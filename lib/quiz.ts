@@ -1,0 +1,82 @@
+import { prisma } from "@/lib/db";
+import type { QuizInput } from "@/lib/validations";
+
+export type QuizScope = "LESSON" | "MODULE" | "COURSE";
+
+function validateQuestions(questions: QuizInput["questions"]) {
+  for (const q of questions) {
+    const correctCount = q.options.filter((o) => o.isCorrect).length;
+    if (correctCount !== 1) {
+      return `A pergunta "${q.text}" precisa de exatamente 1 opção correta`;
+    }
+  }
+  return null;
+}
+
+function questionsCreateData(questions: QuizInput["questions"]) {
+  return questions.map((q) => ({
+    text: q.text,
+    order: q.order,
+    options: {
+      create: q.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect ?? false, order: o.order })),
+    },
+  }));
+}
+
+const includeQuestions = {
+  questions: {
+    include: { options: { orderBy: { order: "asc" as const } } },
+    orderBy: { order: "asc" as const },
+  },
+};
+
+export async function upsertQuiz(scope: QuizScope, parentId: string, data: QuizInput) {
+  const error = validateQuestions(data.questions);
+  if (error) return { ok: false as const, error };
+
+  const questions = questionsCreateData(data.questions);
+  const shared = {
+    title: data.title,
+    // Só o quiz final do curso pode limitar tentativas — quizzes de aula/módulo são sempre ilimitados.
+    maxAttempts: scope === "COURSE" ? data.maxAttempts ?? null : null,
+    timeLimitMinutes: data.timeLimitMinutes ?? null,
+  };
+
+  if (scope === "LESSON") {
+    const quiz = await prisma.quiz.upsert({
+      where: { lessonId: parentId },
+      update: { ...shared, questions: { deleteMany: {}, create: questions } },
+      create: { scope, ...shared, lessonId: parentId, questions: { create: questions } },
+      include: includeQuestions,
+    });
+    return { ok: true as const, quiz };
+  }
+
+  if (scope === "MODULE") {
+    const quiz = await prisma.quiz.upsert({
+      where: { moduleId: parentId },
+      update: { ...shared, questions: { deleteMany: {}, create: questions } },
+      create: { scope, ...shared, moduleId: parentId, questions: { create: questions } },
+      include: includeQuestions,
+    });
+    return { ok: true as const, quiz };
+  }
+
+  const quiz = await prisma.quiz.upsert({
+    where: { courseId: parentId },
+    update: { ...shared, questions: { deleteMany: {}, create: questions } },
+    create: { scope, ...shared, courseId: parentId, questions: { create: questions } },
+    include: includeQuestions,
+  });
+  return { ok: true as const, quiz };
+}
+
+export async function deleteQuiz(scope: QuizScope, parentId: string) {
+  if (scope === "LESSON") {
+    await prisma.quiz.deleteMany({ where: { lessonId: parentId } });
+  } else if (scope === "MODULE") {
+    await prisma.quiz.deleteMany({ where: { moduleId: parentId } });
+  } else {
+    await prisma.quiz.deleteMany({ where: { courseId: parentId } });
+  }
+}

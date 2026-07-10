@@ -51,7 +51,7 @@ export default async function Home() {
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Link href="/courses">
-              <Button variant="secondary" className="bg-white text-slate-900 shadow-md hover:bg-slate-100">
+              <Button variant="light">
                 Explorar cursos
               </Button>
             </Link>

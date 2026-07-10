@@ -44,7 +44,7 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push(wantsToTeach ? "/instructor" : "/dashboard");
+    router.push("/");
     router.refresh();
   }
 

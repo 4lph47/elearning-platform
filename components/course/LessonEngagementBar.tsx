@@ -55,58 +55,66 @@ export function LessonEngagementBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-      {primaryAuthor && (
-        <Link href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-            {primaryAuthor.name
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((p) => p[0]?.toUpperCase())
-              .join("")}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-white hover:text-blue-400">
-              {authors.map((a) => a.name).join(", ")}
-            </p>
-            <p className="text-xs text-slate-500">
-              {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"} · {timeAgo(createdAt)}
-            </p>
-          </div>
-        </Link>
-      )}
+    <div className="border-b border-white/10 pb-4">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-400">
+        <span className="font-medium text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
+        <span>·</span>
+        <span>
+          {likeCount} gosto{likeCount !== 1 ? "s" : ""}
+        </span>
+        <span>·</span>
+        <span>
+          {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"}
+        </span>
+        <span>·</span>
+        <span>{timeAgo(createdAt)}</span>
+      </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex overflow-hidden rounded-full border border-white/15">
+      <div className="mt-3 flex items-center justify-between gap-3">
+        {primaryAuthor && (
+          <Link href={`/instructors/${primaryAuthor.id}`} className="flex shrink-0 items-center">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+              {primaryAuthor.name
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0]?.toUpperCase())
+                .join("")}
+            </span>
+          </Link>
+        )}
+
+        <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-full border border-white/15">
+            <button
+              onClick={() => react("LIKE")}
+              disabled={!isAuthenticated}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed ${
+                reaction === "LIKE" ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-white/5"
+              }`}
+            >
+              <ThumbsUp size={15} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
+            </button>
+            <div className="w-px bg-white/15" />
+            <button
+              onClick={() => react("DISLIKE")}
+              disabled={!isAuthenticated}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed ${
+                reaction === "DISLIKE" ? "bg-red-600/20 text-red-400" : "text-slate-300 hover:bg-white/5"
+              }`}
+            >
+              <ThumbsDown size={15} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
+            </button>
+          </div>
+
           <button
-            onClick={() => react("LIKE")}
-            disabled={!isAuthenticated}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed ${
-              reaction === "LIKE" ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-white/5"
-            }`}
+            onClick={share}
+            className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-white/5"
           >
-            <ThumbsUp size={15} className={reaction === "LIKE" ? "fill-blue-400" : ""} /> {likeCount}
-          </button>
-          <div className="w-px bg-white/15" />
-          <button
-            onClick={() => react("DISLIKE")}
-            disabled={!isAuthenticated}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed ${
-              reaction === "DISLIKE" ? "bg-red-600/20 text-red-400" : "text-slate-300 hover:bg-white/5"
-            }`}
-          >
-            <ThumbsDown size={15} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
+            {copied ? <Check size={15} className="text-blue-400" /> : <Share2 size={15} />}
+            <span className="hidden sm:inline">{copied ? "Link copiado" : "Partilhar"}</span>
           </button>
         </div>
-
-        <button
-          onClick={share}
-          className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-white/5"
-        >
-          {copied ? <Check size={15} className="text-blue-400" /> : <Share2 size={15} />}
-          {copied ? "Link copiado" : "Partilhar"}
-        </button>
       </div>
     </div>
   );

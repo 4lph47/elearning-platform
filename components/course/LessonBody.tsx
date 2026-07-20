@@ -58,6 +58,7 @@ export function LessonBody({
   progress,
   engagement,
   comments,
+  commentsMobile,
 }: {
   nav: React.ReactNode;
   title: React.ReactNode;
@@ -73,6 +74,7 @@ export function LessonBody({
   progress?: React.ReactNode;
   engagement?: React.ReactNode;
   comments?: React.ReactNode;
+  commentsMobile?: React.ReactNode;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -140,6 +142,7 @@ export function LessonBody({
               {completeButton}
             </div>
             {engagement && <div className="mt-3">{engagement}</div>}
+            {commentsMobile && <div className="mt-4">{commentsMobile}</div>}
           </div>
 
           <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
@@ -168,7 +171,6 @@ export function LessonBody({
                 overview={overview}
                 resources={resources}
                 progress={progress}
-                comments={comments}
                 onSelectResource={(r) => setPreviewResource((prev) => (prev?.id === r.id ? null : r))}
               />
             )}

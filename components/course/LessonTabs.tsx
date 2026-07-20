@@ -15,15 +15,13 @@ export function LessonTabs({
   resources,
   onSelectResource,
   progress,
-  comments,
 }: {
   overview: string;
   resources: LessonResourceData[];
   onSelectResource?: (resource: LessonResourceData) => void;
   progress?: React.ReactNode;
-  comments?: React.ReactNode;
 }) {
-  const [tab, setTab] = useState<"overview" | "resources" | "progress" | "comments">("overview");
+  const [tab, setTab] = useState<"overview" | "resources" | "progress">("overview");
 
   return (
     <div>
@@ -54,23 +52,11 @@ export function LessonTabs({
             Progresso
           </button>
         )}
-        {comments && (
-          <button
-            onClick={() => setTab("comments")}
-            className={`border-b-2 px-1 py-2 text-sm font-medium lg:hidden ${
-              tab === "comments" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            Comentários
-          </button>
-        )}
       </div>
 
-      <div className={tab === "progress" || tab === "comments" ? "py-4" : "py-4 text-sm text-slate-300"}>
+      <div className={tab === "progress" ? "py-4" : "py-4 text-sm text-slate-300"}>
         {tab === "progress" ? (
           progress
-        ) : tab === "comments" ? (
-          comments
         ) : tab === "overview" ? (
           <p className="whitespace-pre-wrap leading-relaxed">{overview}</p>
         ) : resources.length === 0 ? (

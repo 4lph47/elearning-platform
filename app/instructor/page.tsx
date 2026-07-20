@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { Users, Star, Wallet, BookOpen, Plus, ArrowRight } from "lucide-react";
 import { authOptions } from "@/lib/auth";
@@ -8,8 +9,9 @@ export const dynamic = "force-dynamic";
 
 export default async function InstructorHomePage() {
   const session = await getServerSession(authOptions);
+  if (!session) redirect("/login?callbackUrl=/instructor");
   const courses = await prisma.course.findMany({
-    where: { OR: [{ instructorId: session!.user.id }, { collaborators: { some: { id: session!.user.id } } }] },
+    where: { OR: [{ instructorId: session.user.id }, { collaborators: { some: { id: session.user.id } } }] },
     include: { modules: { include: { _count: { select: { lessons: true } } } }, enrollments: true },
     orderBy: { createdAt: "desc" },
   });

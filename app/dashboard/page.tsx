@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { Flame, Trophy, Rocket, Award, BookMarked, Zap } from "lucide-react";
 import { authOptions } from "@/lib/auth";
@@ -15,10 +16,11 @@ function dateKey(d: Date) {
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
+  if (!session) redirect("/login?callbackUrl=/dashboard");
 
   const [enrollments, allProgress] = await Promise.all([
     prisma.enrollment.findMany({
-      where: { userId: session!.user.id },
+      where: { userId: session.user.id },
       include: {
         course: {
           include: {
@@ -29,7 +31,7 @@ export default async function DashboardPage() {
       orderBy: { enrolledAt: "desc" },
     }),
     prisma.lessonProgress.findMany({
-      where: { userId: session!.user.id },
+      where: { userId: session.user.id },
     }),
   ]);
   const progressByLesson = new Map(allProgress.map((p) => [p.lessonId, p]));

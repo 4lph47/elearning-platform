@@ -190,7 +190,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   );
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-white dark:bg-black">
       <CourseHero
         title={course.title}
         description={course.description}
@@ -209,14 +209,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
             {course.learningOutcomes.length > 0 && (
-              <div className="rounded-xl border border-white/10 p-5">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-blue-400">
+              <div className="rounded-xl border border-slate-200 p-5 dark:border-white/10">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
                   O que vais aprender
                 </p>
                 <ul className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                   {course.learningOutcomes.map((outcome, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-200">
-                      <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-blue-400" />
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                      <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
                       {outcome}
                     </li>
                   ))}
@@ -226,13 +226,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
             {course.topics.length > 0 && (
               <div>
-                <h2 className="mb-3 text-lg font-semibold text-white">Explorar tópicos relacionados</h2>
+                <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Explorar tópicos relacionados</h2>
                 <div className="flex flex-wrap gap-2">
                   {course.topics.map((topic) => (
                     <Link
                       key={topic}
                       href={`/courses?q=${encodeURIComponent(topic)}`}
-                      className="rounded-full border border-white/15 px-3 py-1 text-sm text-slate-300 hover:border-blue-500/60 hover:text-white"
+                      className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:border-blue-500/60 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:text-white"
                     >
                       {topic}
                     </Link>
@@ -243,11 +243,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
             {course.requirements.length > 0 && (
               <div>
-                <h2 className="mb-3 text-lg font-semibold text-white">Requisitos</h2>
+                <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Requisitos</h2>
                 <ul className="space-y-1.5">
                   {course.requirements.map((req, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-500" />
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400 dark:bg-slate-500" />
                       {req}
                     </li>
                   ))}
@@ -256,17 +256,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
             )}
 
             <div>
-              <h2 className="mb-3 text-lg font-semibold text-white">Descrição</h2>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{course.description}</p>
+              <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Descrição</h2>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">{course.description}</p>
             </div>
 
             {course.targetAudience.length > 0 && (
               <div>
-                <h2 className="mb-3 text-lg font-semibold text-white">Para quem é este curso</h2>
+                <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Para quem é este curso</h2>
                 <ul className="space-y-1.5">
                   {course.targetAudience.map((aud, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-500" />
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400 dark:bg-slate-500" />
                       {aud}
                     </li>
                   ))}
@@ -295,17 +295,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           </div>
 
           <div className="sticky top-20 space-y-4">
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950 shadow-lg shadow-black/40">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60 dark:border-white/10 dark:bg-slate-950 dark:shadow-black/40">
               {course.thumbnailUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={course.thumbnailUrl} alt={course.title} className="h-40 w-full object-cover" />
               )}
 
               <div className="p-4">
-                <h2 className="mb-3 line-clamp-2 font-semibold text-white">{course.title}</h2>
+                <h2 className="mb-3 line-clamp-2 font-semibold text-slate-900 dark:text-white">{course.title}</h2>
                 {isOwner ? (
                   <Link href={`/instructor/courses/${course.id}`}>
-                    <p className="rounded-md border border-white/15 px-4 py-2 text-center text-sm font-medium text-slate-200 hover:bg-white/5">
+                    <p className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5">
                       Editar este curso
                     </p>
                   </Link>
@@ -329,15 +329,15 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                 )}
 
                 {!isOwner && !isEnrolled && (
-                <div className="mt-3 text-center text-sm text-slate-400">
+                <div className="mt-3 text-center text-sm text-slate-500 dark:text-slate-400">
                   {course.price === 0 ? (
                     "Grátis"
                   ) : (
                     <>
                       <div className="flex items-center justify-center gap-2">
-                        <span className="text-lg font-bold text-white">{course.price.toFixed(2)}€</span>
+                        <span className="text-lg font-bold text-slate-900 dark:text-white">{course.price.toFixed(2)}€</span>
                         {course.originalPrice != null && course.originalPrice > course.price && (
-                          <span className="text-sm text-slate-500 line-through">
+                          <span className="text-sm text-slate-400 line-through dark:text-slate-500">
                             {course.originalPrice.toFixed(2)}€
                           </span>
                         )}
@@ -345,10 +345,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                       <div className="mt-0.5 flex items-center justify-center gap-1.5">
                         {course.originalPrice != null && course.originalPrice > course.price && (
                           <>
-                            <span className="text-xs font-semibold text-blue-400">
+                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                               {Math.round((1 - course.price / course.originalPrice) * 100)}% de desconto
                             </span>
-                            <span className="text-slate-600">·</span>
+                            <span className="text-slate-400 dark:text-slate-600">·</span>
                           </>
                         )}
                         <span>pagamento único</span>
@@ -359,52 +359,52 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                 )}
               </div>
 
-              <div className="border-t border-white/10 p-4">
+              <div className="border-t border-slate-200 p-4 dark:border-white/10">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Este curso inclui
                 </p>
-                <dl className="space-y-2.5 text-sm text-slate-300">
+                <dl className="space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2.5">
-                    <Video size={16} className="shrink-0 text-blue-400" />
+                    <Video size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <span>{formatDuration(totalDuration)} de vídeo sob demanda</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <ListChecks size={16} className="shrink-0 text-blue-400" />
+                    <ListChecks size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <span>{allLessons.length} aulas</span>
                   </div>
                   {totalResources > 0 && (
                     <div className="flex items-center gap-2.5">
-                      <Paperclip size={16} className="shrink-0 text-blue-400" />
+                      <Paperclip size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                       <span>{totalResources} materiais de apoio para download</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2.5">
-                    <InfinityIcon size={16} className="shrink-0 text-blue-400" />
+                    <InfinityIcon size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <span>Acesso vitalício</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <Smartphone size={16} className="shrink-0 text-blue-400" />
+                    <Smartphone size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <span>Acesso em qualquer dispositivo</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <Award size={16} className="shrink-0 text-blue-400" />
+                    <Award size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <span>Certificado de conclusão</span>
                   </div>
                 </dl>
               </div>
 
               {course.quiz && (
-                <div className="border-t border-white/10 p-4">
+                <div className="border-t border-slate-200 p-4 dark:border-white/10">
                   {isEnrolled || isOwner ? (
                     <Link
                       href={`/courses/${course.slug}/quiz/${course.quiz.id}`}
-                      className="flex items-center justify-center gap-2 rounded-md border border-white/15 px-4 py-2 text-center text-sm font-medium text-slate-200 hover:bg-white/5"
+                      className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
                     >
                       <HelpCircle size={16} />
                       Fazer teste final do curso
                     </Link>
                   ) : (
-                    <p className="flex items-center justify-center gap-2 rounded-md border border-white/10 px-4 py-2 text-center text-sm text-slate-500">
+                    <p className="flex items-center justify-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-center text-sm text-slate-500 dark:border-white/10">
                       <Lock size={14} />
                       Teste final do curso (inscreve-te para aceder)
                     </p>
@@ -431,14 +431,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-8">
-          <h2 className="mb-4 text-lg font-semibold text-white">{authors.length > 1 ? "Instrutores" : "Instrutor"}</h2>
+        <div className="mt-10 border-t border-slate-200 pt-8 dark:border-white/10">
+          <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">{authors.length > 1 ? "Instrutores" : "Instrutor"}</h2>
           <div className="space-y-4">
             {authors.map((author) => (
               <Link
                 key={author.id}
                 href={`/instructors/${author.id}`}
-                className="flex flex-col gap-4 rounded-xl border border-white/10 bg-slate-950 p-5 transition-colors hover:border-white/20 sm:flex-row sm:items-start"
+                className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:hover:border-white/20 sm:flex-row sm:items-start"
               >
                 <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
                   {author.name
@@ -449,12 +449,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                     .join("")}
                 </span>
                 <div>
-                  <p className="font-semibold text-blue-400 hover:underline">{author.name}</p>
+                  <p className="font-semibold text-blue-600 hover:underline dark:text-blue-400">{author.name}</p>
                   {author.id === course.instructor.id && (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
                       {instructorAvgRating !== null && (
                         <span className="flex items-center gap-1.5">
-                          <Star size={14} className="fill-blue-400 text-blue-400" /> {instructorAvgRating.toFixed(1)} média
+                          <Star size={14} className="fill-blue-600 text-blue-600 dark:fill-blue-400 dark:text-blue-400" /> {instructorAvgRating.toFixed(1)} média
                         </span>
                       )}
                       {instructorReviews > 0 && (
@@ -470,7 +470,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                       </span>
                     </div>
                   )}
-                  {author.bio && <p className="mt-3 line-clamp-3 text-sm text-slate-300">{author.bio}</p>}
+                  {author.bio && <p className="mt-3 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{author.bio}</p>}
                 </div>
               </Link>
             ))}

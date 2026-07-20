@@ -187,19 +187,19 @@ export default async function Home() {
   const firstName = session?.user.name?.split(" ")[0];
 
   return (
-    <div className="-mt-16 bg-black pb-16">
+    <div className="-mt-16 bg-white pb-16 dark:bg-black">
       <HeroCarousel items={featuredCandidates} />
 
       <div className="relative z-10 -mt-10 sm:-mt-20">
         {firstName && (
-          <p className="px-4 pt-4 text-sm text-slate-400 sm:px-8">Bem-vindo de volta, {firstName}.</p>
+          <p className="px-4 pt-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">Bem-vindo de volta, {firstName}.</p>
         )}
         <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-4 pt-4 sm:px-8">
           {categories.map((category) => (
             <Link
               key={category}
               href={`/courses?category=${encodeURIComponent(category)}`}
-              className="shrink-0 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-sm font-medium text-slate-200 transition-colors hover:border-blue-500/60 hover:bg-blue-600/10 hover:text-white"
+              className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-blue-500/60 hover:bg-blue-600/10 hover:text-slate-900 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:text-white"
             >
               {category}
             </Link>
@@ -225,7 +225,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="mx-auto mt-6 max-w-6xl border-t border-white/10 px-4 pt-10 text-center sm:px-8">
+      <div className="mx-auto mt-6 max-w-6xl border-t border-slate-200 px-4 pt-10 text-center dark:border-white/10 sm:px-8">
         <div className="mx-auto grid max-w-lg grid-cols-3 gap-4">
           {[
             { label: "Cursos publicados", value: courseCount },
@@ -233,15 +233,15 @@ export default async function Home() {
             { label: "Instrutores", value: instructorCount },
           ].map((s) => (
             <div key={s.label}>
-              <div className="text-2xl font-bold text-white sm:text-3xl">{s.value}+</div>
-              <div className="mt-1 text-xs text-slate-400 sm:text-sm">{s.label}</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{s.value}+</div>
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">{s.label}</div>
             </div>
           ))}
         </div>
 
         <Link
           href="/courses"
-          className="mt-8 inline-block text-sm font-medium text-blue-400 hover:underline"
+          className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
         >
           Ver catálogo completo →
         </Link>

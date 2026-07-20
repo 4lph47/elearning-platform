@@ -106,24 +106,27 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black px-4 py-10 sm:px-8">
+    <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
       <div className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-bold text-white">A minha aprendizagem</h1>
-        <p className="mt-1 text-sm text-slate-400">Acompanha o teu progresso e continua a aprender.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">A minha aprendizagem</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Acompanha o teu progresso e continua a aprender.</p>
 
         {courseSummaries.length > 0 && (
           <>
             <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               {statTiles.map((tile) => (
-                <div key={tile.label} className="rounded-xl border border-white/10 bg-slate-950 p-4">
+                <div
+                  key={tile.label}
+                  className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950"
+                >
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tile.label}</p>
-                    <tile.icon size={15} className="text-slate-600" />
+                    <tile.icon size={15} className="text-slate-400 dark:text-slate-600" />
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-white">{tile.value}</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{tile.value}</p>
                   <p className="mt-0.5 text-xs text-slate-500">{tile.hint}</p>
                   {tile.label === "Nível" && (
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 dark:bg-white/10">
                       <div
                         className="h-1.5 rounded-full bg-blue-500 transition-all"
                         style={{ width: `${xpIntoLevel}%` }}
@@ -135,13 +138,13 @@ export default async function DashboardPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Atividade dos últimos 7 dias
                 </p>
                 <WeeklyActivityChart data={weeklyActivity} />
               </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Cursos por categoria
                 </p>
@@ -149,17 +152,23 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-white/10 bg-slate-950 p-4">
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Conquistas</p>
               <div className="flex flex-wrap gap-2.5">
                 {achievements.map((a) => (
                   <span
                     key={a.label}
                     className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${
-                      a.unlocked ? "border-white/15 bg-white/5 text-slate-200" : "border-white/5 text-slate-600"
+                      a.unlocked
+                        ? "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/15 dark:bg-white/5 dark:text-slate-200"
+                        : "border-slate-100 text-slate-400 dark:border-white/5 dark:text-slate-600"
                     }`}
                   >
-                    <a.icon size={13} className={a.unlocked ? "text-blue-400" : "text-slate-600"} /> {a.label}
+                    <a.icon
+                      size={13}
+                      className={a.unlocked ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-600"}
+                    />{" "}
+                    {a.label}
                   </span>
                 ))}
               </div>
@@ -168,32 +177,37 @@ export default async function DashboardPage() {
         )}
 
         {courseSummaries.length === 0 ? (
-          <div className="mt-6 rounded-xl border border-white/10 bg-slate-950 p-8 text-center">
-            <p className="text-slate-400">
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950">
+            <p className="text-slate-500 dark:text-slate-400">
               Ainda não estás matriculado em nenhum curso.{" "}
-              <Link href="/courses" className="font-medium text-blue-400 hover:underline">
+              <Link href="/courses" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
                 Explorar catálogo
               </Link>
             </p>
           </div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-xl border border-white/10 bg-slate-950">
+          <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
             {courseSummaries.map(({ course, lessons, completedCount, percent, nextLesson }, i) => (
               <div
                 key={course.id}
-                className={`flex items-center gap-4 p-4 transition-colors hover:bg-white/[0.03] ${
-                  i > 0 ? "border-t border-white/10" : ""
+                className={`flex items-center gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03] ${
+                  i > 0 ? "border-t border-slate-200 dark:border-white/10" : ""
                 }`}
               >
                 <ProgressRing percent={percent} />
                 <div className="min-w-0 flex-1">
-                  <Link href={`/courses/${course.slug}`} className="font-medium text-white hover:text-blue-400">
+                  <Link
+                    href={`/courses/${course.slug}`}
+                    className="font-medium text-slate-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
+                  >
                     {course.title}
                   </Link>
                   <div className="mt-1 flex items-center gap-2 text-xs">
-                    <span className="rounded-md bg-white/5 px-2 py-0.5 text-slate-400">{course.category}</span>
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                      {course.category}
+                    </span>
                     {percent === 100 && (
-                      <span className="rounded-md bg-green-600/10 px-2 py-0.5 font-medium text-green-400">
+                      <span className="rounded-md bg-green-600/10 px-2 py-0.5 font-medium text-green-700 dark:text-green-400">
                         Concluído
                       </span>
                     )}

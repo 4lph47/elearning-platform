@@ -47,28 +47,28 @@ export default async function CoursesPage({
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="border-b border-white/10 bg-gradient-to-b from-slate-900 to-black px-4 py-10 sm:px-8">
+    <div className="min-h-screen bg-white dark:bg-black">
+      <div className="border-b border-slate-200 bg-gradient-to-b from-slate-100 to-white px-4 py-10 dark:border-white/10 dark:from-slate-900 dark:to-black sm:px-8">
         <div className="mx-auto max-w-6xl">
-          <h1 className="text-3xl font-bold text-white sm:text-4xl">Catálogo de Cursos</h1>
-          <p className="mt-2 max-w-xl text-slate-400">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">Catálogo de Cursos</h1>
+          <p className="mt-2 max-w-xl text-slate-600 dark:text-slate-400">
             Explora os cursos disponíveis e começa a aprender hoje.
           </p>
         </div>
       </div>
 
-      <div className="border-b border-white/10 bg-slate-950/60 px-4 py-4 sm:px-8">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-slate-950/60 sm:px-8">
         <div className="mx-auto max-w-6xl">
           <SearchBar categories={categories.map((c) => c.category)} />
         </div>
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8">
-        <p className="mb-6 text-sm text-slate-400">
+        <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
           {courses.length} curso{courses.length !== 1 ? "s" : ""} encontrado{courses.length !== 1 ? "s" : ""}
         </p>
         {courses.length === 0 ? (
-          <p className="text-slate-400">Nenhum curso encontrado.</p>
+          <p className="text-slate-500 dark:text-slate-400">Nenhum curso encontrado.</p>
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {courses.map((course) => {

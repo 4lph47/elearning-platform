@@ -33,7 +33,7 @@ export function SearchBar({ categories }: { categories: string[] }) {
   }
 
   const selectClass =
-    "rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white";
 
   return (
     <div className="space-y-3">
@@ -43,7 +43,7 @@ export function SearchBar({ categories }: { categories: string[] }) {
             placeholder="Procurar cursos..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="w-full rounded-md border border-white/15 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
           />
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
         </div>
@@ -57,35 +57,35 @@ export function SearchBar({ categories }: { categories: string[] }) {
 
       <div className="flex flex-wrap items-center gap-2">
         <select value={category} onChange={(e) => updateParam("category", e.target.value)} className={selectClass}>
-          <option className="bg-slate-900" value="">
+          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="">
             Todas as categorias
           </option>
           {categories.map((c) => (
-            <option className="bg-slate-900" key={c} value={c}>
+            <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" key={c} value={c}>
               {c}
             </option>
           ))}
         </select>
 
         <select value={level} onChange={(e) => updateParam("level", e.target.value)} className={selectClass}>
-          <option className="bg-slate-900" value="">
+          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="">
             Todos os níveis
           </option>
           {LEVELS.map((l) => (
-            <option className="bg-slate-900" key={l.value} value={l.value}>
+            <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" key={l.value} value={l.value}>
               {l.label}
             </option>
           ))}
         </select>
 
         <select value={price} onChange={(e) => updateParam("price", e.target.value)} className={selectClass}>
-          <option className="bg-slate-900" value="">
+          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="">
             Qualquer preço
           </option>
-          <option className="bg-slate-900" value="free">
+          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="free">
             Grátis
           </option>
-          <option className="bg-slate-900" value="paid">
+          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="paid">
             Pago
           </option>
         </select>
@@ -93,7 +93,7 @@ export function SearchBar({ categories }: { categories: string[] }) {
         {(category || level || price) && (
           <button
             onClick={() => router.push(pathname)}
-            className="text-sm font-medium text-slate-400 hover:text-white"
+            className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
             Limpar filtros
           </button>

@@ -45,13 +45,16 @@ export default async function CartPage() {
     }));
 
   return (
-    <div className="min-h-screen bg-black px-4 py-10 sm:px-8">
+    <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link href="/courses" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+        <Link
+          href="/courses"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+        >
           <ArrowLeft size={14} /> Continuar a explorar cursos
         </Link>
 
-        <h1 className="mt-4 text-2xl font-bold text-white">O meu carrinho</h1>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">O meu carrinho</h1>
 
         <div className="mt-6">
           <CartList items={items} />

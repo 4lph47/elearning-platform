@@ -66,26 +66,32 @@ export default async function CheckoutPage({
   if (items.length === 1 && items[0].price === 0 && items[0].id === course.id) redirect(`/courses/${slug}`);
 
   return (
-    <div className="min-h-screen bg-black px-4 py-10 sm:px-8">
+    <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
       <div className="mx-auto max-w-lg">
-        <Link href={`/courses/${slug}`} className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+        <Link
+          href={`/courses/${slug}`}
+          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+        >
           <ArrowLeft size={14} /> Voltar ao curso
         </Link>
 
         <div className="mt-4 space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950 p-4">
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950"
+            >
               {item.thumbnailUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.thumbnailUrl} alt={item.title} className="h-14 w-20 shrink-0 rounded-md object-cover" />
               ) : (
-                <div className="h-14 w-20 shrink-0 rounded-md bg-slate-800" />
+                <div className="h-14 w-20 shrink-0 rounded-md bg-slate-200 dark:bg-slate-800" />
               )}
               <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{item.title}</p>
-                <p className="text-sm text-slate-400">{item.instructorName}</p>
+                <p className="truncate font-semibold text-slate-900 dark:text-white">{item.title}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{item.instructorName}</p>
               </div>
-              <p className="ml-auto shrink-0 text-lg font-bold text-white">
+              <p className="ml-auto shrink-0 text-lg font-bold text-slate-900 dark:text-white">
                 {item.price === 0 ? "Grátis" : `${item.price.toFixed(2)}€`}
               </p>
             </div>

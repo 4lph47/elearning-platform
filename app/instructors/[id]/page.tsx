@@ -98,8 +98,8 @@ export default async function InstructorProfilePage({ params }: { params: Promis
   ].filter((s): s is { url: string; label: string; icon: typeof Globe } => Boolean(s.url));
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="relative overflow-hidden border-b border-white/10">
+    <div className="min-h-screen bg-white dark:bg-black">
+      <div className="relative overflow-hidden border-b border-slate-200 dark:border-white/10">
         <div className="absolute inset-0">
           {backdropUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -160,9 +160,9 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
-        <h2 className="mb-6 text-lg font-semibold text-white">Cursos de {instructor.name.split(" ")[0]}</h2>
+        <h2 className="mb-6 text-lg font-semibold text-slate-900 dark:text-white">Cursos de {instructor.name.split(" ")[0]}</h2>
         {courses.length === 0 ? (
-          <p className="text-slate-400">Ainda não tem cursos publicados.</p>
+          <p className="text-slate-500 dark:text-slate-400">Ainda não tem cursos publicados.</p>
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {courses.map((course) => {
@@ -192,7 +192,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           </div>
         )}
 
-        <Link href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-400 hover:underline">
+        <Link href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
           ← Ver catálogo completo
         </Link>
       </div>

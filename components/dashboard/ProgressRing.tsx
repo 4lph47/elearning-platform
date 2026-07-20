@@ -15,7 +15,14 @@ export function ProgressRing({
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0 -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#ffffff1a" strokeWidth={strokeWidth} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        className="stroke-slate-900/10 dark:stroke-white/10"
+        strokeWidth={strokeWidth}
+      />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -33,7 +40,7 @@ export function ProgressRing({
         transform={`rotate(90 ${size / 2} ${size / 2})`}
         textAnchor="middle"
         dominantBaseline="central"
-        className="fill-white text-[11px] font-semibold"
+        className="fill-slate-900 text-[11px] font-semibold dark:fill-white"
       >
         {percent}%
       </text>

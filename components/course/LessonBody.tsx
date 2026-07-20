@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Maximize2, Minimize2 } from "lucide-react";
+import { X, Maximize2, Minimize2, Check, Circle } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData } from "@/components/course/LessonTabs";
 import { QuizPlayer } from "@/components/course/QuizPlayer";
@@ -78,6 +78,7 @@ export function LessonBody({
   const collapsed = useSidebarCollapsed();
   const [previewResource, setPreviewResource] = useState<LessonResourceData | null>(null);
   const [maximized, setMaximized] = useState(false);
+  const [completed, setCompleted] = useState(initialCompleted);
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
@@ -87,6 +88,34 @@ export function LessonBody({
     setPreviewResource(null);
     setMaximized(false);
   }
+
+  async function markComplete() {
+    if (completed) return;
+    setCompleted(true);
+    await fetch("/api/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonId, completed: true }),
+    });
+  }
+
+  const completeButton = (
+    <button
+      onClick={markComplete}
+      disabled={completed}
+      aria-label={completed ? "Aula concluída" : "Marcar como concluída"}
+      title={completed ? "Aula concluída" : "Marcar como concluída"}
+      className="shrink-0 rounded-full p-1 disabled:cursor-default"
+    >
+      {completed ? (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
+          <Check size={14} strokeWidth={3} className="text-white" />
+        </span>
+      ) : (
+        <Circle size={22} className="text-slate-500 hover:text-slate-300" />
+      )}
+    </button>
+  );
 
   return (
     <div>
@@ -100,9 +129,17 @@ export function LessonBody({
               type={type}
               contentUrl={contentUrl}
               textContent={textContent}
-              initialCompleted={initialCompleted}
               initialWatchedSeconds={initialWatchedSeconds}
+              onComplete={markComplete}
             />
+          </div>
+
+          <div className="mt-4 lg:hidden">
+            <div className="flex items-start justify-between gap-3">
+              {title}
+              {completeButton}
+            </div>
+            {engagement && <div className="mt-3">{engagement}</div>}
           </div>
 
           <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
@@ -131,6 +168,7 @@ export function LessonBody({
                 overview={overview}
                 resources={resources}
                 progress={progress}
+                comments={comments}
                 onSelectResource={(r) => setPreviewResource((prev) => (prev?.id === r.id ? null : r))}
               />
             )}
@@ -160,8 +198,11 @@ export function LessonBody({
         )}
 
         <div className={belowVideoWidth}>
-          <div className="mt-4">
-            {title}
+          <div className="mt-4 hidden lg:block">
+            <div className="flex items-start justify-between gap-3">
+              {title}
+              {completeButton}
+            </div>
             {engagement && <div className="mt-3">{engagement}</div>}
           </div>
 
@@ -178,7 +219,7 @@ export function LessonBody({
             </div>
           )}
 
-          {comments}
+          <div className="hidden lg:block">{comments}</div>
         </div>
       </div>
 

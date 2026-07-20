@@ -16,7 +16,6 @@ export function LessonEngagementBar({
   viewCount,
   createdAt,
   initialLikeCount,
-  initialDislikeCount,
   initialReaction,
   isAuthenticated,
 }: {
@@ -25,12 +24,10 @@ export function LessonEngagementBar({
   viewCount: number;
   createdAt: string;
   initialLikeCount: number;
-  initialDislikeCount: number;
   initialReaction: "LIKE" | "DISLIKE" | null;
   isAuthenticated: boolean;
 }) {
   const [likeCount, setLikeCount] = useState(initialLikeCount);
-  const [dislikeCount, setDislikeCount] = useState(initialDislikeCount);
   const [reaction, setReaction] = useState(initialReaction);
   const [copied, setCopied] = useState(false);
   const primaryAuthor = authors[0];
@@ -48,7 +45,6 @@ export function LessonEngagementBar({
     if (res.ok) {
       const data = await res.json();
       setLikeCount(data.likeCount);
-      setDislikeCount(data.dislikeCount);
     }
   }
 
@@ -100,7 +96,7 @@ export function LessonEngagementBar({
               reaction === "DISLIKE" ? "bg-red-600/20 text-red-400" : "text-slate-300 hover:bg-white/5"
             }`}
           >
-            <ThumbsDown size={15} className={reaction === "DISLIKE" ? "fill-red-400" : ""} /> {dislikeCount}
+            <ThumbsDown size={15} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
           </button>
         </div>
 

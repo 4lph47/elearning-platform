@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { useEffect, useRef } from "react";
 import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { getYouTubeId } from "@/lib/youtube";
 
@@ -11,17 +9,16 @@ export function LessonPlayer({
   type,
   contentUrl,
   textContent,
-  initialCompleted,
   initialWatchedSeconds,
+  onComplete,
 }: {
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
   textContent?: string | null;
-  initialCompleted: boolean;
   initialWatchedSeconds: number;
+  onComplete: () => void;
 }) {
-  const [completed, setCompleted] = useState(initialCompleted);
   const lastSentRef = useRef(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const collapsed = useSidebarCollapsed();
@@ -49,12 +46,12 @@ export function LessonPlayer({
 
     const isNearEnd = video.duration > 0 && now / video.duration >= 0.95;
     sendProgress({ watchedSeconds: now, completed: isNearEnd || undefined });
-    if (isNearEnd) setCompleted(true);
+    if (isNearEnd) onComplete();
   }
 
-  async function markComplete() {
+  async function handleEnded() {
     await sendProgress({ completed: true });
-    setCompleted(true);
+    onComplete();
   }
 
   // API de mensagens do YouTube (enablejsapi=1): estado 0 = vídeo terminou.
@@ -70,7 +67,7 @@ export function LessonPlayer({
       }
       const info = (data as { info?: unknown })?.info;
       if ((data as { event?: string })?.event === "onStateChange" && info === 0) {
-        markComplete();
+        handleEnded();
       }
     }
     window.addEventListener("message", onMessage);
@@ -114,21 +111,8 @@ export function LessonPlayer({
           src={contentUrl ?? undefined}
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdate}
-          onEnded={markComplete}
+          onEnded={handleEnded}
         />
-      )}
-
-      {completed ? (
-        <p className="flex items-center gap-2 text-sm font-medium text-slate-300">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600">
-            <Check size={12} strokeWidth={3} className="text-white" />
-          </span>
-          Aula concluída
-        </p>
-      ) : (
-        <Button onClick={markComplete} variant="outline-dark">
-          Marcar como concluída
-        </Button>
       )}
     </div>
   );

@@ -75,7 +75,6 @@ export default async function LessonPage({
     doneQuizAttempts,
     topLevelComments,
     likeReactions,
-    dislikeReactions,
     myReaction,
     updatedLesson,
   ] = await Promise.all([
@@ -113,7 +112,6 @@ export default async function LessonPage({
       },
     }),
     prisma.lessonReaction.count({ where: { lessonId, type: "LIKE" } }),
-    prisma.lessonReaction.count({ where: { lessonId, type: "DISLIKE" } }),
     prisma.lessonReaction.findUnique({
       where: { userId_lessonId: { userId: session.user.id, lessonId } },
       select: { type: true },
@@ -245,7 +243,6 @@ export default async function LessonPage({
               viewCount={updatedLesson.viewCount}
               createdAt={lesson.createdAt.toISOString()}
               initialLikeCount={likeReactions}
-              initialDislikeCount={dislikeReactions}
               initialReaction={myReaction?.type ?? null}
               isAuthenticated={Boolean(session)}
             />

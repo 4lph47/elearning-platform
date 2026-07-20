@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ThumbsUp, ThumbsDown, Forward, Check } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Check } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
 
 interface Author {
@@ -65,63 +65,84 @@ export function LessonEngagementBar({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const avatar = (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+      {primaryAuthor?.name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase())
+        .join("")}
+    </span>
+  );
+
+  const meta = (
+    <>
+      <span className="font-medium text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
+      <span>·</span>
+      <span>
+        {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"}
+      </span>
+      <span>·</span>
+      <span>{timeAgo(createdAt)}</span>
+    </>
+  );
+
+  const actions = (
+    <div className="flex items-center gap-5">
+      {completeButton}
+
+      <button
+        onClick={() => react("LIKE")}
+        disabled={!isAuthenticated}
+        className={`flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed ${
+          reaction === "LIKE" ? "text-blue-400" : "text-slate-300 hover:text-white"
+        }`}
+      >
+        <ThumbsUp size={19} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
+        {likeCount}
+      </button>
+
+      <button
+        onClick={() => react("DISLIKE")}
+        disabled={!isAuthenticated}
+        className={`disabled:cursor-not-allowed ${
+          reaction === "DISLIKE" ? "text-red-400" : "text-slate-300 hover:text-white"
+        }`}
+      >
+        <ThumbsDown size={19} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
+      </button>
+
+      <button onClick={share} className="text-white" aria-label="Partilhar">
+        {copied ? <Check size={19} className="text-blue-400" /> : <Share2 size={19} />}
+      </button>
+    </div>
+  );
+
   return (
     <div className="pb-4">
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-400">
-        <span className="font-medium text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
-        <span>·</span>
-        <span>
-          {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"}
-        </span>
-        <span>·</span>
-        <span>{timeAgo(createdAt)}</span>
+      {/* Mobile: linha meta em cima, avatar+ações por baixo. */}
+      <div className="lg:hidden">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-400">{meta}</div>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          {primaryAuthor && (
+            <Link href={`/instructors/${primaryAuthor.id}`} className="flex shrink-0 items-center">
+              {avatar}
+            </Link>
+          )}
+          {actions}
+        </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
+      {/* Desktop: avatar + meta juntos numa linha, ações à direita. */}
+      <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-3">
         {primaryAuthor && (
-          <Link href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-              {primaryAuthor.name
-                .split(" ")
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((p) => p[0]?.toUpperCase())
-                .join("")}
-            </span>
-            <span className="hidden truncate font-medium text-white lg:inline">
-              {authors.map((a) => a.name).join(", ")}
-            </span>
+          <Link href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 items-center gap-2.5">
+            {avatar}
+            <span className="flex flex-wrap items-center gap-x-1.5 truncate text-sm text-slate-400">{meta}</span>
           </Link>
         )}
-
-        <div className="flex items-center gap-5">
-          {completeButton}
-
-          <button
-            onClick={() => react("LIKE")}
-            disabled={!isAuthenticated}
-            className={`flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed ${
-              reaction === "LIKE" ? "text-blue-400" : "text-slate-300 hover:text-white"
-            }`}
-          >
-            <ThumbsUp size={19} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
-            {likeCount}
-          </button>
-
-          <button
-            onClick={() => react("DISLIKE")}
-            disabled={!isAuthenticated}
-            className={`disabled:cursor-not-allowed ${
-              reaction === "DISLIKE" ? "text-red-400" : "text-slate-300 hover:text-white"
-            }`}
-          >
-            <ThumbsDown size={19} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
-          </button>
-
-          <button onClick={share} className="text-white" aria-label="Partilhar">
-            {copied ? <Check size={19} className="text-blue-400" /> : <Forward size={19} />}
-          </button>
-        </div>
+        {actions}
       </div>
     </div>
   );

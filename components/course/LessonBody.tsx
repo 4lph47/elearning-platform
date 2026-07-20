@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, cloneElement, type ReactElement } from "react";
-import { X, Maximize2, Minimize2, Check, CircleCheckBig } from "lucide-react";
+import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { QuizPlayer } from "@/components/course/QuizPlayer";
@@ -114,7 +114,7 @@ export function LessonBody({
           <Check size={14} strokeWidth={3} className="text-white" />
         </span>
       ) : (
-        <CircleCheckBig size={21} strokeWidth={1.75} className="text-slate-500 hover:text-slate-300" />
+        <CircleCheck size={22} className="text-slate-500 hover:text-slate-300" />
       )}
     </button>
   );

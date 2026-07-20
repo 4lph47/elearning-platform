@@ -79,14 +79,17 @@ export function LessonEngagementBar({
 
       <div className="mt-3 flex items-center justify-between gap-3">
         {primaryAuthor && (
-          <Link href={`/instructors/${primaryAuthor.id}`} className="flex shrink-0 items-center">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+          <Link href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 shrink-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
               {primaryAuthor.name
                 .split(" ")
                 .filter(Boolean)
                 .slice(0, 2)
                 .map((p) => p[0]?.toUpperCase())
                 .join("")}
+            </span>
+            <span className="hidden truncate font-medium text-white lg:inline">
+              {authors.map((a) => a.name).join(", ")}
             </span>
           </Link>
         )}

@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug } from "@/lib/courseCache";
+import { buildCourseSequence, hrefFor } from "@/lib/courseSequence";
 import { LessonBody } from "@/components/course/LessonBody";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
@@ -43,9 +44,6 @@ export default async function LessonPage({
 
   const isOwner =
     course.instructorId === session.user.id || course.collaborators.some((c) => c.id === session.user.id);
-  const currentIndex = allLessons.findIndex((l) => l.id === lesson.id);
-  const previousLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
-  const nextLesson = allLessons[currentIndex + 1];
 
   const moduleQuizIds = course.modules.map((m) => m.quiz?.id).filter((id): id is string => Boolean(id));
   const lessonQuizIds = allLessons.map((l) => l.quiz?.id).filter((id): id is string => Boolean(id));
@@ -101,14 +99,25 @@ export default async function LessonPage({
     redirect(`/courses/${slug}`);
   }
 
-  const previousHref =
-    previousLesson && (isOwner || isEnrolled || previousLesson.isFreePreview)
-      ? `/courses/${slug}/lessons/${previousLesson.id}`
-      : null;
-  const nextHref =
-    nextLesson && (isOwner || isEnrolled || nextLesson.isFreePreview)
-      ? `/courses/${slug}/lessons/${nextLesson.id}`
-      : null;
+  const sequence = buildCourseSequence(
+    course.modules.map((m) => ({
+      title: m.title,
+      quizId: m.quiz?.id ?? null,
+      lessons: m.lessons.map((l) => ({
+        id: l.id,
+        title: l.title,
+        isFreePreview: l.isFreePreview,
+        quizId: l.quiz?.id ?? null,
+      })),
+    })),
+    course.quiz ? { id: course.quiz.id } : null,
+    { isOwner, isEnrolled }
+  );
+  const currentSeqIndex = sequence.findIndex((it) => it.type === "lesson" && it.id === lesson.id);
+  const previousItem = currentSeqIndex > 0 ? sequence[currentSeqIndex - 1] : null;
+  const nextItem = currentSeqIndex >= 0 ? sequence[currentSeqIndex + 1] : null;
+  const previousHref = previousItem?.accessible ? hrefFor(slug, previousItem) : null;
+  const nextHref = nextItem?.accessible ? hrefFor(slug, nextItem) : null;
 
   const progressByLessonId = Object.fromEntries(progressRows.map((p) => [p.lessonId, p.completed]));
   const completedLessonsCount = Object.values(progressByLessonId).filter(Boolean).length;
@@ -176,24 +185,24 @@ export default async function LessonPage({
         <LessonBody
           nav={
             <div className="flex items-center justify-between">
-              {previousLesson && (isOwner || isEnrolled || previousLesson.isFreePreview) && (
+              {previousHref && previousItem && (
                 <Link
-                  href={`/courses/${slug}/lessons/${previousLesson.id}`}
+                  href={previousHref}
                   className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                 >
                   <ArrowLeft size={14} className="shrink-0" />
                   <span className="truncate">
-                    Aula anterior<span className="hidden sm:inline">: {previousLesson.title}</span>
+                    Aula anterior<span className="hidden sm:inline">: {previousItem.title}</span>
                   </span>
                 </Link>
               )}
-              {nextLesson && (isOwner || isEnrolled || nextLesson.isFreePreview) && (
+              {nextHref && nextItem && (
                 <Link
-                  href={`/courses/${slug}/lessons/${nextLesson.id}`}
+                  href={nextHref}
                   className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
                 >
                   <span className="truncate">
-                    Próxima aula<span className="hidden sm:inline">: {nextLesson.title}</span>
+                    Próxima aula<span className="hidden sm:inline">: {nextItem.title}</span>
                   </span>
                   <ArrowRight size={14} className="shrink-0" />
                 </Link>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, cloneElement, type ReactElement } from "react";
-import { useRouter } from "next/navigation";
+import { useState, cloneElement, type ReactElement } from "react";
 import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
+import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
@@ -69,14 +69,12 @@ export function LessonBody({
   previousHref?: string | null;
   nextHref?: string | null;
 }) {
-  const router = useRouter();
-  const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
   const [previewResource, setPreviewResource] = useState<LessonResourceData | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
-  const [swipeExit, setSwipeExit] = useState<"left" | "right" | null>(null);
+  const { handleTouchStart, handleTouchEnd, swipeClassName } = useSwipeNav(previousHref, nextHref);
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
@@ -117,44 +115,8 @@ export function LessonBody({
 
   const engagementWithButton = engagement && cloneElement(engagement, { completeButton });
 
-  function handleTouchStart(e: React.TouchEvent) {
-    const t = e.touches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start || window.innerWidth >= 1024) return;
-
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    const elapsed = Date.now() - start.t;
-    const isSwipe = Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 600;
-    if (!isSwipe) return;
-
-    if (dx < 0 && nextHref) {
-      setSwipeExit("left");
-      setTimeout(() => router.push(nextHref), 180);
-    } else if (dx > 0 && previousHref) {
-      setSwipeExit("right");
-      setTimeout(() => router.push(previousHref), 180);
-    }
-  }
-
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      className={`transition-all duration-200 ease-in ${
-        swipeExit === "left"
-          ? "-translate-x-10 opacity-0"
-          : swipeExit === "right"
-            ? "translate-x-10 opacity-0"
-            : "translate-x-0 opacity-100"
-      }`}
-    >
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
       {nav}
 
       <div className="mt-4">

@@ -1,11 +1,15 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug } from "@/lib/courseCache";
+import { buildCourseSequence, hrefFor } from "@/lib/courseSequence";
 import { QuizPlayer } from "@/components/course/QuizPlayer";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
+import { SwipeNavShell } from "@/components/course/SwipeNavShell";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +70,26 @@ export default async function CourseQuizPage({
   const completedCount = completedLessonsCount + doneQuizIds.size;
   const percent = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
 
+  const sequence = buildCourseSequence(
+    course.modules.map((m) => ({
+      title: m.title,
+      quizId: m.quiz?.id ?? null,
+      lessons: m.lessons.map((l) => ({
+        id: l.id,
+        title: l.title,
+        isFreePreview: l.isFreePreview,
+        quizId: l.quiz?.id ?? null,
+      })),
+    })),
+    course.quiz ? { id: course.quiz.id } : null,
+    { isOwner, isEnrolled }
+  );
+  const currentSeqIndex = sequence.findIndex((it) => it.type === "quiz" && it.id === quiz.id);
+  const previousItem = currentSeqIndex > 0 ? sequence[currentSeqIndex - 1] : null;
+  const nextItem = currentSeqIndex >= 0 ? sequence[currentSeqIndex + 1] : null;
+  const previousHref = previousItem?.accessible ? hrefFor(slug, previousItem) : null;
+  const nextHref = nextItem?.accessible ? hrefFor(slug, nextItem) : null;
+
   return (
     <LessonLayoutShell
       courseSlug={slug}
@@ -97,7 +121,36 @@ export default async function CourseQuizPage({
         />
       }
     >
-      <div>
+      <SwipeNavShell
+        previousHref={previousHref}
+        nextHref={nextHref}
+        nav={
+          <div className="mb-4 flex items-center justify-between">
+            {previousHref && previousItem && (
+              <Link
+                href={previousHref}
+                className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              >
+                <ArrowLeft size={14} className="shrink-0" />
+                <span className="truncate">
+                  Aula anterior<span className="hidden sm:inline">: {previousItem.title}</span>
+                </span>
+              </Link>
+            )}
+            {nextHref && nextItem && (
+              <Link
+                href={nextHref}
+                className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
+              >
+                <span className="truncate">
+                  Próxima aula<span className="hidden sm:inline">: {nextItem.title}</span>
+                </span>
+                <ArrowRight size={14} className="shrink-0" />
+              </Link>
+            )}
+          </div>
+        }
+      >
         <QuizPlayer
           quizId={quiz.id}
           title={quiz.title}
@@ -110,7 +163,7 @@ export default async function CourseQuizPage({
             options: q.options.map((o) => ({ id: o.id, text: o.text })),
           }))}
         />
-      </div>
+      </SwipeNavShell>
     </LessonLayoutShell>
   );
 }

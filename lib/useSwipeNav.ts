@@ -54,18 +54,18 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
     }
   }
 
-  const swipeStateClassName =
-    swipeExit === "left"
-      ? "-translate-x-10 opacity-0"
-      : swipeExit === "right"
-      ? "translate-x-10 opacity-0"
-      : swipeEnter === "left"
-      ? "translate-x-10 opacity-0"
-      : swipeEnter === "right"
-      ? "-translate-x-10 opacity-0"
-      : "translate-x-0 opacity-100";
-
-  const swipeClassName = `transition-all duration-200 ease-in ${swipeStateClassName}`;
+  let swipeClassName: string;
+  if (swipeExit === "left") {
+    swipeClassName = "transition-all duration-200 ease-in -translate-x-10 opacity-0";
+  } else if (swipeExit === "right") {
+    swipeClassName = "transition-all duration-200 ease-in translate-x-10 opacity-0";
+  } else if (swipeEnter === "left") {
+    swipeClassName = "transition-all duration-200 ease-out translate-x-10 opacity-0";
+  } else if (swipeEnter === "right") {
+    swipeClassName = "transition-all duration-200 ease-out -translate-x-10 opacity-0";
+  } else {
+    swipeClassName = "transition-all duration-200 ease-out translate-x-0 opacity-100";
+  }
 
   return { handleTouchStart, handleTouchEnd, swipeClassName };
 }

@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { LessonBody } from "@/components/course/LessonBody";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
+import { LessonEngagementBar } from "@/components/course/LessonEngagementBar";
+import { LessonComments, type CommentData } from "@/components/course/LessonComments";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,8 @@ export default async function LessonPage({
     prisma.course.findUnique({
       where: { slug },
       include: {
-        collaborators: { select: { id: true } },
+        instructor: { select: { id: true, name: true } },
+        collaborators: { select: { id: true, name: true } },
         quiz: { select: { id: true } },
         modules: {
           orderBy: { order: "asc" },
@@ -64,7 +67,18 @@ export default async function LessonPage({
   const lessonQuizIds = allLessons.map((l) => l.quiz?.id).filter((id): id is string => Boolean(id));
   const allQuizIds = [...moduleQuizIds, ...lessonQuizIds, ...(course.quiz ? [course.quiz.id] : [])];
 
-  const [enrollment, fullQuiz, quizAttemptsUsed, progressRows, doneQuizAttempts] = await Promise.all([
+  const [
+    enrollment,
+    fullQuiz,
+    quizAttemptsUsed,
+    progressRows,
+    doneQuizAttempts,
+    topLevelComments,
+    likeReactions,
+    dislikeReactions,
+    myReaction,
+    updatedLesson,
+  ] = await Promise.all([
     prisma.enrollment.findUnique({
       where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
     }),
@@ -86,6 +100,29 @@ export default async function LessonPage({
           select: { quizId: true },
         })
       : Promise.resolve([]),
+    prisma.lessonComment.findMany({
+      where: { lessonId, parentId: null },
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { id: true, name: true } },
+        likes: { select: { userId: true } },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: { user: { select: { id: true, name: true } }, likes: { select: { userId: true } } },
+        },
+      },
+    }),
+    prisma.lessonReaction.count({ where: { lessonId, type: "LIKE" } }),
+    prisma.lessonReaction.count({ where: { lessonId, type: "DISLIKE" } }),
+    prisma.lessonReaction.findUnique({
+      where: { userId_lessonId: { userId: session.user.id, lessonId } },
+      select: { type: true },
+    }),
+    prisma.lesson.update({
+      where: { id: lessonId },
+      data: { viewCount: { increment: 1 } },
+      select: { viewCount: true },
+    }),
   ]);
 
   const isEnrolled = Boolean(enrollment);
@@ -96,6 +133,25 @@ export default async function LessonPage({
   const progressByLessonId = Object.fromEntries(progressRows.map((p) => [p.lessonId, p.completed]));
   const completedLessonsCount = Object.values(progressByLessonId).filter(Boolean).length;
   const doneQuizIds = new Set(doneQuizAttempts.map((a) => a.quizId));
+
+  const authors = [course.instructor, ...course.collaborators];
+  const commentTree: CommentData[] = topLevelComments.map((c) => ({
+    id: c.id,
+    content: c.content,
+    createdAt: c.createdAt.toISOString(),
+    user: c.user,
+    likeCount: c.likes.length,
+    likedByMe: c.likes.some((l) => l.userId === session.user.id),
+    replies: c.replies.map((r) => ({
+      id: r.id,
+      content: r.content,
+      createdAt: r.createdAt.toISOString(),
+      user: r.user,
+      likeCount: r.likes.length,
+      likedByMe: r.likes.some((l) => l.userId === session.user.id),
+      replies: [],
+    })),
+  }));
 
   const totalItems = allLessons.length + allQuizIds.length;
   const completedCount = completedLessonsCount + doneQuizIds.size;
@@ -180,6 +236,28 @@ export default async function LessonPage({
           overview={lesson.description || course.description}
           resources={resources.map((r) => ({ id: r.id, name: r.name, url: r.url, type: r.type }))}
           progress={progressSidebar}
+          engagement={
+            <LessonEngagementBar
+              lessonId={lesson.id}
+              authors={authors}
+              viewCount={updatedLesson.viewCount}
+              createdAt={lesson.createdAt.toISOString()}
+              initialLikeCount={likeReactions}
+              initialDislikeCount={dislikeReactions}
+              initialReaction={myReaction?.type ?? null}
+              isAuthenticated={Boolean(session)}
+            />
+          }
+          comments={
+            <LessonComments
+              lessonId={lesson.id}
+              comments={commentTree}
+              currentUserId={session.user.id}
+              currentUserName={session.user.name ?? null}
+              canModerate={isOwner}
+              isAuthenticated={Boolean(session)}
+            />
+          }
           quiz={
             fullQuiz
               ? {

@@ -55,6 +55,8 @@ export function LessonBody({
   resources,
   quiz,
   progress,
+  engagement,
+  comments,
 }: {
   header: React.ReactNode;
   lessonId: string;
@@ -67,6 +69,8 @@ export function LessonBody({
   resources: LessonResourceData[];
   quiz: QuizData | null;
   progress?: React.ReactNode;
+  engagement?: React.ReactNode;
+  comments?: React.ReactNode;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -84,6 +88,7 @@ export function LessonBody({
   return (
     <div>
       {header}
+      {engagement && <div className="mt-3">{engagement}</div>}
 
       <div className="mt-4">
         <div className={sideBySide ? "lg:flex lg:items-stretch lg:gap-6" : ""}>
@@ -164,6 +169,8 @@ export function LessonBody({
             />
           </div>
         )}
+
+        {comments}
       </div>
 
       {previewResource && maximized && (

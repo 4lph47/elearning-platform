@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ThumbsUp, ThumbsDown, Forward, Check } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
+import { linkify } from "@/lib/linkify";
 
 interface Author {
   id: string;
@@ -153,7 +154,7 @@ export function LessonEngagementBar({
             <p className="text-sm text-slate-300">
               {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"} · {timeAgo(createdAt)}
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{overview}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{linkify(overview)}</p>
           </div>
         )}
       </div>

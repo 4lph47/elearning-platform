@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Paperclip, Eye, Presentation } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
+import { linkify } from "@/lib/linkify";
 
 export interface LessonResourceData {
   id: string;
@@ -84,7 +85,7 @@ export function LessonTabs({
           comments
         ) : tab === "overview" ? (
           <div className="lg:hidden">
-            <p className="whitespace-pre-wrap leading-relaxed">{overview}</p>
+            <p className="whitespace-pre-wrap leading-relaxed">{linkify(overview)}</p>
 
             {videoMeta && (
               <div className="mt-5 space-y-4 border-t border-white/10 pt-4">

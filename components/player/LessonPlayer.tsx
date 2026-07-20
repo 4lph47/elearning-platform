@@ -83,11 +83,11 @@ export function LessonPlayer({
     <div className="space-y-4">
       {type === "TEXT" ? (
         <div
-          className={`overflow-y-auto rounded-lg border border-white/10 bg-slate-950 p-6 lg:max-w-none ${
+          className={`overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-slate-950 lg:max-w-none ${
             collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
           }`}
         >
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">{textContent}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>
       ) : youtubeId ? (
         <iframe

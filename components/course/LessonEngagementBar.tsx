@@ -78,7 +78,7 @@ export function LessonEngagementBar({
 
   const meta = (
     <>
-      <span className="font-medium text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
+      <span className="font-medium text-slate-700 dark:text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
       <span>·</span>
       <span>
         {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"}
@@ -96,7 +96,7 @@ export function LessonEngagementBar({
         onClick={() => react("LIKE")}
         disabled={!isAuthenticated}
         className={`flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed ${
-          reaction === "LIKE" ? "text-blue-400" : "text-slate-300 hover:text-white"
+          reaction === "LIKE" ? "text-blue-400" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
         }`}
       >
         <ThumbsUp size={19} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
@@ -107,13 +107,13 @@ export function LessonEngagementBar({
         onClick={() => react("DISLIKE")}
         disabled={!isAuthenticated}
         className={`disabled:cursor-not-allowed ${
-          reaction === "DISLIKE" ? "text-red-400" : "text-slate-300 hover:text-white"
+          reaction === "DISLIKE" ? "text-red-400" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
         }`}
       >
         <ThumbsDown size={19} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
       </button>
 
-      <button onClick={share} className="text-white" aria-label="Partilhar">
+      <button onClick={share} className="text-slate-900 dark:text-white" aria-label="Partilhar">
         {copied ? <Check size={19} className="text-blue-400" /> : <Share2 size={19} />}
       </button>
     </div>
@@ -123,7 +123,7 @@ export function LessonEngagementBar({
     <div className="pb-4">
       {/* Mobile: linha meta em cima, avatar+ações por baixo. */}
       <div className="lg:hidden">
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-400">{meta}</div>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-500 dark:text-slate-400">{meta}</div>
         <div className="mt-3 flex items-center justify-between gap-3">
           {primaryAuthor && (
             <Link href={`/instructors/${primaryAuthor.id}`} className="flex shrink-0 items-center">
@@ -139,7 +139,7 @@ export function LessonEngagementBar({
         {primaryAuthor && (
           <Link href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 items-center gap-2.5">
             {avatar}
-            <span className="flex flex-wrap items-center gap-x-1.5 truncate text-sm text-slate-400">{meta}</span>
+            <span className="flex flex-wrap items-center gap-x-1.5 truncate text-sm text-slate-500 dark:text-slate-400">{meta}</span>
           </Link>
         )}
         {actions}

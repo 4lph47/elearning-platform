@@ -96,21 +96,21 @@ function CommentRow({
 
   return (
     <div className="flex gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-slate-200">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
         {initials(comment.user.name)}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm">
-          <span className="font-medium text-slate-100">{comment.user.name}</span>{" "}
+          <span className="font-medium text-slate-800 dark:text-slate-100">{comment.user.name}</span>{" "}
           <span className="text-xs text-slate-500">{timeAgo(comment.createdAt)}</span>
         </p>
-        <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-300">{comment.content}</p>
+        <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">{comment.content}</p>
 
         <div className="mt-1.5 flex items-center gap-4 text-xs text-slate-500">
           <button
             onClick={toggleLike}
             disabled={!currentUserId}
-            className={`flex items-center gap-1 hover:text-slate-300 disabled:cursor-not-allowed ${liked ? "text-blue-400" : ""}`}
+            className={`flex items-center gap-1 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
           >
             <ThumbsUp size={13} className={liked ? "fill-blue-400" : ""} /> {likeCount > 0 ? likeCount : ""}
           </button>
@@ -120,7 +120,7 @@ function CommentRow({
                 setReplying((v) => !v);
                 if (!replying && isReply) setReplyText(`@${comment.user.name} `);
               }}
-              className="flex items-center gap-1 hover:text-slate-300"
+              className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300"
             >
               <MessageSquare size={13} /> Responder
             </button>
@@ -139,7 +139,7 @@ function CommentRow({
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="Escreve uma resposta..."
               autoFocus
-              className="flex-1 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+              className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
             />
             <button
               type="submit"
@@ -161,7 +161,7 @@ function CommentRow({
               {comment.replies.length} resposta{comment.replies.length !== 1 ? "s" : ""}
             </button>
             {showReplies && (
-              <div className="mt-3 space-y-3 border-l border-white/10 pl-4">
+              <div className="mt-3 space-y-3 border-l border-slate-200 pl-4 dark:border-white/10">
                 {comment.replies.map((reply) => (
                   <CommentRow
                     key={reply.id}
@@ -232,17 +232,25 @@ export function LessonComments({
   return (
     <div className="mt-8">
       <div className="mb-4 flex items-center gap-6">
-        <h2 className="text-lg font-semibold text-white">{totalCount} comentário{totalCount !== 1 ? "s" : ""}</h2>
-        <div className="flex items-center gap-1 text-sm text-slate-400">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{totalCount} comentário{totalCount !== 1 ? "s" : ""}</h2>
+        <div className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
           <button
             onClick={() => setSort("recent")}
-            className={`rounded-full px-3 py-1 ${sort === "recent" ? "bg-white/10 text-white" : "hover:text-slate-200"}`}
+            className={`rounded-full px-3 py-1 ${
+              sort === "recent"
+                ? "bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white"
+                : "hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
           >
             Recentes
           </button>
           <button
             onClick={() => setSort("top")}
-            className={`rounded-full px-3 py-1 ${sort === "top" ? "bg-white/10 text-white" : "hover:text-slate-200"}`}
+            className={`rounded-full px-3 py-1 ${
+              sort === "top"
+                ? "bg-slate-900/10 text-slate-900 dark:bg-white/10 dark:text-white"
+                : "hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
           >
             Relevantes
           </button>
@@ -251,7 +259,7 @@ export function LessonComments({
 
       {isAuthenticated ? (
         <form onSubmit={submitComment} className="mb-6 flex gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-slate-200">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
             {currentUserName ? initials(currentUserName) : "?"}
           </span>
           <div className="flex-1">
@@ -259,14 +267,14 @@ export function LessonComments({
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Adiciona um comentário..."
-              className="w-full border-b border-white/15 bg-transparent pb-1.5 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+              className="w-full border-b border-slate-300 bg-transparent pb-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:text-white dark:placeholder-slate-500"
             />
             {text && (
               <div className="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setText("")}
-                  className="rounded-full px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-white/5"
+                  className="rounded-full px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"
                 >
                   Cancelar
                 </button>

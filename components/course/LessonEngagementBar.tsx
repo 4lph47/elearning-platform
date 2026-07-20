@@ -32,7 +32,6 @@ export function LessonEngagementBar({
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [reaction, setReaction] = useState(initialReaction);
   const [copied, setCopied] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const primaryAuthor = authors[0];
 
   async function react(type: "LIKE" | "DISLIKE") {
@@ -76,32 +75,7 @@ export function LessonEngagementBar({
         </span>
         <span>·</span>
         <span>{timeAgo(createdAt)}</span>
-        <button onClick={() => setShowDetails((v) => !v)} className="font-medium text-slate-200 hover:text-white">
-          {showDetails ? "menos" : "...mais"}
-        </button>
       </div>
-
-      {showDetails && (
-        <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
-          <p className="text-sm font-semibold text-white">Detalhes do vídeo</p>
-          <dl className="mt-2 space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-slate-400">Data</dt>
-              <dd className="text-slate-200">
-                {new Date(createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-400">Visualizações</dt>
-              <dd className="text-slate-200">{viewCount.toLocaleString("pt-PT")}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-400">Gostos</dt>
-              <dd className="text-slate-200">{likeCount.toLocaleString("pt-PT")}</dd>
-            </div>
-          </dl>
-        </div>
-      )}
 
       <div className="mt-3 flex items-center justify-between gap-3">
         {primaryAuthor && (

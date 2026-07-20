@@ -3,7 +3,7 @@
 import { useState, cloneElement, type ReactElement } from "react";
 import { X, Maximize2, Minimize2, Check, Circle } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
-import { LessonTabs, type LessonResourceData } from "@/components/course/LessonTabs";
+import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { QuizPlayer } from "@/components/course/QuizPlayer";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { SlideDeckViewer } from "@/components/course/SlideDeckViewer";
@@ -58,6 +58,7 @@ export function LessonBody({
   progress,
   engagement,
   comments,
+  videoMeta,
 }: {
   nav: React.ReactNode;
   title: React.ReactNode;
@@ -73,6 +74,7 @@ export function LessonBody({
   progress?: React.ReactNode;
   engagement?: ReactElement<{ completeButton?: React.ReactNode }>;
   comments?: React.ReactNode;
+  videoMeta?: VideoMeta;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -168,6 +170,7 @@ export function LessonBody({
                 resources={resources}
                 progress={progress}
                 comments={comments}
+                videoMeta={videoMeta}
                 onSelectResource={(r) => setPreviewResource((prev) => (prev?.id === r.id ? null : r))}
               />
             )}

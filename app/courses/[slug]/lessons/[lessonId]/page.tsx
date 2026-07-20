@@ -257,6 +257,12 @@ export default async function LessonPage({
               isAuthenticated={Boolean(session)}
             />
           }
+          videoMeta={{
+            authors,
+            viewCount: updatedLesson.viewCount,
+            likeCount: likeReactions,
+            createdAt: lesson.createdAt.toISOString(),
+          }}
           quiz={
             fullQuiz
               ? {

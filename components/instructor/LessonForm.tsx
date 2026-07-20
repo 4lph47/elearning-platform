@@ -116,7 +116,7 @@ export function LessonForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-md border border-slate-300 bg-slate-50 p-3">
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-md border border-slate-300 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
       <div>
         <Label htmlFor={`lesson-title-${lesson?.id ?? "new"}`}>Título da aula</Label>
         <Input
@@ -136,7 +136,7 @@ export function LessonForm({
               type="button"
               onClick={() => setType(t)}
               className={`flex-1 rounded-md border px-3 py-1.5 text-sm ${
-                type === t ? "border-slate-700 bg-slate-800 text-white" : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                type === t ? "border-slate-800 bg-slate-900 text-white dark:border-slate-600 dark:bg-slate-700" : "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"
               }`}
             >
               {t === "VIDEO" ? "Vídeo" : "Texto"}
@@ -149,13 +149,13 @@ export function LessonForm({
         <div>
           <Label>Vídeo da aula (obrigatório)</Label>
           <FileUploadInput kind="VIDEO" onUploaded={(r) => setContentUrl(r.url)} />
-          <p className="my-1.5 text-center text-xs text-slate-400">ou</p>
+          <p className="my-1.5 text-center text-xs text-slate-400 dark:text-slate-500">ou</p>
           <Input
             placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
             defaultValue={contentUrl?.includes("youtu") ? contentUrl : ""}
             onBlur={(e) => e.target.value && setContentUrl(e.target.value)}
           />
-          {contentUrl && <p className="mt-1 text-xs text-slate-500">Vídeo atual: {contentUrl}</p>}
+          {contentUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Vídeo atual: {contentUrl}</p>}
         </div>
       ) : (
         <div>
@@ -180,7 +180,7 @@ export function LessonForm({
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
         <input
           type="checkbox"
           checked={isFreePreview}
@@ -195,7 +195,7 @@ export function LessonForm({
           <Label>Envolvidos nesta aula</Label>
           <div className="space-y-1">
             {courseAuthors.map((a) => (
-              <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700">
+              <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={contributorIds.includes(a.id)}
@@ -210,19 +210,19 @@ export function LessonForm({
       )}
 
       {isEditing && (
-        <div className="border-t border-slate-200 pt-3">
+        <div className="border-t border-slate-200 pt-3 dark:border-white/10">
           <Label>Materiais de apoio (anexos extra: PDF, imagem...)</Label>
           <ul className="mb-2 space-y-1">
             {resources.map((r) => (
               <li key={r.id} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1.5">
-                  <Paperclip size={14} className="text-slate-400" />
+                <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                  <Paperclip size={14} className="text-slate-400 dark:text-slate-500" />
                   {r.name}
                 </span>
                 <button
                   type="button"
                   onClick={() => handleRemoveResource(r.id)}
-                  className="text-xs text-red-600 hover:underline"
+                  className="text-xs text-red-600 hover:underline dark:text-red-400"
                 >
                   remover
                 </button>
@@ -237,8 +237,8 @@ export function LessonForm({
                 onClick={() => setResourceKind(k)}
                 className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
                   resourceKind === k
-                    ? "border-slate-700 bg-slate-800 text-white"
-                    : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                    ? "border-slate-800 bg-slate-900 text-white dark:border-slate-600 dark:bg-slate-700"
+                    : "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"
                 }`}
               >
                 {k === "DOCUMENT" && (
@@ -264,12 +264,12 @@ export function LessonForm({
       )}
 
       {isEditing && type === "VIDEO" && (
-        <div className="border-t border-slate-200 pt-3">
+        <div className="border-t border-slate-200 pt-3 dark:border-white/10">
           <QuizEditor scope="LESSON" parentId={lesson!.id} label="Quiz da aula" existingQuiz={lesson?.quiz} />
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>

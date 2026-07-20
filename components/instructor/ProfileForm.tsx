@@ -64,7 +64,7 @@ export function ProfileForm({
           onChange={(e) => setBio(e.target.value)}
           placeholder="Conta um pouco sobre a tua experiência e o que ensinas..."
         />
-        <p className="mt-1 text-xs text-slate-400">{bio.length}/600</p>
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{bio.length}/600</p>
       </div>
 
       <div>
@@ -108,12 +108,12 @@ export function ProfileForm({
         />
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={saving}>
           {saving ? "A guardar..." : "Guardar"}
         </Button>
-        {saved && <span className="text-sm text-slate-500">Guardado.</span>}
+        {saved && <span className="text-sm text-slate-500 dark:text-slate-400">Guardado.</span>}
       </div>
     </form>
   );

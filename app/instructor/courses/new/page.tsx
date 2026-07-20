@@ -71,14 +71,14 @@ export default function NewCoursePage() {
               id="level"
               value={level}
               onChange={(e) => setLevel(e.target.value as typeof level)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
             >
-              <option value="beginner">Iniciante</option>
-              <option value="intermediate">Intermédio</option>
-              <option value="advanced">Avançado</option>
+              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="beginner">Iniciante</option>
+              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="intermediate">Intermédio</option>
+              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="advanced">Avançado</option>
             </select>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "A criar..." : "Criar curso e continuar"}
           </Button>

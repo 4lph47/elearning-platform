@@ -158,7 +158,7 @@ export function QuizEditor({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+        className="flex items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"
       >
         <HelpCircle size={14} />
         {existingQuiz ? `${label} (${existingQuiz.questions.length} perguntas)` : `+ ${label}`}
@@ -167,7 +167,7 @@ export function QuizEditor({
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-slate-300 bg-slate-50 p-3">
+    <div className="space-y-3 rounded-md border border-slate-300 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
       <div>
         <Label htmlFor={`quiz-title-${parentId}`}>Título do quiz</Label>
         <Input id={`quiz-title-${parentId}`} value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -185,7 +185,7 @@ export function QuizEditor({
               onChange={(e) => setMaxAttempts(e.target.value)}
               placeholder="Ilimitado"
             />
-            <p className="mt-1 text-xs text-slate-400">Só o teste final do curso pode limitar tentativas.</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Só o teste final do curso pode limitar tentativas.</p>
           </div>
         )}
         <div>
@@ -203,9 +203,9 @@ export function QuizEditor({
 
       <div className="space-y-3">
         {questions.map((q, qi) => (
-          <div key={q.id} className="rounded-md border border-slate-200 bg-white p-3">
+          <div key={q.id} className="rounded-md border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/5">
             <div className="mb-2 flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-400">#{qi + 1}</span>
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500">#{qi + 1}</span>
               <Input
                 value={q.text}
                 onChange={(e) => updateQuestionText(q.id, e.target.value)}
@@ -215,7 +215,7 @@ export function QuizEditor({
               <button
                 type="button"
                 onClick={() => removeQuestion(q.id)}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                 aria-label="Remover pergunta"
               >
                 <Trash2 size={16} />
@@ -240,7 +240,7 @@ export function QuizEditor({
                   <button
                     type="button"
                     onClick={() => removeOption(q.id, o.id)}
-                    className="text-slate-400 hover:text-red-600"
+                    className="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
                     aria-label="Remover opção"
                   >
                     <Trash2 size={14} />
@@ -250,7 +250,7 @@ export function QuizEditor({
               <button
                 type="button"
                 onClick={() => addOption(q.id)}
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900"
+                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
               >
                 <Plus size={12} /> Opção
               </button>
@@ -262,14 +262,14 @@ export function QuizEditor({
       <button
         type="button"
         onClick={addQuestion}
-        className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900"
+        className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
       >
         <Plus size={14} /> Pergunta
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <div className="flex gap-2 border-t border-slate-200 pt-3">
+      <div className="flex gap-2 border-t border-slate-200 pt-3 dark:border-white/10">
         <Button type="button" onClick={handleSave} disabled={saving}>
           {saving ? "A guardar..." : "Guardar quiz"}
         </Button>

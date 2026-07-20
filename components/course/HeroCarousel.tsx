@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BookOpen, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +15,11 @@ export interface HeroCarouselItem {
 export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Texto atrasa a troca do fundo: desaparece logo, espera 1s e só depois
+  // mostra o texto do novo slide (em vez de trocar tudo em simultâneo).
+  const [textIndex, setTextIndex] = useState(0);
+  const [textVisible, setTextVisible] = useState(true);
+  const mounted = useRef(false);
 
   useEffect(() => {
     if (items.length <= 1 || paused) return;
@@ -22,9 +27,23 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
     return () => clearInterval(timer);
   }, [items.length, paused]);
 
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    setTextVisible(false);
+    const timer = setTimeout(() => {
+      setTextIndex(index);
+      setTextVisible(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [index]);
+
   const featured = items[index].card;
   const activeVideoUrl = items[index].videoUrl;
   const activeYoutubeId = activeVideoUrl ? getYouTubeId(activeVideoUrl) : null;
+  const textCard = items[textIndex].card;
 
   return (
     <section
@@ -77,38 +96,33 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
 
       <div className="relative flex min-h-[520px] items-end sm:min-h-[460px] sm:items-center lg:min-h-[600px]">
         <div className="relative max-w-xl px-4 pb-8 sm:px-8 sm:pb-0">
-          {items.map((item, i) => (
-            <div
-              key={item.card.slug}
-              className={`transition-all duration-500 ${
-                i === index
-                  ? "relative translate-y-0 opacity-100"
-                  : "pointer-events-none absolute inset-0 translate-y-4 opacity-0"
-              }`}
-            >
-              <span className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-                {item.card.category}
-              </span>
-              <h1 className="mt-3 text-3xl font-bold text-slate-900 drop-shadow-sm dark:text-white dark:drop-shadow sm:text-5xl">
-                {item.card.title}
-              </h1>
-              <p className="mt-3 line-clamp-3 text-sm text-slate-700 drop-shadow-sm dark:text-slate-200 dark:drop-shadow sm:text-base">
-                {item.card.description}
-              </p>
-              <div className="mt-6 flex gap-3">
-                <Link href={`/courses/${item.card.slug}`}>
-                  <Button variant="accent">
-                    <BookOpen size={16} /> Inscrever-me
-                  </Button>
-                </Link>
-                <Link href={`/courses/${item.card.slug}`}>
-                  <Button variant="outline-dark">
-                    <Info size={16} /> Mais informações
-                  </Button>
-                </Link>
-              </div>
+          <div
+            className={`transition-all duration-500 ${
+              textVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+            }`}
+          >
+            <span className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+              {textCard.category}
+            </span>
+            <h1 className="mt-3 text-3xl font-bold text-slate-900 drop-shadow-sm dark:text-white dark:drop-shadow sm:text-5xl">
+              {textCard.title}
+            </h1>
+            <p className="mt-3 line-clamp-3 text-sm text-slate-700 drop-shadow-sm dark:text-slate-200 dark:drop-shadow sm:text-base">
+              {textCard.description}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <Link href={`/courses/${textCard.slug}`}>
+                <Button variant="accent">
+                  <BookOpen size={16} /> Inscrever-me
+                </Button>
+              </Link>
+              <Link href={`/courses/${textCard.slug}`}>
+                <Button variant="outline-dark">
+                  <Info size={16} /> Mais informações
+                </Button>
+              </Link>
             </div>
-          ))}
+          </div>
 
           {items.length > 1 && (
             <div className="mt-8 flex gap-1.5">

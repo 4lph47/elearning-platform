@@ -36,7 +36,7 @@ export function AddModuleForm({ courseId, nextOrder }: { courseId: string; nextO
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 rounded-lg border border-slate-200 bg-white p-3">
+    <form onSubmit={handleSubmit} className="flex gap-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-slate-950">
       <Input
         placeholder="Título do módulo"
         value={title}

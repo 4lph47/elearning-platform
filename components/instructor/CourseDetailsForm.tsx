@@ -62,7 +62,7 @@ function EditableListField({
             <button
               type="button"
               onClick={() => list.remove(i)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-red-600"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:text-slate-500 dark:hover:bg-white/10"
               aria-label="Remover"
             >
               <X size={14} />
@@ -73,7 +73,7 @@ function EditableListField({
       <button
         type="button"
         onClick={list.add}
-        className="mt-2 flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+        className="mt-2 flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
       >
         <Plus size={14} /> Adicionar item
       </button>
@@ -168,7 +168,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           </Badge>
           {course.ratingCount > 0 && (
             <span className="flex items-center gap-1 text-xs text-slate-500">
-              <Star size={12} className="fill-slate-800 text-slate-800" />
+              <Star size={12} className="fill-slate-800 text-slate-800 dark:fill-slate-200 dark:text-slate-200" />
               {course.rating.toFixed(1)} ({course.ratingCount} avaliações)
             </span>
           )}
@@ -213,11 +213,11 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
               id="level"
               value={level}
               onChange={(e) => setLevel(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
             >
-              <option value="beginner">Iniciante</option>
-              <option value="intermediate">Intermédio</option>
-              <option value="advanced">Avançado</option>
+              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="beginner">Iniciante</option>
+              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="intermediate">Intermédio</option>
+              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="advanced">Avançado</option>
             </select>
           </div>
           <div>
@@ -248,13 +248,13 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         <div>
           <Label>Trailer do curso</Label>
           <FileUploadInput kind="VIDEO" onUploaded={(r) => setTrailerUrl(r.url)} />
-          <p className="my-1.5 text-center text-xs text-slate-400">ou</p>
+          <p className="my-1.5 text-center text-xs text-slate-400 dark:text-slate-500">ou</p>
           <Input
             placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
             defaultValue={trailerUrl?.includes("youtu") ? trailerUrl : ""}
             onBlur={(e) => e.target.value && setTrailerUrl(e.target.value)}
           />
-          {trailerUrl && <p className="mt-1 text-xs text-slate-500">Trailer atual: {trailerUrl}</p>}
+          {trailerUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Trailer atual: {trailerUrl}</p>}
         </div>
 
         <EditableListField label="O que os alunos vão aprender" placeholder="Ex.: Fundamentos práticos" list={outcomes} />
@@ -270,12 +270,12 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
             onChange={(e) => setBundleName(e.target.value)}
           />
           {bundleName.trim() && (
-            <div className="mt-2 space-y-1.5 rounded-md border border-slate-200 p-3">
+            <div className="mt-2 space-y-1.5 rounded-md border border-slate-200 p-3 dark:border-white/10">
               {otherCourses.length === 0 ? (
                 <p className="text-xs text-slate-500">Não tens outros cursos publicados para incluir no bundle.</p>
               ) : (
                 otherCourses.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input
                       type="checkbox"
                       checked={bundleCourseIds.includes(c.id)}
@@ -297,12 +297,15 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           </p>
           <div className="space-y-1.5">
             {collaborators.map((c) => (
-              <div key={c.email} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-1.5 text-sm">
+              <div
+                key={c.email}
+                className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-1.5 text-sm dark:border-white/10"
+              >
                 <span>{c.name !== c.email ? `${c.name} (${c.email})` : c.email}</span>
                 <button
                   type="button"
                   onClick={() => removeCollaborator(c.email)}
-                  className="text-xs text-red-600 hover:underline"
+                  className="text-xs text-red-600 hover:underline dark:text-red-400"
                 >
                   remover
                 </button>
@@ -328,13 +331,13 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <Button type="submit" disabled={saving}>
           {saving ? "A guardar..." : "Guardar alterações"}
         </Button>
       </form>
 
-      <div className="mt-6 border-t border-slate-200 pt-4">
+      <div className="mt-6 border-t border-slate-200 pt-4 dark:border-white/10">
         <QuizEditor scope="COURSE" parentId={course.id} label="Quiz final do curso" existingQuiz={course.quiz} />
       </div>
     </Card>

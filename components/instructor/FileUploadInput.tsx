@@ -53,13 +53,13 @@ export function FileUploadInput({
         accept={ACCEPT[kind]}
         onChange={handleChange}
         disabled={uploading}
-        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15"
       />
-      {uploading && <p className="mt-1 text-xs text-slate-500">A enviar...</p>}
+      {uploading && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A enviar...</p>}
       {uploadedName && !uploading && (
-        <p className="mt-1 text-xs text-slate-600">Enviado: {uploadedName}</p>
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Enviado: {uploadedName}</p>
       )}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

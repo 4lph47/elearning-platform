@@ -21,7 +21,10 @@ export default async function InstructorProfileSettingsPage() {
     <div className="mx-auto max-w-2xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Perfil público</h1>
-        <Link href={`/instructors/${session.user.id}`} className="text-sm font-medium text-slate-600 hover:text-slate-900">
+        <Link
+          href={`/instructors/${session.user.id}`}
+          className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+        >
           Ver perfil público →
         </Link>
       </div>

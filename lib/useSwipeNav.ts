@@ -21,8 +21,13 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
 
   useEffect(() => {
     if (!swipeEnter) return;
-    const t = setTimeout(() => setSwipeEnter(null), 20);
-    return () => clearTimeout(t);
+    // double rAF: guarantees the browser paints the offset starting position
+    // before we flip to settled, so the transition actually animates - the
+    // minimum possible gap, tied to the paint cycle instead of a guessed timer.
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSwipeEnter(null));
+    });
+    return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -46,11 +51,11 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
     if (dx < 0 && nextHref) {
       setSwipeExit("left");
       sessionStorage.setItem(STORAGE_KEY, "left");
-      setTimeout(() => router.push(nextHref), 1180);
+      setTimeout(() => router.push(nextHref), 1200);
     } else if (dx > 0 && previousHref) {
       setSwipeExit("right");
       sessionStorage.setItem(STORAGE_KEY, "right");
-      setTimeout(() => router.push(previousHref), 1180);
+      setTimeout(() => router.push(previousHref), 1200);
     }
   }
 

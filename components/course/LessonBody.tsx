@@ -72,7 +72,7 @@ export function LessonBody({
   resources: LessonResourceData[];
   quiz: QuizData | null;
   progress?: React.ReactNode;
-  engagement?: ReactElement<{ completeButton?: React.ReactNode }>;
+  engagement?: ReactElement<{ completeButton?: React.ReactNode; overview?: string }>;
   comments?: React.ReactNode;
   videoMeta?: VideoMeta;
 }) {
@@ -119,7 +119,7 @@ export function LessonBody({
     </button>
   );
 
-  const engagementWithButton = engagement && cloneElement(engagement, { completeButton });
+  const engagementWithButton = engagement && cloneElement(engagement, { completeButton, overview });
 
   return (
     <div>

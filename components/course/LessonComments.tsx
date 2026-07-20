@@ -229,13 +229,13 @@ export function LessonComments({
             onClick={() => setSort("recent")}
             className={`rounded-full px-3 py-1 ${sort === "recent" ? "bg-white/10 text-white" : "hover:text-slate-200"}`}
           >
-            Mais recentes
+            Recentes
           </button>
           <button
             onClick={() => setSort("top")}
             className={`rounded-full px-3 py-1 ${sort === "top" ? "bg-white/10 text-white" : "hover:text-slate-200"}`}
           >
-            Mais relevantes
+            Relevantes
           </button>
         </div>
       </div>

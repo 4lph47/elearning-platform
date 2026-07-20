@@ -41,7 +41,7 @@ export function LessonTabs({
       <div className="flex gap-6">
         <button
           onClick={() => setTab("overview")}
-          className={`px-1 py-2 text-sm font-medium ${
+          className={`px-1 py-2 text-sm font-medium lg:hidden ${
             tab === "overview" ? "text-white" : "text-slate-500 hover:text-slate-300"
           }`}
         >
@@ -83,7 +83,7 @@ export function LessonTabs({
         ) : tab === "comments" ? (
           comments
         ) : tab === "overview" ? (
-          <div>
+          <div className="lg:hidden">
             <p className="whitespace-pre-wrap leading-relaxed">{overview}</p>
 
             {videoMeta && (

@@ -3,11 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Textarea, Label } from "@/components/ui/Input";
+import { Textarea, Label, Input } from "@/components/ui/Input";
 
-export function ProfileForm({ initialBio }: { initialBio: string }) {
+export function ProfileForm({
+  initialBio,
+  initialWebsiteUrl,
+  initialTwitterUrl,
+  initialLinkedinUrl,
+  initialYoutubeUrl,
+}: {
+  initialBio: string;
+  initialWebsiteUrl?: string;
+  initialTwitterUrl?: string;
+  initialLinkedinUrl?: string;
+  initialYoutubeUrl?: string;
+}) {
   const router = useRouter();
   const [bio, setBio] = useState(initialBio);
+  const [websiteUrl, setWebsiteUrl] = useState(initialWebsiteUrl ?? "");
+  const [twitterUrl, setTwitterUrl] = useState(initialTwitterUrl ?? "");
+  const [linkedinUrl, setLinkedinUrl] = useState(initialLinkedinUrl ?? "");
+  const [youtubeUrl, setYoutubeUrl] = useState(initialYoutubeUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -21,7 +37,7 @@ export function ProfileForm({ initialBio }: { initialBio: string }) {
     const res = await fetch("/api/instructor/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bio }),
+      body: JSON.stringify({ bio, websiteUrl, twitterUrl, linkedinUrl, youtubeUrl }),
     });
 
     setSaving(false);
@@ -50,6 +66,48 @@ export function ProfileForm({ initialBio }: { initialBio: string }) {
         />
         <p className="mt-1 text-xs text-slate-400">{bio.length}/600</p>
       </div>
+
+      <div>
+        <Label htmlFor="websiteUrl">Website</Label>
+        <Input
+          id="websiteUrl"
+          type="url"
+          value={websiteUrl}
+          onChange={(e) => setWebsiteUrl(e.target.value)}
+          placeholder="https://o-teu-site.com"
+        />
+      </div>
+      <div>
+        <Label htmlFor="twitterUrl">Twitter / X</Label>
+        <Input
+          id="twitterUrl"
+          type="url"
+          value={twitterUrl}
+          onChange={(e) => setTwitterUrl(e.target.value)}
+          placeholder="https://x.com/utilizador"
+        />
+      </div>
+      <div>
+        <Label htmlFor="linkedinUrl">LinkedIn</Label>
+        <Input
+          id="linkedinUrl"
+          type="url"
+          value={linkedinUrl}
+          onChange={(e) => setLinkedinUrl(e.target.value)}
+          placeholder="https://linkedin.com/in/utilizador"
+        />
+      </div>
+      <div>
+        <Label htmlFor="youtubeUrl">YouTube</Label>
+        <Input
+          id="youtubeUrl"
+          type="url"
+          value={youtubeUrl}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+          placeholder="https://youtube.com/@canal"
+        />
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={saving}>

@@ -88,7 +88,7 @@ export function LessonTabs({
             <p className="whitespace-pre-wrap leading-relaxed">{linkify(overview)}</p>
 
             {videoMeta && (
-              <div className="mt-5 space-y-4 border-t border-white/10 pt-4">
+              <div className="mt-5 space-y-4">
                 {videoMeta.authors[0] && (
                   <Link
                     href={`/instructors/${videoMeta.authors[0].id}`}

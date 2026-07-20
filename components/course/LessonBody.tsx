@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, cloneElement, type ReactElement } from "react";
-import { X, Maximize2, Minimize2, Check, Circle } from "lucide-react";
+import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { QuizPlayer } from "@/components/course/QuizPlayer";
@@ -114,7 +114,7 @@ export function LessonBody({
           <Check size={14} strokeWidth={3} className="text-white" />
         </span>
       ) : (
-        <Circle size={22} className="text-slate-500 hover:text-slate-300" />
+        <CircleCheck size={22} className="text-slate-500 hover:text-slate-300" />
       )}
     </button>
   );
@@ -224,7 +224,7 @@ export function LessonBody({
 
       {previewResource && maximized && (
         <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-950 shadow-2xl lg:inset-10">
-          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+          <div className="flex items-center justify-between px-3 py-2">
             <span className="truncate text-sm font-medium text-slate-200">{previewResource.name}</span>
             <div className="flex items-center gap-1.5">
               <button

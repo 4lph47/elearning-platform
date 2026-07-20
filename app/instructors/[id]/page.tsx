@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Star, Users, BookOpen, MessageSquare } from "lucide-react";
+import { Star, Users, BookOpen, MessageSquare, Globe, Link2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { CourseTile } from "@/components/course/CourseTile";
 
@@ -27,6 +27,10 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       name: true,
       role: true,
       bio: true,
+      websiteUrl: true,
+      twitterUrl: true,
+      linkedinUrl: true,
+      youtubeUrl: true,
       coursesTaught: {
         where: { published: true },
         orderBy: { createdAt: "desc" },
@@ -75,6 +79,13 @@ export default async function InstructorProfilePage({ params }: { params: Promis
   const totalReviews = courses.reduce((sum, c) => sum + c.ratingCount, 0);
   const backdropUrl = courses.find((c) => c.thumbnailUrl)?.thumbnailUrl ?? null;
 
+  const socialLinks = [
+    { url: instructor.websiteUrl, label: "Website", icon: Globe },
+    { url: instructor.twitterUrl, label: "Twitter/X", icon: Link2 },
+    { url: instructor.linkedinUrl, label: "LinkedIn", icon: Link2 },
+    { url: instructor.youtubeUrl, label: "YouTube", icon: Link2 },
+  ].filter((s): s is { url: string; label: string; icon: typeof Globe } => Boolean(s.url));
+
   return (
     <div className="min-h-screen bg-black">
       <div className="relative overflow-hidden border-b border-white/10">
@@ -98,6 +109,22 @@ export default async function InstructorProfilePage({ params }: { params: Promis
 
           {instructor.bio && (
             <p className="mt-4 max-w-2xl whitespace-pre-wrap text-slate-300">{instructor.bio}</p>
+          )}
+
+          {socialLinks.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {socialLinks.map(({ url, label, icon: Icon }) => (
+                <a
+                  key={label}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/60 hover:text-white"
+                >
+                  <Icon size={13} /> {label}
+                </a>
+              ))}
+            </div>
           )}
 
           <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-300">

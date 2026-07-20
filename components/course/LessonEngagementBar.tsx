@@ -66,7 +66,7 @@ export function LessonEngagementBar({
   }
 
   return (
-    <div className="pb-4 lg:border-b lg:border-white/10">
+    <div className="pb-4">
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-400">
         <span className="font-medium text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
         <span>·</span>

@@ -32,6 +32,7 @@ function CommentRow({
   currentUserId,
   canModerate,
   isReply,
+  rootId,
   onReplyPosted,
 }: {
   comment: CommentData;
@@ -39,6 +40,7 @@ function CommentRow({
   currentUserId: string | null;
   canModerate: boolean;
   isReply: boolean;
+  rootId: string;
   onReplyPosted: () => void;
 }) {
   const router = useRouter();
@@ -69,7 +71,7 @@ function CommentRow({
     const res = await fetch(`/api/lessons/${lessonId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: replyText, parentId: comment.id }),
+      body: JSON.stringify({ content: replyText, parentId: rootId }),
     });
     setPosting(false);
     if (res.ok) {
@@ -112,8 +114,14 @@ function CommentRow({
           >
             <ThumbsUp size={13} className={liked ? "fill-blue-400" : ""} /> {likeCount > 0 ? likeCount : ""}
           </button>
-          {!isReply && currentUserId && (
-            <button onClick={() => setReplying((v) => !v)} className="flex items-center gap-1 hover:text-slate-300">
+          {currentUserId && (
+            <button
+              onClick={() => {
+                setReplying((v) => !v);
+                if (!replying && isReply) setReplyText(`@${comment.user.name} `);
+              }}
+              className="flex items-center gap-1 hover:text-slate-300"
+            >
               <MessageSquare size={13} /> Responder
             </button>
           )}
@@ -162,6 +170,7 @@ function CommentRow({
                     currentUserId={currentUserId}
                     canModerate={canModerate}
                     isReply
+                    rootId={rootId}
                     onReplyPosted={onReplyPosted}
                   />
                 ))}
@@ -285,6 +294,7 @@ export function LessonComments({
             currentUserId={currentUserId}
             canModerate={canModerate}
             isReply={false}
+            rootId={comment.id}
             onReplyPosted={() => router.refresh()}
           />
         ))}

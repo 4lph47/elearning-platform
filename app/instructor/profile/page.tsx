@@ -12,7 +12,10 @@ export default async function InstructorProfileSettingsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { bio: true } });
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { bio: true, websiteUrl: true, twitterUrl: true, linkedinUrl: true, youtubeUrl: true },
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -23,7 +26,13 @@ export default async function InstructorProfileSettingsPage() {
         </Link>
       </div>
       <Card className="p-6">
-        <ProfileForm initialBio={user?.bio ?? ""} />
+        <ProfileForm
+          initialBio={user?.bio ?? ""}
+          initialWebsiteUrl={user?.websiteUrl ?? ""}
+          initialTwitterUrl={user?.twitterUrl ?? ""}
+          initialLinkedinUrl={user?.linkedinUrl ?? ""}
+          initialYoutubeUrl={user?.youtubeUrl ?? ""}
+        />
       </Card>
     </div>
   );

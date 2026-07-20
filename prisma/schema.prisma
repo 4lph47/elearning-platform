@@ -45,6 +45,10 @@ model User {
   passwordHash String
   role         Role     @default(STUDENT)
   bio          String?
+  websiteUrl   String?
+  twitterUrl   String?
+  linkedinUrl  String?
+  youtubeUrl   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

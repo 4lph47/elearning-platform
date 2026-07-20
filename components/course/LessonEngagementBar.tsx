@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ThumbsUp, ThumbsDown, Forward, Check } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Check } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
 
 interface Author {
@@ -52,7 +52,16 @@ export function LessonEngagementBar({
   }
 
   async function share() {
-    await navigator.clipboard.writeText(window.location.href);
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: document.title, url });
+      } catch {
+        // utilizador cancelou a partilha
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -133,7 +142,7 @@ export function LessonEngagementBar({
           </button>
 
           <button onClick={share} className="text-slate-300 hover:text-white" aria-label="Partilhar">
-            {copied ? <Check size={19} className="text-blue-400" /> : <Forward size={19} />}
+            {copied ? <Check size={19} className="text-blue-400" /> : <Share2 size={19} />}
           </button>
         </div>
       </div>

@@ -42,16 +42,16 @@ export function LessonTabs({
       <div className="flex gap-6">
         <button
           onClick={() => setTab("overview")}
-          className={`px-1 py-2 text-sm font-medium lg:hidden ${
-            tab === "overview" ? "text-white" : "text-slate-500 hover:text-slate-300"
+          className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+            tab === "overview" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
           }`}
         >
           Geral
         </button>
         <button
           onClick={() => setTab("resources")}
-          className={`px-1 py-2 text-sm font-medium ${
-            tab === "resources" ? "text-white" : "text-slate-500 hover:text-slate-300"
+          className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+            tab === "resources" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
           }`}
         >
           Recursos {resources.length > 0 && `(${resources.length})`}
@@ -59,8 +59,8 @@ export function LessonTabs({
         {progress && (
           <button
             onClick={() => setTab("progress")}
-            className={`px-1 py-2 text-sm font-medium lg:hidden ${
-              tab === "progress" ? "text-white" : "text-slate-500 hover:text-slate-300"
+            className={`rounded-full px-3 py-1.5 text-sm font-medium lg:hidden ${
+              tab === "progress" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
             }`}
           >
             Progresso
@@ -69,8 +69,8 @@ export function LessonTabs({
         {comments && (
           <button
             onClick={() => setTab("comments")}
-            className={`px-1 py-2 text-sm font-medium lg:hidden ${
-              tab === "comments" ? "text-white" : "text-slate-500 hover:text-slate-300"
+            className={`rounded-full px-3 py-1.5 text-sm font-medium lg:hidden ${
+              tab === "comments" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
             }`}
           >
             Comentários
@@ -84,7 +84,7 @@ export function LessonTabs({
         ) : tab === "comments" ? (
           comments
         ) : tab === "overview" ? (
-          <div className="lg:hidden">
+          <div>
             <p className="whitespace-pre-wrap leading-relaxed">{linkify(overview)}</p>
 
             {videoMeta && (

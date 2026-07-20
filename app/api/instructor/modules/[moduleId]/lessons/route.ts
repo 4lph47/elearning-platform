@@ -19,8 +19,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
+  const authorIds = new Set([courseModule.course.instructorId, ...courseModule.course.collaborators.map((c) => c.id)]);
+  const contributorIds: string[] = Array.isArray(body.contributorIds)
+    ? body.contributorIds.filter((id: unknown): id is string => typeof id === "string" && authorIds.has(id))
+    : [];
+
   const lesson = await prisma.lesson.create({
-    data: { ...parsed.data, moduleId },
+    data: {
+      ...parsed.data,
+      moduleId,
+      contributors: contributorIds.length > 0 ? { connect: contributorIds.map((id) => ({ id })) } : undefined,
+    },
   });
 
   return NextResponse.json(lesson, { status: 201 });

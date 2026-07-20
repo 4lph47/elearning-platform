@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
+import { getYouTubeId } from "@/lib/youtube";
 
 export function LessonPlayer({
   lessonId,
@@ -19,6 +20,7 @@ export function LessonPlayer({
   const [completed, setCompleted] = useState(initialCompleted);
   const lastSentRef = useRef(0);
   const collapsed = useSidebarCollapsed();
+  const youtubeId = getYouTubeId(contentUrl);
 
   async function sendProgress(payload: { watchedSeconds?: number; completed?: boolean }) {
     await fetch("/api/progress", {
@@ -50,28 +52,40 @@ export function LessonPlayer({
     setCompleted(true);
   }
 
+  const playerClassName = `aspect-video w-full rounded-lg bg-black lg:max-w-none ${
+    collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
+  }`;
+
   return (
     <div className="space-y-4">
-      <video
-        controls
-        className={`aspect-video w-full rounded-lg bg-black lg:max-w-none ${
-          collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
-        }`}
-        src={contentUrl}
-        onLoadedMetadata={handleLoadedMetadata}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={markComplete}
-      />
+      {youtubeId ? (
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0`}
+          title="Vídeo da aula"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className={playerClassName}
+        />
+      ) : (
+        <video
+          controls
+          className={playerClassName}
+          src={contentUrl}
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={markComplete}
+        />
+      )}
 
       {completed ? (
-        <p className="flex items-center gap-2 text-sm font-medium text-slate-700">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900">
+        <p className="flex items-center gap-2 text-sm font-medium text-slate-300">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600">
             <Check size={12} strokeWidth={3} className="text-white" />
           </span>
           Aula concluída
         </p>
       ) : (
-        <Button onClick={markComplete} variant="outline">
+        <Button onClick={markComplete} variant="outline-dark">
           Marcar como concluída
         </Button>
       )}

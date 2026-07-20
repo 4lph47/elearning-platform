@@ -20,8 +20,14 @@ export const courseSchema = z.object({
   category: z.string().min(2, "Categoria é obrigatória"),
   level: z.enum(["beginner", "intermediate", "advanced"]),
   thumbnailUrl: z.string().optional().nullable(),
+  trailerUrl: z.string().optional().nullable(),
   published: z.boolean().optional().default(false),
   price: z.number().min(0, "Preço não pode ser negativo").optional().default(0),
+  originalPrice: z.number().min(0, "Preço original não pode ser negativo").optional().nullable(),
+  learningOutcomes: z.array(z.string().min(1)).optional().default([]),
+  requirements: z.array(z.string().min(1)).optional().default([]),
+  targetAudience: z.array(z.string().min(1)).optional().default([]),
+  topics: z.array(z.string().min(1)).optional().default([]),
 });
 export type CourseInput = z.infer<typeof courseSchema>;
 
@@ -37,6 +43,7 @@ export const lessonSchema = z.object({
   isFreePreview: z.boolean().optional().default(false),
   contentUrl: z.string().min(1, "É obrigatório enviar um vídeo para a aula"),
   durationSeconds: z.number().int().min(0).optional().nullable(),
+  description: z.string().optional().nullable(),
 });
 export type LessonInput = z.infer<typeof lessonSchema>;
 

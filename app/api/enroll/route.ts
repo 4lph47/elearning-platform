@@ -9,21 +9,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Precisas de iniciar sessão" }, { status: 401 });
   }
 
-  const { courseId } = await request.json();
-  if (typeof courseId !== "string") {
+  const body = await request.json();
+  const rawIds: unknown = Array.isArray(body.courseIds)
+    ? body.courseIds
+    : typeof body.courseId === "string"
+      ? [body.courseId]
+      : null;
+
+  if (!Array.isArray(rawIds) || rawIds.length === 0 || !rawIds.every((id): id is string => typeof id === "string")) {
     return NextResponse.json({ error: "courseId em falta" }, { status: 400 });
   }
+  const courseIds: string[] = rawIds;
 
-  const course = await prisma.course.findUnique({ where: { id: courseId } });
-  if (!course || !course.published) {
+  const courses = await prisma.course.findMany({ where: { id: { in: courseIds }, published: true } });
+  if (courses.length !== courseIds.length) {
     return NextResponse.json({ error: "Curso não encontrado" }, { status: 404 });
   }
 
-  const enrollment = await prisma.enrollment.upsert({
-    where: { userId_courseId: { userId: session.user.id, courseId } },
-    update: {},
-    create: { userId: session.user.id, courseId },
-  });
+  const enrollments = await prisma.$transaction(
+    courseIds.map((courseId: string) =>
+      prisma.enrollment.upsert({
+        where: { userId_courseId: { userId: session.user.id, courseId } },
+        update: {},
+        create: { userId: session.user.id, courseId },
+      })
+    )
+  );
 
-  return NextResponse.json(enrollment, { status: 201 });
+  await prisma.cartItem.deleteMany({ where: { userId: session.user.id, courseId: { in: courseIds } } });
+
+  return NextResponse.json(enrollments, { status: 201 });
 }

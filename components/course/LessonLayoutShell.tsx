@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CourseChatbot } from "@/components/course/CourseChatbot";
 import { ChatOpenProvider, SidebarCollapsedProvider } from "@/components/course/ChatOpenContext";
 
 export function LessonLayoutShell({
+  courseSlug,
+  courseTitle,
   sidebar,
   chat,
   children,
 }: {
+  courseSlug: string;
+  courseTitle: string;
   sidebar: React.ReactNode;
   chat?: { courseId: string; lessonId: string; courseTitle: string };
   children: React.ReactNode;
@@ -19,7 +24,18 @@ export function LessonLayoutShell({
   const effectiveChatOpen = chat ? chatOpen : false;
 
   return (
-    <div className={`transition-[padding] duration-200 ${effectiveChatOpen ? "lg:pr-[440px]" : ""}`}>
+    <div
+      className={`min-h-screen bg-black transition-[padding] duration-200 ${effectiveChatOpen ? "lg:pr-[440px]" : ""}`}
+    >
+      <div className="mx-auto max-w-[1600px] px-4 pt-6">
+        <Link
+          href={`/courses/${courseSlug}`}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-200 hover:text-blue-400"
+        >
+          <ArrowLeft size={15} /> {courseTitle}
+        </Link>
+      </div>
+
       <div
         className={`mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-4 py-6 ${
           collapsed ? "" : "lg:grid-cols-[300px_1fr]"
@@ -31,7 +47,7 @@ export function LessonLayoutShell({
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="mb-3 hidden items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 lg:inline-flex"
+            className="mb-3 hidden items-center gap-1.5 rounded-md border border-white/15 px-2 py-1 text-xs text-slate-300 hover:bg-white/5 lg:inline-flex"
           >
             {collapsed ? (
               <>

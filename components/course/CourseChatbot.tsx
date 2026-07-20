@@ -86,7 +86,7 @@ export function CourseChatbot({
     <>
       <button
         onClick={() => onOpenChange(true)}
-        className={`fixed right-6 top-20 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all duration-150 hover:bg-slate-700 ${
+        className={`fixed right-6 top-20 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all duration-150 hover:bg-blue-500 ${
           open ? "pointer-events-none scale-90 opacity-0" : "scale-100 opacity-100"
         }`}
         aria-label="Abrir assistente do curso"
@@ -96,15 +96,15 @@ export function CourseChatbot({
 
       {rendered && (
         <div
-          className={`fixed right-6 top-20 z-40 flex h-[calc(100vh-6.5rem)] w-[400px] max-w-[calc(100vw-3rem)] flex-col rounded-2xl border border-slate-200 bg-white shadow-xl transition-all duration-150 ease-out ${
+          className={`fixed right-6 top-20 z-40 flex h-[calc(100vh-6.5rem)] w-[400px] max-w-[calc(100vw-3rem)] flex-col rounded-2xl border border-white/10 bg-slate-950 shadow-xl transition-all duration-150 ease-out ${
             open ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
           }`}
         >
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <p className="line-clamp-1 text-sm font-medium text-slate-900">{courseTitle}</p>
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <p className="line-clamp-1 text-sm font-medium text-white">{courseTitle}</p>
             <button
               onClick={() => onOpenChange(false)}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-white/10 hover:text-white"
               aria-label="Fechar assistente"
             >
               <X size={14} />
@@ -116,28 +116,28 @@ export function CourseChatbot({
               <div
                 key={i}
                 className={`max-w-[85%] rounded-xl px-3 py-1.5 text-sm ${
-                  m.role === "user" ? "ml-auto bg-slate-900 text-white" : "bg-slate-100 text-slate-800"
+                  m.role === "user" ? "ml-auto bg-blue-600 text-white" : "bg-slate-800 text-slate-100"
                 }`}
               >
                 <p className="whitespace-pre-wrap">{m.content || (loading && i === messages.length - 1 ? "…" : "")}</p>
               </div>
             ))}
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error && <p className="text-xs text-red-400">{error}</p>}
           </div>
 
-          <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-slate-100 p-2.5">
+          <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-white/10 p-2.5">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pergunta algo sobre este curso."
               disabled={loading}
-              className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm focus:border-slate-400 focus:bg-white focus:outline-none"
+              className="flex-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-40"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
               aria-label="Enviar"
             >
               <Send size={14} />

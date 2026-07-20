@@ -18,6 +18,29 @@ function thumb(seed: string) {
   return `https://picsum.photos/seed/${seed}/640/360`;
 }
 
+// Vídeos reais do Pexels (royalty-free), escolhidos por tema de cada curso/categoria.
+const PEXELS_TRAILERS: Record<string, string> = {
+  "introducao-ao-nextjs": "https://videos.pexels.com/video-files/11274330/11274330-sd_640_360_25fps.mp4",
+  "react-avancado-performance": "https://videos.pexels.com/video-files/11274330/11274330-sd_640_360_25fps.mp4",
+  "typescript-para-iniciantes": "https://videos.pexels.com/video-files/11274330/11274330-sd_640_360_25fps.mp4",
+  "nodejs-apis-rest": "https://videos.pexels.com/video-files/11274330/11274330-sd_640_360_25fps.mp4",
+  "design-de-interfaces": "https://videos.pexels.com/video-files/1350205/1350205-sd_640_360_30fps.mp4",
+  "producao-musical-ableton": "https://videos.pexels.com/video-files/12330928/12330928-sd_360_640_25fps.mp4",
+  "fotografia-com-telemovel": "https://videos.pexels.com/video-files/5168109/5168109-sd_640_360_25fps.mp4",
+  "gestao-de-projetos-ageis": "https://videos.pexels.com/video-files/8033854/8033854-sd_640_360_25fps.mp4",
+  "marketing-digital-do-zero": "https://videos.pexels.com/video-files/7966582/7966582-sd_640_360_25fps.mp4",
+  "ingles-para-viagens": "https://videos.pexels.com/video-files/5409006/5409006-sd_360_640_30fps.mp4",
+  "yoga-e-mindfulness": "https://videos.pexels.com/video-files/7521693/7521693-sd_640_360_25fps.mp4",
+  "educacao-financeira-do-zero": "https://videos.pexels.com/video-files/7735814/7735814-sd_640_360_25fps.mp4",
+  "cozinha-rapida-do-dia-a-dia": "https://videos.pexels.com/video-files/8626672/8626672-sd_640_360_25fps.mp4",
+  "produtividade-e-gestao-do-tempo": "https://videos.pexels.com/video-files/4197892/4197892-sd_640_360_30fps.mp4",
+  "fundamentos-de-vendas": "https://videos.pexels.com/video-files/7735499/7735499-sd_640_360_25fps.mp4",
+  "desenho-e-ilustracao-digital": "https://videos.pexels.com/video-files/854136/854136-sd_640_360_25fps.mp4",
+  "excel-para-negocios": "https://videos.pexels.com/video-files/8033854/8033854-sd_640_360_25fps.mp4",
+  "copywriting-que-vende": "https://videos.pexels.com/video-files/7966582/7966582-sd_640_360_25fps.mp4",
+  "guitarra-para-iniciantes": "https://videos.pexels.com/video-files/12330928/12330928-sd_360_640_25fps.mp4",
+};
+
 function slugify(s: string) {
   return s
     .toLowerCase()
@@ -139,9 +162,14 @@ interface CourseSeed {
   level: "beginner" | "intermediate" | "advanced";
   published: boolean;
   price: number;
+  originalPrice?: number;
   rating: number;
   ratingCount: number;
   instructor: "ana" | "carlos";
+  learningOutcomes?: string[];
+  requirements?: string[];
+  targetAudience?: string[];
+  topics?: string[];
   modules: ModuleSeed[];
 }
 
@@ -158,6 +186,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.7,
     ratingCount: 1284,
     instructor: "ana",
+    learningOutcomes: [
+      "Construir uma aplicação completa com o App Router do Next.js 14",
+      "Distinguir Server Components de Client Components e saber quando usar cada um",
+      "Ligar a aplicação a uma base de dados real com Prisma",
+      "Fazer deploy de um projeto Next.js na Vercel",
+    ],
+    requirements: ["Conhecimentos básicos de JavaScript", "Familiaridade com HTML e CSS", "Node.js instalado"],
+    targetAudience: [
+      "Programadores que já sabem JavaScript e querem aprender React/Next.js",
+      "Quem quer construir aplicações web modernas e escaláveis",
+      "Devs que já usam Next.js e querem atualizar para o App Router",
+    ],
+    topics: ["Next.js", "React", "App Router", "Server Components", "Prisma"],
     modules: [
       {
         title: "Primeiros Passos",
@@ -216,6 +257,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.5,
     ratingCount: 342,
     instructor: "ana",
+    learningOutcomes: [
+      "Aplicar princípios essenciais de UI/UX sem precisar de formação em design",
+      "Escolher paletas de cor e tipografia que funcionam de verdade",
+      "Criar layouts com grelhas e espaçamento consistente",
+      "Usar hierarquia visual para guiar o utilizador na interface",
+    ],
+    requirements: ["Nenhuma experiência prévia em design", "Vontade de melhorar interfaces que já constróis"],
+    targetAudience: [
+      "Programadores que criam as suas próprias interfaces",
+      "Product managers que querem falar a mesma língua dos designers",
+      "Freelancers que precisam de entregar produtos com bom aspeto",
+    ],
+    topics: ["UI", "UX", "Design de Interfaces", "Tipografia", "Cor"],
     modules: [
       {
         title: "Fundamentos Visuais",
@@ -263,6 +317,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.6,
     ratingCount: 897,
     instructor: "carlos",
+    learningOutcomes: [
+      "Programar em Python desde os fundamentos até estruturas de dados",
+      "Manipular e limpar dados reais com pandas",
+      "Criar visualizações de dados claras com matplotlib",
+      "Aplicar análise de dados a problemas do dia a dia",
+    ],
+    requirements: ["Nenhuma experiência prévia em programação é obrigatória", "Computador com Python instalável"],
+    targetAudience: [
+      "Iniciantes que querem entrar na área de dados",
+      "Profissionais que precisam de analisar dados no trabalho",
+      "Estudantes de áreas quantitativas que querem aprender Python aplicado",
+    ],
+    topics: ["Python", "Pandas", "NumPy", "Ciência de Dados", "Matplotlib"],
     modules: [
       {
         title: "Fundamentos de Python",
@@ -316,6 +383,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.4,
     ratingCount: 610,
     instructor: "carlos",
+    learningOutcomes: [
+      "Definir o público-alvo certo para o teu negócio",
+      "Construir um funil de vendas do zero",
+      "Criar conteúdo que converte em redes sociais",
+      "Configurar campanhas pagas no Instagram e Facebook",
+    ],
+    requirements: ["Nenhuma experiência prévia em marketing", "Uma conta de rede social para praticar"],
+    targetAudience: [
+      "Donos de pequenos negócios que querem vender mais online",
+      "Freelancers que querem oferecer serviços de marketing",
+      "Quem quer começar a trabalhar com redes sociais profissionalmente",
+    ],
+    topics: ["Marketing Digital", "Redes Sociais", "Anúncios Pagos", "Funil de Vendas"],
     modules: [
       {
         title: "Estratégia e Fundamentos",
@@ -362,6 +442,23 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.8,
     ratingCount: 2043,
     instructor: "ana",
+    learningOutcomes: [
+      "Dominar composição e enquadramento",
+      "Usar luz natural a teu favor",
+      "Editar fotos diretamente no telemóvel",
+      "Criar um estilo visual consistente",
+    ],
+    requirements: [
+      "Um smartphone com câmara",
+      "Nenhuma experiência prévia em fotografia",
+      "Vontade de praticar entre as aulas",
+    ],
+    targetAudience: [
+      "Iniciantes que querem tirar melhores fotos com o telemóvel",
+      "Criadores de conteúdo para redes sociais",
+      "Quem quer começar a vender fotografia sem equipamento caro",
+    ],
+    topics: ["Fotografia", "Mobile", "Edição de Fotos", "Redes Sociais"],
     modules: [
       {
         title: "Composição e Luz",
@@ -403,6 +500,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.3,
     ratingCount: 205,
     instructor: "carlos",
+    learningOutcomes: [
+      "Aplicar Scrum e Kanban em equipas reais",
+      "Planear e conduzir sprints do início ao fim",
+      "Acompanhar métricas como velocity e burndown",
+      "Escolher a cerimónia e ferramenta certa para cada equipa",
+    ],
+    requirements: ["Experiência a trabalhar em equipa", "Nenhum conhecimento prévio de metodologias ágeis"],
+    targetAudience: [
+      "Gestores de projeto que querem adotar métodos ágeis",
+      "Product owners e scrum masters em início de carreira",
+      "Equipas que querem melhorar a forma como entregam trabalho",
+    ],
+    topics: ["Scrum", "Kanban", "Gestão de Projetos", "Metodologias Ágeis"],
     modules: [
       {
         title: "Fundamentos Ágeis",
@@ -445,6 +555,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.9,
     ratingCount: 156,
     instructor: "ana",
+    learningOutcomes: [
+      "Criar sons próprios com síntese e presets",
+      "Programar e arranjar uma faixa do zero",
+      "Aplicar EQ e compressão de forma eficaz",
+      "Masterizar uma faixa a um nível profissional básico",
+    ],
+    requirements: ["Ableton Live instalado (trial serve)", "Auscultadores ou monitores de estúdio"],
+    targetAudience: [
+      "Músicos que querem produzir as próprias faixas",
+      "Iniciantes em produção musical eletrónica",
+      "Quem já usa Ableton mas quer melhorar mistura e masterização",
+    ],
+    topics: ["Produção Musical", "Ableton Live", "Mistura", "Masterização", "Sound Design"],
     modules: [
       {
         title: "Sound Design",
@@ -486,6 +609,19 @@ const courseSeeds: CourseSeed[] = [
     rating: 4.6,
     ratingCount: 731,
     instructor: "carlos",
+    learningOutcomes: [
+      "Entender como e quando o React re-renderiza componentes",
+      "Otimizar performance com memo, useMemo e useCallback",
+      "Estruturar arquitetura de componentes para projetos grandes",
+      "Escrever testes para componentes React",
+    ],
+    requirements: ["Experiência sólida com React", "Conhecimentos de JavaScript moderno (ES6+)"],
+    targetAudience: [
+      "Programadores React de nível intermédio que querem subir de nível",
+      "Devs que trabalham em aplicações React de grande escala",
+      "Quem prepara entrevistas técnicas para vagas de frontend sénior",
+    ],
+    topics: ["React", "Performance", "Arquitetura de Software", "Testes"],
     modules: [
       {
         title: "Performance",
@@ -517,6 +653,627 @@ const courseSeeds: CourseSeed[] = [
     ],
   },
   {
+    title: "TypeScript para Iniciantes",
+    slug: "typescript-para-iniciantes",
+    description:
+      "Aprende TypeScript do zero: tipos, interfaces, generics e como aplicar tudo isto em projetos reais de JavaScript.",
+    category: "Programação",
+    level: "beginner",
+    published: true,
+    price: 19.99,
+    originalPrice: 39.99,
+    rating: 4.6,
+    ratingCount: 512,
+    instructor: "ana",
+    learningOutcomes: [
+      "Entender tipos básicos e inferência de tipos",
+      "Criar interfaces e types reutilizáveis",
+      "Usar generics para escrever código mais flexível",
+      "Configurar TypeScript num projeto real com tsconfig",
+    ],
+    requirements: ["Conhecimentos de JavaScript", "Nenhuma experiência prévia com TypeScript"],
+    targetAudience: [
+      "Programadores JavaScript que querem adicionar tipos ao seu código",
+      "Iniciantes que querem entrar em equipas que usam TypeScript",
+      "Quem quer projetos mais seguros e fáceis de manter",
+    ],
+    topics: ["TypeScript", "JavaScript", "Tipos", "Generics"],
+    modules: [
+      {
+        title: "Fundamentos de TypeScript",
+        lessons: [
+          {
+            title: "Porque usar TypeScript",
+            durationSeconds: 260,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Porque TypeScript.pptx", type: "SLIDES", sizeBytes: 560_000 }],
+          },
+          { title: "Tipos básicos e inferência", durationSeconds: 380 },
+          {
+            title: "Interfaces e types",
+            durationSeconds: 410,
+            resources: [{ name: "Cheatsheet de tipos.pdf", type: "PDF", sizeBytes: 140_000 }],
+          },
+        ],
+      },
+      {
+        title: "TypeScript na Prática",
+        lessons: [
+          { title: "Generics explicados com exemplos", durationSeconds: 470 },
+          {
+            title: "Configurar tsconfig num projeto real",
+            durationSeconds: 320,
+            resources: [{ name: "tsconfig de exemplo.pdf", type: "PDF", sizeBytes: 60_000 }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Node.js e APIs REST",
+    slug: "nodejs-apis-rest",
+    description:
+      "Constrói APIs REST robustas com Node.js e Express: autenticação, validação, base de dados e boas práticas de arquitetura.",
+    category: "Programação",
+    level: "intermediate",
+    published: true,
+    price: 34.99,
+    rating: 4.5,
+    ratingCount: 410,
+    instructor: "carlos",
+    learningOutcomes: [
+      "Construir APIs REST com Node.js e Express",
+      "Ligar a aplicação a uma base de dados",
+      "Implementar autenticação com JWT",
+      "Aplicar boas práticas de arquitetura e segurança",
+    ],
+    requirements: ["Conhecimentos de JavaScript", "Noções básicas de HTTP"],
+    targetAudience: [
+      "Programadores frontend que querem aprender backend",
+      "Devs que querem construir as suas próprias APIs",
+      "Quem se prepara para vagas de backend Node.js",
+    ],
+    topics: ["Node.js", "Express", "APIs REST", "JWT", "Backend"],
+    modules: [
+      {
+        title: "Fundamentos de APIs",
+        lessons: [
+          {
+            title: "Como funciona uma API REST",
+            durationSeconds: 300,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Fundamentos de APIs.pptx", type: "SLIDES", sizeBytes: 600_000 }],
+          },
+          { title: "Rotas e middlewares no Express", durationSeconds: 420 },
+        ],
+      },
+      {
+        title: "Persistência e Segurança",
+        lessons: [
+          {
+            title: "Ligar a uma base de dados",
+            durationSeconds: 500,
+            resources: [{ name: "Diagrama de arquitetura API.png", type: "IMAGE", sizeBytes: 200_000 }],
+          },
+          {
+            title: "Autenticação com JWT",
+            durationSeconds: 460,
+            resources: [{ name: "Checklist de segurança.pdf", type: "PDF", sizeBytes: 110_000 }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Inglês para Viagens",
+    slug: "ingles-para-viagens",
+    description:
+      "Vocabulário e frases essenciais de inglês para te desenrascares em aeroportos, hotéis, restaurantes e situações do dia a dia em viagem.",
+    category: "Idiomas",
+    level: "beginner",
+    published: true,
+    price: 0,
+    rating: 4.7,
+    ratingCount: 890,
+    instructor: "carlos",
+    learningOutcomes: [
+      "Comunicar com confiança em aeroportos e hotéis",
+      "Pedir comida e bebida em restaurantes",
+      "Pedir ajuda e indicações em inglês",
+      "Usar vocabulário essencial para situações do dia a dia em viagem",
+    ],
+    requirements: ["Nenhum nível prévio de inglês é necessário"],
+    targetAudience: [
+      "Quem vai viajar em breve e quer aprender o essencial",
+      "Iniciantes em inglês que querem foco prático, não gramática",
+    ],
+    topics: ["Inglês", "Viagens", "Vocabulário", "Conversação"],
+    modules: [
+      {
+        title: "Primeiros Contactos",
+        lessons: [
+          {
+            title: "Saudações e apresentações",
+            durationSeconds: 240,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Saudações.pptx", type: "SLIDES", sizeBytes: 480_000 }],
+          },
+          { title: "No aeroporto e no hotel", durationSeconds: 320 },
+        ],
+      },
+      {
+        title: "No Dia a Dia",
+        lessons: [
+          {
+            title: "Pedir comida num restaurante",
+            durationSeconds: 300,
+            resources: [{ name: "Vocabulário - Restaurante.pdf", type: "PDF", sizeBytes: 100_000 }],
+          },
+          { title: "Pedir ajuda e indicações", durationSeconds: 260 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Yoga e Mindfulness para o Dia a Dia",
+    slug: "yoga-e-mindfulness",
+    description:
+      "Práticas simples de yoga e mindfulness para reduzir stress, melhorar o sono e criar uma rotina de bem-estar sustentável.",
+    category: "Saúde e Bem-estar",
+    level: "beginner",
+    published: true,
+    price: 24.99,
+    rating: 4.8,
+    ratingCount: 640,
+    instructor: "ana",
+    learningOutcomes: [
+      "Praticar respiração consciente para reduzir stress",
+      "Executar posturas básicas de yoga com segurança",
+      "Criar uma rotina diária de bem-estar sustentável",
+      "Usar mindfulness para melhorar a qualidade do sono",
+    ],
+    requirements: ["Um tapete ou espaço confortável no chão", "Roupa confortável"],
+    targetAudience: [
+      "Quem quer reduzir stress e ansiedade no dia a dia",
+      "Iniciantes em yoga e meditação",
+      "Quem procura uma rotina de bem-estar simples de manter",
+    ],
+    topics: ["Yoga", "Mindfulness", "Bem-estar", "Meditação"],
+    modules: [
+      {
+        title: "Fundamentos",
+        lessons: [
+          {
+            title: "Respiração consciente",
+            durationSeconds: 280,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Respiração.pptx", type: "SLIDES", sizeBytes: 460_000 }],
+          },
+          { title: "Posturas básicas de yoga", durationSeconds: 420 },
+        ],
+      },
+      {
+        title: "Rotina Diária",
+        lessons: [
+          {
+            title: "Sequência rápida de 10 minutos",
+            durationSeconds: 600,
+            resources: [{ name: "Guia da sequência.pdf", type: "PDF", sizeBytes: 90_000 }],
+          },
+          { title: "Mindfulness antes de dormir", durationSeconds: 340 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Educação Financeira do Zero",
+    slug: "educacao-financeira-do-zero",
+    description:
+      "Organiza as tuas finanças pessoais: orçamento, poupança, investimento básico e como sair de dívidas de forma prática.",
+    category: "Finanças Pessoais",
+    level: "beginner",
+    published: true,
+    price: 19.99,
+    rating: 4.5,
+    ratingCount: 430,
+    instructor: "carlos",
+    learningOutcomes: [
+      "Criar e seguir um orçamento pessoal simples",
+      "Cortar despesas sem sacrificar qualidade de vida",
+      "Construir um fundo de emergência",
+      "Dar os primeiros passos em investimentos",
+    ],
+    requirements: ["Nenhum conhecimento prévio de finanças"],
+    targetAudience: [
+      "Quem quer organizar as finanças pessoais pela primeira vez",
+      "Pessoas a tentar sair de dívidas",
+      "Quem quer começar a poupar e investir com segurança",
+    ],
+    topics: ["Finanças Pessoais", "Orçamento", "Poupança", "Investimentos"],
+    modules: [
+      {
+        title: "Organizar o Orçamento",
+        lessons: [
+          {
+            title: "Como fazer um orçamento simples",
+            durationSeconds: 300,
+            isFreePreview: true,
+            resources: [{ name: "Template de orçamento.xlsx", type: "OTHER", sizeBytes: 55_000 }],
+          },
+          { title: "Cortar despesas sem sofrimento", durationSeconds: 340 },
+        ],
+      },
+      {
+        title: "Poupar e Investir",
+        lessons: [
+          {
+            title: "Criar um fundo de emergência",
+            durationSeconds: 320,
+            resources: [{ name: "Checklist de poupança.pdf", type: "PDF", sizeBytes: 80_000 }],
+          },
+          { title: "Primeiros passos em investimentos", durationSeconds: 380 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Cozinha Rápida do Dia a Dia",
+    slug: "cozinha-rapida-do-dia-a-dia",
+    description:
+      "Receitas práticas e rápidas para o dia a dia, técnicas básicas de confeção e planeamento de refeições para a semana.",
+    category: "Culinária",
+    level: "beginner",
+    published: true,
+    price: 14.99,
+    rating: 4.6,
+    ratingCount: 310,
+    instructor: "ana",
+    learningOutcomes: [
+      "Dominar cortes e técnicas básicas de faca",
+      "Usar temperos e bases de sabor com confiança",
+      "Planear refeições para a semana toda",
+      "Cozinhar receitas completas em menos de 20 minutos",
+    ],
+    requirements: ["Uma cozinha básica equipada", "Nenhuma experiência prévia em cozinhar"],
+    targetAudience: [
+      "Quem tem pouco tempo para cozinhar no dia a dia",
+      "Iniciantes na cozinha que querem ganhar confiança",
+      "Estudantes ou pessoas a viver sozinhas pela primeira vez",
+    ],
+    topics: ["Culinária", "Receitas Rápidas", "Planeamento de Refeições"],
+    modules: [
+      {
+        title: "Técnicas Básicas",
+        lessons: [
+          {
+            title: "Facas, cortes e mise en place",
+            durationSeconds: 260,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Técnicas básicas.pptx", type: "SLIDES", sizeBytes: 450_000 }],
+          },
+          { title: "Temperos e bases de sabor", durationSeconds: 300 },
+        ],
+      },
+      {
+        title: "Refeições da Semana",
+        lessons: [
+          {
+            title: "Planear refeições para 5 dias",
+            durationSeconds: 340,
+            resources: [{ name: "Plano semanal.pdf", type: "PDF", sizeBytes: 70_000 }],
+          },
+          { title: "3 receitas em menos de 20 minutos", durationSeconds: 400 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Produtividade e Gestão do Tempo",
+    slug: "produtividade-e-gestao-do-tempo",
+    description:
+      "Técnicas práticas para organizar o teu dia, eliminar distrações e criar hábitos que aumentam o foco e a produtividade real.",
+    category: "Desenvolvimento Pessoal",
+    level: "beginner",
+    published: true,
+    price: 0,
+    rating: 4.6,
+    ratingCount: 720,
+    instructor: "ana",
+    learningOutcomes: [
+      "Identificar porque falhas a gerir o teu tempo",
+      "Priorizar tarefas com a matriz de Eisenhower",
+      "Criar uma rotina diária que realmente segues",
+      "Eliminar distrações digitais que roubam o teu foco",
+    ],
+    requirements: ["Nenhuma ferramenta especial necessária", "Vontade de mudar hábitos"],
+    targetAudience: [
+      "Quem sente que nunca tem tempo suficiente",
+      "Profissionais e estudantes que querem mais foco",
+      "Quem já tentou várias apps de produtividade sem resultado",
+    ],
+    topics: ["Produtividade", "Gestão do Tempo", "Hábitos", "Foco"],
+    modules: [
+      {
+        title: "Fundamentos da Produtividade",
+        lessons: [
+          {
+            title: "Porque falhamos a gerir o tempo",
+            durationSeconds: 260,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Fundamentos.pptx", type: "SLIDES", sizeBytes: 470_000 }],
+          },
+          { title: "Definir prioridades com a matriz de Eisenhower", durationSeconds: 340 },
+        ],
+      },
+      {
+        title: "Hábitos e Ferramentas",
+        lessons: [
+          {
+            title: "Criar uma rotina diária eficaz",
+            durationSeconds: 320,
+            resources: [{ name: "Template de rotina.pdf", type: "PDF", sizeBytes: 75_000 }],
+          },
+          { title: "Eliminar distrações digitais", durationSeconds: 280 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Fundamentos de Vendas",
+    slug: "fundamentos-de-vendas",
+    description:
+      "Aprende a estrutura de uma venda eficaz: prospeção, negociação, lidar com objeções e fechar negócios com confiança.",
+    category: "Vendas",
+    level: "beginner",
+    published: true,
+    price: 27.99,
+    rating: 4.4,
+    ratingCount: 275,
+    instructor: "carlos",
+    learningOutcomes: [
+      "Entender as etapas de uma venda de sucesso",
+      "Prospetar os clientes certos para o teu negócio",
+      "Responder a objeções comuns com confiança",
+      "Fechar negócios sem parecer insistente",
+    ],
+    requirements: ["Nenhuma experiência prévia em vendas"],
+    targetAudience: [
+      "Quem está a começar numa carreira de vendas",
+      "Donos de negócio que vendem os próprios produtos ou serviços",
+      "Freelancers que precisam de fechar mais clientes",
+    ],
+    topics: ["Vendas", "Negociação", "Prospeção", "Fecho de Negócio"],
+    modules: [
+      {
+        title: "O Processo de Venda",
+        lessons: [
+          {
+            title: "As etapas de uma venda de sucesso",
+            durationSeconds: 300,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Processo de venda.pptx", type: "SLIDES", sizeBytes: 500_000 }],
+          },
+          { title: "Como prospetar clientes certos", durationSeconds: 340 },
+        ],
+      },
+      {
+        title: "Negociação e Fecho",
+        lessons: [
+          {
+            title: "Responder a objeções comuns",
+            durationSeconds: 360,
+            resources: [{ name: "Guia de objeções.pdf", type: "PDF", sizeBytes: 95_000 }],
+          },
+          { title: "Técnicas de fecho de negócio", durationSeconds: 310 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Desenho e Ilustração Digital",
+    slug: "desenho-e-ilustracao-digital",
+    description:
+      "Do esboço à ilustração final: fundamentos de desenho, cor e composição usando ferramentas digitais acessíveis.",
+    category: "Arte e Ilustração",
+    level: "beginner",
+    published: true,
+    price: 22.99,
+    rating: 4.7,
+    ratingCount: 380,
+    instructor: "ana",
+    learningOutcomes: [
+      "Desenhar formas básicas com proporção correta",
+      "Aplicar luz, sombra e volume nos teus desenhos",
+      "Configurar e usar ferramentas de ilustração digital",
+      "Colorir e finalizar uma ilustração do início ao fim",
+    ],
+    requirements: ["Um tablet gráfico ou telemóvel/tablet com caneta", "Nenhuma experiência prévia em desenho"],
+    targetAudience: [
+      "Iniciantes que querem aprender a desenhar do zero",
+      "Quem quer migrar do papel para a ilustração digital",
+      "Criadores de conteúdo que querem produzir as próprias ilustrações",
+    ],
+    topics: ["Desenho", "Ilustração Digital", "Cor", "Composição"],
+    modules: [
+      {
+        title: "Fundamentos do Desenho",
+        lessons: [
+          {
+            title: "Formas básicas e proporção",
+            durationSeconds: 280,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Formas e proporção.pptx", type: "SLIDES", sizeBytes: 490_000 }],
+          },
+          { title: "Luz, sombra e volume", durationSeconds: 320 },
+        ],
+      },
+      {
+        title: "Ilustração Digital",
+        lessons: [
+          {
+            title: "Configurar o teu primeiro documento digital",
+            durationSeconds: 300,
+            resources: [{ name: "Paleta de exemplo.png", type: "IMAGE", sizeBytes: 190_000 }],
+          },
+          { title: "Colorir e finalizar uma ilustração", durationSeconds: 380 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Excel para Negócios",
+    slug: "excel-para-negocios",
+    description:
+      "Domina o Excel para o trabalho: fórmulas, tabelas dinâmicas, dashboards simples e automação básica para decisões de negócio mais rápidas.",
+    category: "Negócios",
+    level: "beginner",
+    published: true,
+    price: 24.99,
+    rating: 4.5,
+    ratingCount: 540,
+    instructor: "carlos",
+    learningOutcomes: [
+      "Usar fórmulas essenciais do Excel no dia a dia de trabalho",
+      "Criar tabelas dinâmicas para analisar dados rapidamente",
+      "Construir um dashboard simples para acompanhar métricas",
+      "Automatizar tarefas repetitivas com funções básicas",
+    ],
+    requirements: ["Excel ou Google Sheets instalado", "Nenhuma experiência prévia necessária"],
+    targetAudience: [
+      "Profissionais que usam Excel no trabalho mas querem ser mais rápidos",
+      "Quem quer criar relatórios e dashboards para a equipa",
+      "Estudantes de gestão e negócios",
+    ],
+    topics: ["Excel", "Tabelas Dinâmicas", "Dashboards", "Produtividade"],
+    modules: [
+      {
+        title: "Fórmulas Essenciais",
+        lessons: [
+          {
+            title: "Fórmulas que todos deviam saber",
+            durationSeconds: 320,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Fórmulas essenciais.pptx", type: "SLIDES", sizeBytes: 520_000 }],
+          },
+          { title: "Referências relativas vs absolutas", durationSeconds: 280 },
+        ],
+      },
+      {
+        title: "Análise de Dados",
+        lessons: [
+          {
+            title: "Criar a tua primeira tabela dinâmica",
+            durationSeconds: 400,
+            resources: [{ name: "Dataset de prática.xlsx", type: "OTHER", sizeBytes: 68_000 }],
+          },
+          { title: "Construir um dashboard simples", durationSeconds: 420 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Copywriting que Vende",
+    slug: "copywriting-que-vende",
+    description:
+      "Escreve textos persuasivos para anúncios, emails e redes sociais que realmente convertem leitores em clientes.",
+    category: "Marketing",
+    level: "intermediate",
+    published: true,
+    price: 29.99,
+    rating: 4.6,
+    ratingCount: 320,
+    instructor: "carlos",
+    learningOutcomes: [
+      "Escrever headlines que capturam atenção",
+      "Estruturar textos persuasivos usando gatilhos mentais",
+      "Criar emails que geram vendas sem parecer spam",
+      "Adaptar o teu copy a diferentes plataformas e públicos",
+    ],
+    requirements: ["Nenhuma experiência prévia em copywriting"],
+    targetAudience: [
+      "Donos de negócio que escrevem os próprios anúncios",
+      "Profissionais de marketing que querem melhorar conversões",
+      "Freelancers que querem oferecer copywriting como serviço",
+    ],
+    topics: ["Copywriting", "Marketing", "Vendas", "Email Marketing"],
+    modules: [
+      {
+        title: "Fundamentos do Copywriting",
+        lessons: [
+          {
+            title: "Como escrever headlines irresistíveis",
+            durationSeconds: 300,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Headlines.pptx", type: "SLIDES", sizeBytes: 470_000 }],
+          },
+          { title: "Gatilhos mentais que funcionam", durationSeconds: 360 },
+        ],
+      },
+      {
+        title: "Copy na Prática",
+        lessons: [
+          {
+            title: "Escrever um email de vendas do zero",
+            durationSeconds: 380,
+            resources: [{ name: "Template de email.pdf", type: "PDF", sizeBytes: 85_000 }],
+          },
+          { title: "Adaptar o copy a redes sociais", durationSeconds: 300 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Guitarra para Iniciantes",
+    slug: "guitarra-para-iniciantes",
+    description:
+      "Aprende a tocar guitarra do zero: acordes essenciais, ritmo, e as tuas primeiras músicas completas em poucas semanas.",
+    category: "Música",
+    level: "beginner",
+    published: true,
+    price: 19.99,
+    rating: 4.8,
+    ratingCount: 465,
+    instructor: "ana",
+    learningOutcomes: [
+      "Tocar os acordes essenciais de guitarra",
+      "Manter ritmo constante com diferentes padrões de batida",
+      "Trocar entre acordes de forma fluida",
+      "Tocar a tua primeira música completa",
+    ],
+    requirements: ["Uma guitarra acústica ou elétrica", "Nenhuma experiência prévia necessária"],
+    targetAudience: [
+      "Quem sempre quis aprender a tocar guitarra",
+      "Iniciantes completos sem qualquer base musical",
+      "Quem quer aprender a acompanhar músicas simples",
+    ],
+    topics: ["Guitarra", "Música", "Acordes", "Ritmo"],
+    modules: [
+      {
+        title: "Primeiros Acordes",
+        lessons: [
+          {
+            title: "Postura e afinação da guitarra",
+            durationSeconds: 260,
+            isFreePreview: true,
+            resources: [{ name: "Slides - Afinação.pptx", type: "SLIDES", sizeBytes: 440_000 }],
+          },
+          { title: "Os 4 acordes que abrem 100 músicas", durationSeconds: 400 },
+        ],
+      },
+      {
+        title: "Ritmo e Prática",
+        lessons: [
+          {
+            title: "Padrões de batida essenciais",
+            durationSeconds: 340,
+            resources: [{ name: "Tablatura de prática.pdf", type: "PDF", sizeBytes: 60_000 }],
+          },
+          { title: "Tocar a tua primeira música completa", durationSeconds: 450 },
+        ],
+      },
+    ],
+  },
+  {
     title: "Curso em Preparação",
     slug: "curso-rascunho",
     description: "Curso ainda não publicado, usado para testar a área do instrutor.",
@@ -534,16 +1291,21 @@ const courseSeeds: CourseSeed[] = [
 async function main() {
   const passwordHash = await bcrypt.hash("password123", 10);
 
+  const anaBio =
+    "Ex-engenheira de software com mais de 10 anos de experiência em produto e frontend. Apaixonada por ensinar de forma prática, com projetos reais em vez de teoria solta.";
+  const carlosBio =
+    "Analista de dados e consultor de negócio há 13 anos. Já ajudei dezenas de equipas a tomar decisões melhores com dados — agora traz essa experiência para os cursos.";
+
   const ana = await prisma.user.upsert({
     where: { email: "instrutor@example.com" },
-    update: {},
-    create: { name: "Ana Rodrigues", email: "instrutor@example.com", passwordHash, role: "INSTRUCTOR" },
+    update: { bio: anaBio },
+    create: { name: "Ana Rodrigues", email: "instrutor@example.com", passwordHash, role: "INSTRUCTOR", bio: anaBio },
   });
 
   const carlos = await prisma.user.upsert({
     where: { email: "carlos@example.com" },
-    update: {},
-    create: { name: "Carlos Mendes", email: "carlos@example.com", passwordHash, role: "INSTRUCTOR" },
+    update: { bio: carlosBio },
+    create: { name: "Carlos Mendes", email: "carlos@example.com", passwordHash, role: "INSTRUCTOR", bio: carlosBio },
   });
 
   const bruno = await prisma.user.upsert({
@@ -558,6 +1320,31 @@ async function main() {
     create: { name: "Sofia Ferreira", email: "sofia@example.com", passwordHash, role: "STUDENT" },
   });
 
+  const miguel = await prisma.user.upsert({
+    where: { email: "miguel@example.com" },
+    update: {},
+    create: { name: "Miguel Santos", email: "miguel@example.com", passwordHash, role: "STUDENT" },
+  });
+
+  const carla = await prisma.user.upsert({
+    where: { email: "carla@example.com" },
+    update: {},
+    create: { name: "Carla Nunes", email: "carla@example.com", passwordHash, role: "STUDENT" },
+  });
+
+  const tiago = await prisma.user.upsert({
+    where: { email: "tiago@example.com" },
+    update: {},
+    create: { name: "Tiago Silva", email: "tiago@example.com", passwordHash, role: "STUDENT" },
+  });
+
+  const beatriz = await prisma.user.upsert({
+    where: { email: "beatriz@example.com" },
+    update: {},
+    create: { name: "Beatriz Costa", email: "beatriz@example.com", passwordHash, role: "STUDENT" },
+  });
+
+  const reviewers = [bruno, sofia, miguel, carla, tiago, beatriz];
   const instructors = { ana, carlos };
   const courses: Record<string, Awaited<ReturnType<typeof prisma.course.upsert>>> = {};
 
@@ -576,7 +1363,13 @@ async function main() {
   for (const c of courseSeeds) {
     const course = await prisma.course.upsert({
       where: { slug: c.slug },
-      update: {},
+      update: {
+        trailerUrl: PEXELS_TRAILERS[c.slug] ?? null,
+        learningOutcomes: c.learningOutcomes ?? [],
+        requirements: c.requirements ?? [],
+        targetAudience: c.targetAudience ?? [],
+        topics: c.topics ?? [],
+      },
       create: {
         title: c.title,
         slug: c.slug,
@@ -585,9 +1378,15 @@ async function main() {
         level: c.level,
         published: c.published,
         price: c.price,
+        originalPrice: c.originalPrice ?? null,
         rating: c.rating,
         ratingCount: c.ratingCount,
         thumbnailUrl: c.published ? thumb(c.slug) : null,
+        trailerUrl: PEXELS_TRAILERS[c.slug] ?? null,
+        learningOutcomes: c.learningOutcomes ?? [],
+        requirements: c.requirements ?? [],
+        targetAudience: c.targetAudience ?? [],
+        topics: c.topics ?? [],
         instructorId: instructors[c.instructor].id,
         modules: {
           create: c.modules.map((m, mi) => ({
@@ -690,6 +1489,108 @@ async function main() {
   await enroll(sofia.id, "marketing-digital-do-zero", 1);
   await enroll(sofia.id, "gestao-de-projetos-ageis", 0.25);
   await enroll(sofia.id, "react-avancado-performance", 0);
+
+  async function ensureBundle(name: string, instructorId: string, slugs: string[]) {
+    let bundle = await prisma.bundle.findFirst({ where: { name, instructorId } });
+    if (!bundle) {
+      bundle = await prisma.bundle.create({ data: { name, instructorId } });
+    }
+    await prisma.course.updateMany({
+      where: { slug: { in: slugs } },
+      data: { bundleId: bundle.id },
+    });
+  }
+
+  await ensureBundle("Pacote Frontend Moderno", ana.id, ["introducao-ao-nextjs", "typescript-para-iniciantes"]);
+  await ensureBundle("Pacote Data & Backend", carlos.id, [
+    "python-ciencia-de-dados",
+    "nodejs-apis-rest",
+    "react-avancado-performance",
+  ]);
+  await ensureBundle("Pacote Criativo Completo", ana.id, [
+    "design-de-interfaces",
+    "fotografia-com-telemovel",
+    "producao-musical-ableton",
+    "guitarra-para-iniciantes",
+  ]);
+  await ensureBundle("Pacote Gestão & Marketing", carlos.id, [
+    "marketing-digital-do-zero",
+    "gestao-de-projetos-ageis",
+    "excel-para-negocios",
+    "copywriting-que-vende",
+  ]);
+  await ensureBundle("Pacote Bem-estar & Criatividade", ana.id, [
+    "yoga-e-mindfulness",
+    "cozinha-rapida-do-dia-a-dia",
+    "produtividade-e-gestao-do-tempo",
+    "desenho-e-ilustracao-digital",
+  ]);
+  await ensureBundle("Pacote Vendas & Finanças", carlos.id, [
+    "ingles-para-viagens",
+    "educacao-financeira-do-zero",
+    "fundamentos-de-vendas",
+  ]);
+
+  const REVIEW_COMMENTS: Record<number, string[]> = {
+    5: [
+      "Curso excelente, recomendo a qualquer pessoa que queira aprender a sério.",
+      "Aprendi imenso, o instrutor explica tudo de forma muito clara.",
+      "Conteúdo muito bem estruturado, superou as minhas expectativas.",
+      "Um dos melhores cursos que já fiz nesta área.",
+      "Didática excelente, dá mesmo vontade de continuar a aprender.",
+    ],
+    4: [
+      "Muito bom, só senti falta de mais exercícios práticos.",
+      "Curso sólido, algumas partes podiam ser mais aprofundadas.",
+      "Gostei bastante, o instrutor explica bem e o ritmo é bom.",
+      "Boa relação qualidade-preço, recomendo.",
+    ],
+    3: [
+      "Curso ok, mas esperava um pouco mais de profundidade.",
+      "Conteúdo básico, serve bem para quem está a começar.",
+    ],
+  };
+  const REVIEW_RATING_POOL = [5, 5, 5, 4, 4, 3];
+
+  for (const c of courseSeeds) {
+    if (!c.published) continue;
+    const course = courses[c.slug];
+    const numReviews = 3 + (course.title.length % 4); // varia entre 3 e 6 reviews por curso
+    const courseReviewers = shuffle(reviewers).slice(0, numReviews);
+
+    for (let i = 0; i < courseReviewers.length; i++) {
+      const reviewer = courseReviewers[i];
+      const rating = REVIEW_RATING_POOL[(course.title.length + i) % REVIEW_RATING_POOL.length];
+      const comments = REVIEW_COMMENTS[rating];
+      const comment = comments[(course.title.length + i * 7) % comments.length];
+      const createdAt = new Date(Date.now() - (i + 1) * 9 * 24 * 60 * 60 * 1000);
+
+      await prisma.enrollment.upsert({
+        where: { userId_courseId: { userId: reviewer.id, courseId: course.id } },
+        update: {},
+        create: { userId: reviewer.id, courseId: course.id, enrolledAt: createdAt },
+      });
+
+      await prisma.review.upsert({
+        where: { userId_courseId: { userId: reviewer.id, courseId: course.id } },
+        update: { rating, comment },
+        create: { userId: reviewer.id, courseId: course.id, rating, comment, createdAt },
+      });
+    }
+
+    const agg = await prisma.review.aggregate({
+      where: { courseId: course.id },
+      _avg: { rating: true },
+      _count: true,
+    });
+    await prisma.course.update({
+      where: { id: course.id },
+      data: {
+        rating: agg._avg.rating ? Math.round(agg._avg.rating * 10) / 10 : c.rating,
+        ratingCount: agg._count,
+      },
+    });
+  }
 
   const nextjsCourse = courses["introducao-ao-nextjs"];
   const nextjsModules = await prisma.module.findMany({

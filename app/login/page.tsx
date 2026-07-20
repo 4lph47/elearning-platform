@@ -4,9 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { GraduationCap, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input, Label } from "@/components/ui/Input";
-import { Card } from "@/components/ui/Card";
 
 export default function LoginPage() {
   return (
@@ -49,44 +48,76 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-57px)] items-center justify-center bg-slate-50 px-4 py-16">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-lg font-bold text-white">
-            E
-          </span>
-          <h1 className="text-xl font-bold text-slate-900">Bem-vindo de volta</h1>
-          <p className="mt-1 text-sm text-slate-500">Entra na tua conta para continuar a aprender</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 py-16">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-blue-900/30 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        <div className="mb-8 text-center">
+          <Link href="/" className="mx-auto flex w-fit items-center gap-2 text-lg font-bold text-white">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
+              <GraduationCap size={22} />
+            </span>
+            E-Learn
+          </Link>
+          <h1 className="mt-5 text-2xl font-bold text-white">Bem-vindo de volta</h1>
+          <p className="mt-1.5 text-sm text-slate-400">Entra na tua conta para continuar a aprender</p>
         </div>
-        <Card className="p-6 shadow-md">
+
+        <div className="rounded-xl border border-white/10 bg-slate-950 p-6 shadow-xl shadow-black/40">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-300">
+                Email
+              </label>
+              <div className="relative">
+                <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-300">
+                Password
+              </label>
+              <div className="relative">
+                <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "A entrar..." : "Entrar"}
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+              {loading ? "A entrar..." : (
+                <>
+                  Entrar <ArrowRight size={16} />
+                </>
+              )}
             </Button>
           </form>
-          <p className="mt-4 text-sm text-slate-500">
+          <p className="mt-5 text-center text-sm text-slate-400">
             Ainda não tens conta?{" "}
-            <Link href="/register" className="font-medium text-slate-900 hover:underline">
+            <Link href="/register" className="font-medium text-blue-400 hover:text-blue-300 hover:underline">
               Regista-te
             </Link>
           </p>
-        </Card>
-        <p className="mt-4 text-center text-xs text-slate-400">
+        </div>
+
+        <p className="mt-5 text-center text-xs text-slate-500">
           Demo: instrutor@example.com / aluno@example.com — password: password123
         </p>
       </div>

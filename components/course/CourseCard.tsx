@@ -14,6 +14,7 @@ export interface CourseCardData {
   price: number;
   rating: number;
   ratingCount: number;
+  trailerUrl: string | null;
 }
 
 const LEVEL_LABEL: Record<string, string> = {

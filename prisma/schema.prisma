@@ -34,13 +34,46 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role     @default(STUDENT)
+  bio          String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  coursesTaught  Course[]         @relation("InstructorCourses")
-  enrollments    Enrollment[]
-  lessonProgress LessonProgress[]
-  quizAttempts   QuizAttempt[]
+  coursesTaught        Course[]         @relation("InstructorCourses")
+  collaboratingCourses Course[]         @relation("CourseCollaborators")
+  lessonContributions  Lesson[]         @relation("LessonContributors")
+  bundles              Bundle[]
+  cartItems            CartItem[]
+  enrollments          Enrollment[]
+  lessonProgress       LessonProgress[]
+  quizAttempts         QuizAttempt[]
+  reviews              Review[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+
+model Bundle {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instructorId String
+  instructor   User   @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  courses Course[]
+
+  @@index([instructorId])
 }
 
 model Course {
@@ -49,24 +82,38 @@ model Course {
   slug         String   @unique
   description  String
   thumbnailUrl String?
+  trailerUrl   String?
   category     String
   level        String   @default("beginner")
   published    Boolean  @default(false)
   price        Float    @default(0)
+  originalPrice Float?
   rating       Float    @default(4.5)
   ratingCount  Int      @default(0)
+  learningOutcomes String[] @default([])
+  requirements     String[] @default([])
+  targetAudience   String[] @default([])
+  topics           String[] @default([])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   instructorId String
   instructor   User   @relation("InstructorCourses", fields: [instructorId], references: [id], onDelete: Cascade)
 
+  collaborators User[] @relation("CourseCollaborators")
+
+  bundleId String?
+  bundle   Bundle? @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+
   modules     Module[]
   enrollments Enrollment[]
+  cartItems   CartItem[]
   quiz        Quiz?
+  reviews     Review[]
 
   @@index([instructorId])
   @@index([published])
+  @@index([bundleId])
 }
 
 model Module {
@@ -90,9 +137,12 @@ model Lesson {
   isFreePreview   Boolean  @default(false)
   contentUrl      String
   durationSeconds Int?
+  description     String?
 
   moduleId String
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  contributors User[] @relation("LessonContributors")
 
   resources LessonResource[]
   progress  LessonProgress[]
@@ -186,6 +236,21 @@ model QuizOption {
   question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@index([questionId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
 }
 
 model QuizAttempt {

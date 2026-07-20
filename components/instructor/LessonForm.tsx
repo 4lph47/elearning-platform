@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Paperclip, FileText, Image as ImageIcon, Video } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input, Label } from "@/components/ui/Input";
+import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { QuizEditor } from "@/components/instructor/QuizEditor";
 import type { LessonData } from "@/components/instructor/LessonRow";
@@ -12,24 +12,34 @@ export function LessonForm({
   moduleId,
   lesson,
   nextOrder,
+  courseAuthors,
   onDone,
   onCancel,
 }: {
   moduleId: string | null;
   lesson?: LessonData;
   nextOrder: number;
+  courseAuthors: { id: string; name: string }[];
   onDone: () => void;
   onCancel: () => void;
 }) {
   const isEditing = Boolean(lesson);
 
   const [title, setTitle] = useState(lesson?.title ?? "");
+  const [description, setDescription] = useState(lesson?.description ?? "");
   const [isFreePreview, setIsFreePreview] = useState(lesson?.isFreePreview ?? false);
   const [contentUrl, setContentUrl] = useState<string | null>(lesson?.contentUrl ?? null);
+  const [contributorIds, setContributorIds] = useState<string[]>(
+    lesson?.contributors?.map((c) => c.id) ?? []
+  );
   const [resources, setResources] = useState(lesson?.resources ?? []);
   const [resourceKind, setResourceKind] = useState<"VIDEO" | "DOCUMENT" | "IMAGE">("DOCUMENT");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleContributor(id: string) {
+    setContributorIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +56,8 @@ export function LessonForm({
       order: lesson?.order ?? nextOrder,
       isFreePreview,
       contentUrl,
+      description: description.trim() || null,
+      contributorIds,
     };
 
     const url = isEditing ? `/api/instructor/lessons/${lesson!.id}` : `/api/instructor/modules/${moduleId}/lessons`;
@@ -110,7 +122,23 @@ export function LessonForm({
       <div>
         <Label>Vídeo da aula (obrigatório)</Label>
         <FileUploadInput kind="VIDEO" onUploaded={(r) => setContentUrl(r.url)} />
+        <p className="my-1.5 text-center text-xs text-slate-400">ou</p>
+        <Input
+          placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
+          defaultValue={contentUrl?.includes("youtu") ? contentUrl : ""}
+          onBlur={(e) => e.target.value && setContentUrl(e.target.value)}
+        />
         {contentUrl && <p className="mt-1 text-xs text-slate-500">Vídeo atual: {contentUrl}</p>}
+      </div>
+
+      <div>
+        <Label htmlFor={`lesson-description-${lesson?.id ?? "new"}`}>Descrição da aula (opcional)</Label>
+        <Textarea
+          id={`lesson-description-${lesson?.id ?? "new"}`}
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
       </div>
 
       <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -122,6 +150,25 @@ export function LessonForm({
         />
         Aula disponível como preview grátis (sem matrícula)
       </label>
+
+      {courseAuthors.length > 1 && (
+        <div>
+          <Label>Envolvidos nesta aula</Label>
+          <div className="space-y-1">
+            {courseAuthors.map((a) => (
+              <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={contributorIds.includes(a.id)}
+                  onChange={() => toggleContributor(a.id)}
+                  className="rounded border-slate-300"
+                />
+                {a.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isEditing && (
         <div className="border-t border-slate-200 pt-3">

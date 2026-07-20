@@ -92,7 +92,7 @@ export function LessonBody({
 
           <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
             {inlinePreview ? (
-              <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white ${inlinePreviewHeight}`}>
+              <div className={`relative overflow-hidden rounded-lg border border-white/10 bg-slate-950 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
                   <button
                     onClick={() => setMaximized(true)}
@@ -122,7 +122,7 @@ export function LessonBody({
         </div>
 
         {!sideBySide && previewResource && (
-          <div className="relative mt-3 h-[80vh] w-full overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="relative mt-3 h-[80vh] w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950">
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
               <button
                 onClick={() => setMaximized(true)}
@@ -158,20 +158,20 @@ export function LessonBody({
       </div>
 
       {previewResource && maximized && (
-        <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl lg:inset-10">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <span className="truncate text-sm font-medium text-slate-700">{previewResource.name}</span>
+        <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-950 shadow-2xl lg:inset-10">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <span className="truncate text-sm font-medium text-slate-200">{previewResource.name}</span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setMaximized(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-white/10"
                 aria-label="Restaurar preview"
               >
                 <Minimize2 size={14} />
               </button>
               <button
                 onClick={closePreview}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-white/10"
                 aria-label="Fechar preview"
               >
                 <X size={14} />

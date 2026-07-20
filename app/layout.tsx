@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SessionProviderWrapper } from "@/components/layout/SessionProviderWrapper";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -26,14 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt">
+    <html lang="pt" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-900`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-white text-slate-900 antialiased dark:bg-black dark:text-white`}
       >
-        <SessionProviderWrapper>
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
-        </SessionProviderWrapper>
+        <ThemeProvider>
+          <SessionProviderWrapper>
+            <Navbar />
+            <main className="min-h-screen pt-16">{children}</main>
+            <Footer />
+          </SessionProviderWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );

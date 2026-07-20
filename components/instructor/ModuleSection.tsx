@@ -16,7 +16,15 @@ interface ModuleData {
   quiz?: QuizData | null;
 }
 
-export function ModuleSection({ module, courseSlug }: { module: ModuleData; courseSlug: string }) {
+export function ModuleSection({
+  module,
+  courseSlug,
+  courseAuthors,
+}: {
+  module: ModuleData;
+  courseSlug: string;
+  courseAuthors: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [addingLesson, setAddingLesson] = useState(false);
 
@@ -40,7 +48,7 @@ export function ModuleSection({ module, courseSlug }: { module: ModuleData; cour
 
       <div className="space-y-2">
         {module.lessons.map((lesson) => (
-          <LessonRow key={lesson.id} lesson={lesson} courseSlug={courseSlug} />
+          <LessonRow key={lesson.id} lesson={lesson} courseSlug={courseSlug} courseAuthors={courseAuthors} />
         ))}
       </div>
 
@@ -49,6 +57,7 @@ export function ModuleSection({ module, courseSlug }: { module: ModuleData; cour
           <LessonForm
             moduleId={module.id}
             nextOrder={module.lessons.length}
+            courseAuthors={courseAuthors}
             onDone={() => {
               setAddingLesson(false);
               router.refresh();

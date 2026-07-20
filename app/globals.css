@@ -21,6 +21,16 @@ body {
 
 @layer base {
   ::selection {
-    background-color: rgb(147 51 234 / 0.2);
+    background-color: rgb(37 99 235 / 0.25);
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

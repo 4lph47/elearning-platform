@@ -23,11 +23,11 @@ export function LessonTabs({
 
   return (
     <div>
-      <div className="flex gap-6 border-b border-slate-200">
+      <div className="flex gap-6 border-b border-white/10">
         <button
           onClick={() => setTab("overview")}
           className={`border-b-2 px-1 py-2 text-sm font-medium ${
-            tab === "overview" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"
+            tab === "overview" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
           }`}
         >
           Visão geral
@@ -35,27 +35,27 @@ export function LessonTabs({
         <button
           onClick={() => setTab("resources")}
           className={`border-b-2 px-1 py-2 text-sm font-medium ${
-            tab === "resources" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"
+            tab === "resources" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
           }`}
         >
           Recursos {resources.length > 0 && `(${resources.length})`}
         </button>
       </div>
 
-      <div className="py-4 text-sm text-slate-700">
+      <div className="py-4 text-sm text-slate-300">
         {tab === "overview" ? (
           <p className="whitespace-pre-wrap leading-relaxed">{overview}</p>
         ) : resources.length === 0 ? (
-          <p className="text-slate-400">Esta aula não tem materiais de apoio.</p>
+          <p className="text-slate-500">Esta aula não tem materiais de apoio.</p>
         ) : (
           <ul className="space-y-2">
             {resources.map((r) => (
-              <li key={r.id} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+              <li key={r.id} className="flex items-center justify-between rounded-md border border-white/10 px-3 py-2">
                 <span className="flex items-center gap-2">
                   {r.type === "SLIDES" ? (
-                    <Presentation size={14} className="text-slate-400" />
+                    <Presentation size={14} className="text-slate-500" />
                   ) : (
-                    <Paperclip size={14} className="text-slate-400" />
+                    <Paperclip size={14} className="text-slate-500" />
                   )}
                   {r.name}
                 </span>
@@ -63,7 +63,7 @@ export function LessonTabs({
                   {onSelectResource && (
                     <button
                       onClick={() => onSelectResource(r)}
-                      className="flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900"
+                      className="flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
                     >
                       <Eye size={14} /> Pré-visualizar
                     </button>
@@ -71,7 +71,7 @@ export function LessonTabs({
                   <a
                     href={r.url}
                     download={r.name}
-                    className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                    className="text-xs font-medium text-slate-400 hover:text-white"
                   >
                     Descarregar
                   </a>

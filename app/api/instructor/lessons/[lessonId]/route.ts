@@ -20,6 +20,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
   }
 
   const updated = await prisma.lesson.update({ where: { id: lessonId }, data: parsed.data });
+
+  if ("contributorIds" in body) {
+    const authorIds = new Set([
+      lesson.module.course.instructorId,
+      ...lesson.module.course.collaborators.map((c) => c.id),
+    ]);
+    const contributorIds: string[] = Array.isArray(body.contributorIds)
+      ? body.contributorIds.filter((id: unknown): id is string => typeof id === "string" && authorIds.has(id))
+      : [];
+
+    await prisma.lesson.update({
+      where: { id: lessonId },
+      data: { contributors: { set: contributorIds.map((id) => ({ id })) } },
+    });
+  }
+
   return NextResponse.json(updated);
 }
 

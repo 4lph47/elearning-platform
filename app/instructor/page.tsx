@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function InstructorHomePage() {
   const session = await getServerSession(authOptions);
   const courses = await prisma.course.findMany({
-    where: { instructorId: session!.user.id },
+    where: { OR: [{ instructorId: session!.user.id }, { collaborators: { some: { id: session!.user.id } } }] },
     include: { modules: { include: { _count: { select: { lessons: true } } } }, enrollments: true },
     orderBy: { createdAt: "desc" },
   });
@@ -19,9 +19,14 @@ export default async function InstructorHomePage() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Os meus cursos</h1>
-        <Link href="/instructor/courses/new">
-          <Button>+ Novo curso</Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/instructor/profile" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+            Perfil público
+          </Link>
+          <Link href="/instructor/courses/new">
+            <Button>+ Novo curso</Button>
+          </Link>
+        </div>
       </div>
 
       {courses.length === 0 ? (

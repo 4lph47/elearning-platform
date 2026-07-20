@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/Button";
 
 export function EnrollButton({
   courseId,
+  courseSlug,
+  price,
   isAuthenticated,
   firstLessonHref,
 }: {
   courseId: string;
+  courseSlug: string;
+  price: number;
   isAuthenticated: boolean;
   firstLessonHref: string;
 }) {
@@ -19,7 +23,13 @@ export function EnrollButton({
 
   async function handleEnroll() {
     if (!isAuthenticated) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`);
+      const target = price > 0 ? `/courses/${courseSlug}/checkout` : window.location.pathname;
+      router.push(`/login?callbackUrl=${encodeURIComponent(target)}`);
+      return;
+    }
+
+    if (price > 0) {
+      router.push(`/courses/${courseSlug}/checkout`);
       return;
     }
 
@@ -46,8 +56,8 @@ export function EnrollButton({
 
   return (
     <div>
-      <Button onClick={handleEnroll} disabled={loading} className="w-full">
-        {loading ? "A matricular..." : "Matricular-me gratuitamente"}
+      <Button onClick={handleEnroll} disabled={loading} variant="accent" className="w-full">
+        {loading ? "A matricular..." : price > 0 ? "Inscrever-me" : "Inscrever-me gratuitamente"}
       </Button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

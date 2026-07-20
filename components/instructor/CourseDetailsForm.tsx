@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Star } from "lucide-react";
+import { Star, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card, Badge } from "@/components/ui/Card";
 import { QuizEditor, type QuizData } from "@/components/instructor/QuizEditor";
+import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 
 interface CourseData {
   id: string;
@@ -17,20 +18,107 @@ interface CourseData {
   published: boolean;
   slug: string;
   price: number;
+  originalPrice: number | null;
   rating: number;
   ratingCount: number;
+  trailerUrl: string | null;
+  learningOutcomes: string[];
+  requirements: string[];
+  targetAudience: string[];
+  topics: string[];
+  bundle: { name: string; courses: { id: string }[] } | null;
+  instructor: { id: string; name: string; email: string };
+  collaborators: { id: string; name: string; email: string }[];
   quiz?: QuizData | null;
 }
 
-export function CourseDetailsForm({ course }: { course: CourseData }) {
+function useEditableList(initial: string[]) {
+  const [items, setItems] = useState(initial.length > 0 ? initial : [""]);
+
+  return {
+    items,
+    update: (index: number, value: string) => setItems((prev) => prev.map((v, i) => (i === index ? value : v))),
+    add: () => setItems((prev) => [...prev, ""]),
+    remove: (index: number) => setItems((prev) => prev.filter((_, i) => i !== index)),
+  };
+}
+
+function EditableListField({
+  label,
+  placeholder,
+  list,
+}: {
+  label: string;
+  placeholder: string;
+  list: ReturnType<typeof useEditableList>;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="space-y-2">
+        {list.items.map((value, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input value={value} onChange={(e) => list.update(i, e.target.value)} placeholder={placeholder} />
+            <button
+              type="button"
+              onClick={() => list.remove(i)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-red-600"
+              aria-label="Remover"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={list.add}
+        className="mt-2 flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+      >
+        <Plus size={14} /> Adicionar item
+      </button>
+    </div>
+  );
+}
+
+export function CourseDetailsForm({ course, otherCourses }: { course: CourseData; otherCourses: { id: string; title: string }[] }) {
   const router = useRouter();
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description);
   const [category, setCategory] = useState(course.category);
   const [level, setLevel] = useState(course.level);
   const [price, setPrice] = useState(String(course.price));
+  const [originalPrice, setOriginalPrice] = useState(course.originalPrice != null ? String(course.originalPrice) : "");
+  const [trailerUrl, setTrailerUrl] = useState(course.trailerUrl);
+  const outcomes = useEditableList(course.learningOutcomes);
+  const requirements = useEditableList(course.requirements);
+  const audience = useEditableList(course.targetAudience);
+  const topics = useEditableList(course.topics);
+  const [bundleName, setBundleName] = useState(course.bundle?.name ?? "");
+  const [bundleCourseIds, setBundleCourseIds] = useState<string[]>(
+    course.bundle?.courses.map((c) => c.id).filter((id) => id !== course.id) ?? []
+  );
+  const [collaborators, setCollaborators] = useState(course.collaborators);
+  const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleBundleCourse(id: string) {
+    setBundleCourseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function addCollaborator() {
+    const email = newCollaboratorEmail.trim();
+    if (!email) return;
+    if (email.toLowerCase() === course.instructor.email.toLowerCase()) return;
+    if (collaborators.some((c) => c.email.toLowerCase() === email.toLowerCase())) return;
+    setCollaborators((prev) => [...prev, { id: email, name: email, email }]);
+    setNewCollaboratorEmail("");
+  }
+
+  function removeCollaborator(email: string) {
+    setCollaborators((prev) => prev.filter((c) => c.email !== email));
+  }
 
   async function save(overrides: Record<string, unknown> = {}) {
     setSaving(true);
@@ -38,7 +126,22 @@ export function CourseDetailsForm({ course }: { course: CourseData }) {
     const res = await fetch(`/api/instructor/courses/${course.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, category, level, price: Number(price) || 0, ...overrides }),
+      body: JSON.stringify({
+        title,
+        description,
+        category,
+        level,
+        price: Number(price) || 0,
+        originalPrice: originalPrice.trim() === "" ? null : Number(originalPrice) || 0,
+        trailerUrl,
+        learningOutcomes: outcomes.items.map((o) => o.trim()).filter(Boolean),
+        requirements: requirements.items.map((r) => r.trim()).filter(Boolean),
+        targetAudience: audience.items.map((a) => a.trim()).filter(Boolean),
+        topics: topics.items.map((t) => t.trim()).filter(Boolean),
+        bundle: bundleName.trim() ? { name: bundleName.trim(), courseIds: bundleCourseIds } : null,
+        collaboratorEmails: collaborators.map((c) => c.email),
+        ...overrides,
+      }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -99,7 +202,7 @@ export function CourseDetailsForm({ course }: { course: CourseData }) {
           <Label htmlFor="description">Descrição</Label>
           <Textarea id="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <Label htmlFor="category">Categoria</Label>
             <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
@@ -128,7 +231,103 @@ export function CourseDetailsForm({ course }: { course: CourseData }) {
               onChange={(e) => setPrice(e.target.value)}
             />
           </div>
+          <div>
+            <Label htmlFor="originalPrice">Preço original (€, opcional)</Label>
+            <Input
+              id="originalPrice"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="Ex.: 59.99"
+              value={originalPrice}
+              onChange={(e) => setOriginalPrice(e.target.value)}
+            />
+          </div>
         </div>
+
+        <div>
+          <Label>Trailer do curso</Label>
+          <FileUploadInput kind="VIDEO" onUploaded={(r) => setTrailerUrl(r.url)} />
+          <p className="my-1.5 text-center text-xs text-slate-400">ou</p>
+          <Input
+            placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
+            defaultValue={trailerUrl?.includes("youtu") ? trailerUrl : ""}
+            onBlur={(e) => e.target.value && setTrailerUrl(e.target.value)}
+          />
+          {trailerUrl && <p className="mt-1 text-xs text-slate-500">Trailer atual: {trailerUrl}</p>}
+        </div>
+
+        <EditableListField label="O que os alunos vão aprender" placeholder="Ex.: Fundamentos práticos" list={outcomes} />
+        <EditableListField label="Requisitos" placeholder="Ex.: Conhecimentos básicos de JavaScript" list={requirements} />
+        <EditableListField label="Para quem é este curso" placeholder="Ex.: Iniciantes que querem mudar de carreira" list={audience} />
+        <EditableListField label="Tópicos relacionados" placeholder="Ex.: React, TypeScript, APIs" list={topics} />
+
+        <div>
+          <Label>Bundle (comprados frequentemente em conjunto)</Label>
+          <Input
+            placeholder="Nome do bundle, ex.: Pacote Data Science Completo"
+            value={bundleName}
+            onChange={(e) => setBundleName(e.target.value)}
+          />
+          {bundleName.trim() && (
+            <div className="mt-2 space-y-1.5 rounded-md border border-slate-200 p-3">
+              {otherCourses.length === 0 ? (
+                <p className="text-xs text-slate-500">Não tens outros cursos publicados para incluir no bundle.</p>
+              ) : (
+                otherCourses.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={bundleCourseIds.includes(c.id)}
+                      onChange={() => toggleBundleCourse(c.id)}
+                      className="rounded border-slate-300"
+                    />
+                    {c.title}
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <Label>Colaboradores (co-autores deste curso)</Label>
+          <p className="mb-2 text-xs text-slate-500">
+            Colaboradores ganham acesso total de edição a este curso, tal como tu.
+          </p>
+          <div className="space-y-1.5">
+            {collaborators.map((c) => (
+              <div key={c.email} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-1.5 text-sm">
+                <span>{c.name !== c.email ? `${c.name} (${c.email})` : c.email}</span>
+                <button
+                  type="button"
+                  onClick={() => removeCollaborator(c.email)}
+                  className="text-xs text-red-600 hover:underline"
+                >
+                  remover
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Input
+              type="email"
+              placeholder="email@exemplo.com"
+              value={newCollaboratorEmail}
+              onChange={(e) => setNewCollaboratorEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCollaborator();
+                }
+              }}
+            />
+            <Button type="button" variant="outline" onClick={addCollaborator}>
+              Adicionar
+            </Button>
+          </div>
+        </div>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Button type="submit" disabled={saving}>
           {saving ? "A guardar..." : "Guardar alterações"}

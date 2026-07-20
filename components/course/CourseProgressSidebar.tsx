@@ -41,31 +41,31 @@ export function CourseProgressSidebar({
   const quizAccessible = isOwner || isEnrolled;
 
   return (
-    <div className="sticky top-20 rounded-xl border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 p-4">
-        <h2 className="text-sm font-semibold text-slate-800">O teu progresso</h2>
+    <div className="sticky top-20 rounded-xl border border-white/10 bg-slate-950">
+      <div className="border-b border-white/10 p-4">
+        <h2 className="text-sm font-semibold text-slate-100">O teu progresso</h2>
         {isEnrolled ? (
           <div className="mt-3">
             <div className="flex items-end justify-between">
-              <span className="text-3xl font-bold text-slate-900">{percent}%</span>
-              <span className="pb-1 text-xs text-slate-500">
+              <span className="text-3xl font-bold text-white">{percent}%</span>
+              <span className="pb-1 text-xs text-slate-400">
                 {completedCount}/{totalLessons} itens
               </span>
             </div>
-            <div className="mt-2 h-2 w-full rounded-full bg-slate-100">
-              <div className="h-2 rounded-full bg-slate-900 transition-all" style={{ width: `${percent}%` }} />
+            <div className="mt-2 h-2 w-full rounded-full bg-slate-800">
+              <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${percent}%` }} />
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-xs text-slate-500">Preview grátis — matricula-te para acompanhar o progresso.</p>
+          <p className="mt-2 text-xs text-slate-400">Preview grátis — inscreve-te para acompanhar o progresso.</p>
         )}
       </div>
       <div className="max-h-[55vh] overflow-y-auto">
         {modules.map((module, mi) => (
-          <div key={module.id} className="border-b border-slate-100 last:border-0">
+          <div key={module.id} className="border-b border-white/10 last:border-0">
             <details open={module.lessons.some((l) => l.id === currentLessonId)} className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between bg-slate-50 px-4 py-2">
-                <span className="text-sm font-medium text-slate-700">
+              <summary className="flex cursor-pointer list-none items-center justify-between bg-slate-900/60 px-4 py-2">
+                <span className="text-sm font-medium text-slate-200">
                   Módulo {mi + 1} · {module.title}
                 </span>
                 <ChevronDown size={14} className="shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
@@ -82,24 +82,24 @@ export function CourseProgressSidebar({
                           href={`/courses/${slug}/lessons/${l.id}`}
                           className={`flex items-center gap-2 border-l-4 px-4 py-2 text-sm ${
                             isCurrent
-                              ? "border-slate-900 bg-slate-100 text-slate-900"
-                              : "border-transparent text-slate-600 hover:bg-slate-50"
+                              ? "border-blue-500 bg-blue-600/10 text-white"
+                              : "border-transparent text-slate-300 hover:bg-white/5"
                           }`}
                         >
                           {isDone ? (
-                            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-900">
+                            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
                               <Check size={10} strokeWidth={3} className="text-white" />
                             </span>
                           ) : (
-                            <CheckCircle2 size={16} className="shrink-0 text-slate-300" />
+                            <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
                           )}
                           <span className="flex-1">{l.title}</span>
                           {l.durationSeconds && (
-                            <span className="text-xs text-slate-400">{Math.round(l.durationSeconds / 60)}min</span>
+                            <span className="text-xs text-slate-500">{Math.round(l.durationSeconds / 60)}min</span>
                           )}
                         </Link>
                       ) : (
-                        <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-400">
+                        <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-500">
                           <Lock size={16} className="shrink-0" />
                           <span className="flex-1">{l.title}</span>
                         </span>
@@ -113,19 +113,19 @@ export function CourseProgressSidebar({
                     {quizAccessible ? (
                       <Link
                         href={`/courses/${slug}/quiz/${module.quizId}`}
-                        className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                        className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
                       >
                         {doneQuizIds.has(module.quizId) ? (
-                          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-900">
+                          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
                             <Check size={10} strokeWidth={3} className="text-white" />
                           </span>
                         ) : (
-                          <CheckCircle2 size={16} className="shrink-0 text-slate-300" />
+                          <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
                         )}
                         <span className="flex-1">Quiz · {module.title}</span>
                       </Link>
                     ) : (
-                      <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-400">
+                      <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-500">
                         <Lock size={16} className="shrink-0" />
                         <span className="flex-1">Quiz · {module.title}</span>
                       </span>

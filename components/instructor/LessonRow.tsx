@@ -21,11 +21,21 @@ export interface LessonData {
   isFreePreview: boolean;
   contentUrl: string;
   durationSeconds: number | null;
+  description?: string | null;
+  contributors?: { id: string }[];
   resources: LessonResourceData[];
   quiz?: QuizData | null;
 }
 
-export function LessonRow({ lesson, courseSlug }: { lesson: LessonData; courseSlug: string }) {
+export function LessonRow({
+  lesson,
+  courseSlug,
+  courseAuthors,
+}: {
+  lesson: LessonData;
+  courseSlug: string;
+  courseAuthors: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
@@ -41,6 +51,7 @@ export function LessonRow({ lesson, courseSlug }: { lesson: LessonData; courseSl
         moduleId={null}
         lesson={lesson}
         nextOrder={lesson.order}
+        courseAuthors={courseAuthors}
         onDone={() => {
           setEditing(false);
           router.refresh();

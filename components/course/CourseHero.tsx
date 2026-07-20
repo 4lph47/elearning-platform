@@ -181,7 +181,7 @@ export function CourseHero({
       {!maximized && (
         <div className="pointer-events-none relative flex min-h-[520px] items-center px-3 py-14 pt-24 sm:min-h-[600px] sm:px-6 sm:py-20 sm:pt-28">
           <div
-            className={`pointer-events-auto max-w-xl text-left transition-all duration-300 ${
+            className={`pointer-events-auto mt-10 max-w-xl text-left transition-all duration-300 sm:mt-16 ${
               visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
             }`}
           >

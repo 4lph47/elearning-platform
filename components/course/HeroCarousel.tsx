@@ -76,24 +76,37 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
       </div>
 
       <div className="relative flex min-h-[520px] items-end sm:min-h-[460px] sm:items-center lg:min-h-[600px]">
-        <div className="max-w-xl px-4 pb-8 sm:px-8 sm:pb-0">
-          <span className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-            {featured.category}
-          </span>
-          <h1 className="mt-3 text-3xl font-bold text-white drop-shadow sm:text-5xl">{featured.title}</h1>
-          <p className="mt-3 line-clamp-3 text-sm text-slate-200 drop-shadow sm:text-base">{featured.description}</p>
-          <div className="mt-6 flex gap-3">
-            <Link href={`/courses/${featured.slug}`}>
-              <Button variant="accent">
-                <BookOpen size={16} /> Inscrever-me
-              </Button>
-            </Link>
-            <Link href={`/courses/${featured.slug}`}>
-              <Button variant="outline-dark">
-                <Info size={16} /> Mais informações
-              </Button>
-            </Link>
-          </div>
+        <div className="relative max-w-xl px-4 pb-8 sm:px-8 sm:pb-0">
+          {items.map((item, i) => (
+            <div
+              key={item.card.slug}
+              className={`transition-all duration-500 ${
+                i === index
+                  ? "relative translate-y-0 opacity-100"
+                  : "pointer-events-none absolute inset-0 translate-y-4 opacity-0"
+              }`}
+            >
+              <span className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+                {item.card.category}
+              </span>
+              <h1 className="mt-3 text-3xl font-bold text-white drop-shadow sm:text-5xl">{item.card.title}</h1>
+              <p className="mt-3 line-clamp-3 text-sm text-slate-200 drop-shadow sm:text-base">
+                {item.card.description}
+              </p>
+              <div className="mt-6 flex gap-3">
+                <Link href={`/courses/${item.card.slug}`}>
+                  <Button variant="accent">
+                    <BookOpen size={16} /> Inscrever-me
+                  </Button>
+                </Link>
+                <Link href={`/courses/${item.card.slug}`}>
+                  <Button variant="outline-dark">
+                    <Info size={16} /> Mais informações
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ))}
 
           {items.length > 1 && (
             <div className="mt-8 flex gap-1.5">

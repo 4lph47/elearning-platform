@@ -93,19 +93,19 @@ export function CourseTile({
 
       <div className="mt-2.5">
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="font-medium text-blue-400">{course.category}</span>
-          <span className="text-slate-600">·</span>
-          <span className="text-slate-400">{LEVEL_LABEL[course.level] ?? course.level}</span>
+          <span className="font-medium text-blue-600 dark:text-blue-400">{course.category}</span>
+          <span className="text-slate-400 dark:text-slate-600">·</span>
+          <span className="text-slate-500 dark:text-slate-400">{LEVEL_LABEL[course.level] ?? course.level}</span>
         </div>
-        <h3 className="mt-0.5 line-clamp-1 font-semibold text-white transition-colors group-hover:text-blue-400">
+        <h3 className="mt-0.5 line-clamp-1 font-semibold text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
           {course.title}
         </h3>
-        <p className="mt-0.5 text-xs text-slate-400">
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
           {course.instructorName} · {course.lessonCount} aulas
         </p>
         {course.ratingCount > 0 && (
           <div className="mt-1">
-            <StarRating rating={course.rating} count={course.ratingCount} tone="dark" />
+            <StarRating rating={course.rating} count={course.ratingCount} />
           </div>
         )}
       </div>

@@ -71,25 +71,25 @@ export function CheckoutForm({
 
   if (result) {
     return (
-      <div className="rounded-xl border border-white/10 bg-slate-950 p-8 text-center">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600">
           <Check size={26} className="text-white" />
         </span>
-        <h2 className="mt-4 text-xl font-bold text-white">Pagamento confirmado</h2>
-        <p className="mt-1 text-sm text-slate-400">Já tens acesso ao curso. Bons estudos!</p>
+        <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Pagamento confirmado</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Já tens acesso ao curso. Bons estudos!</p>
 
-        <dl className="mx-auto mt-6 max-w-xs space-y-1.5 rounded-lg border border-white/10 bg-white/5 p-4 text-left text-sm">
+        <dl className="mx-auto mt-6 max-w-xs space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm dark:border-white/10 dark:bg-white/5">
           <div className="flex justify-between">
-            <dt className="text-slate-400">Referência</dt>
-            <dd className="font-medium text-slate-100">{result.reference}</dd>
+            <dt className="text-slate-500 dark:text-slate-400">Referência</dt>
+            <dd className="font-medium text-slate-800 dark:text-slate-100">{result.reference}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-400">Método</dt>
-            <dd className="font-medium text-slate-100">{METHODS.find((m) => m.id === method)!.label}</dd>
+            <dt className="text-slate-500 dark:text-slate-400">Método</dt>
+            <dd className="font-medium text-slate-800 dark:text-slate-100">{METHODS.find((m) => m.id === method)!.label}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-400">Valor</dt>
-            <dd className="font-semibold text-blue-400">{price.toFixed(2)}€</dd>
+            <dt className="text-slate-500 dark:text-slate-400">Valor</dt>
+            <dd className="font-semibold text-blue-600 dark:text-blue-400">{price.toFixed(2)}€</dd>
           </div>
         </dl>
 
@@ -118,7 +118,9 @@ export function CheckoutForm({
             <label
               key={m.id}
               className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 ${
-                method === m.id ? "border-blue-500 bg-blue-600/10" : "border-white/10 hover:bg-white/5"
+                method === m.id
+                  ? "border-blue-500 bg-blue-600/10"
+                  : "border-slate-200 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
               }`}
             >
               <input
@@ -128,11 +130,11 @@ export function CheckoutForm({
                 onChange={() => setMethod(m.id)}
                 className="accent-blue-600"
               />
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-slate-300">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 {m.mobile ? <Smartphone size={15} /> : <CreditCard size={15} />}
               </span>
               <span>
-                <span className="block text-sm font-medium text-slate-100">{m.label}</span>
+                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">{m.label}</span>
                 <span className="block text-xs text-slate-500">{m.sub}</span>
               </span>
             </label>
@@ -142,38 +144,38 @@ export function CheckoutForm({
 
       {METHODS.find((m) => m.id === method)!.mobile ? (
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Número {METHODS.find((m) => m.id === method)!.label}</label>
-          <div className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2">
-            <span className="text-sm text-slate-400">+258</span>
+          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">Número {METHODS.find((m) => m.id === method)!.label}</label>
+          <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/5">
+            <span className="text-sm text-slate-500 dark:text-slate-400">+258</span>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="84 123 4567"
-              className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+              className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none dark:text-white dark:placeholder-slate-500"
             />
           </div>
           <p className="mt-1.5 text-xs text-slate-500">Vais receber um pedido de confirmação no teu telemóvel.</p>
         </div>
       ) : (
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-300">Número do cartão</label>
+          <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">Número do cartão</label>
           <input
             type="text"
             value={cardNumber}
             onChange={(e) => setCardNumber(e.target.value)}
             placeholder="0000 0000 0000 0000"
-            className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
           />
         </div>
       )}
 
-      <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-4 py-3">
-        <span className="text-sm text-slate-300">Total a pagar</span>
-        <span className="text-lg font-bold text-white">{price.toFixed(2)}€</span>
+      <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+        <span className="text-sm text-slate-600 dark:text-slate-300">Total a pagar</span>
+        <span className="text-lg font-bold text-slate-900 dark:text-white">{price.toFixed(2)}€</span>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
 
       <Button type="submit" variant="accent" disabled={loading} className="w-full">
         {loading ? "A processar..." : `Confirmar pagamento`}

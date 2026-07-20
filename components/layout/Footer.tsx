@@ -58,28 +58,31 @@ export async function Footer() {
   ];
 
   return (
-    <footer className="border-t border-white/10 bg-black">
+    <footer className="border-t border-slate-200 bg-white dark:border-white/10 dark:bg-black">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-5">
           <div className="col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 text-lg font-bold text-white">
+            <Link href="/" className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <GraduationCap size={18} />
               </span>
               E-Learn
             </Link>
-            <p className="mt-3 max-w-xs text-sm text-slate-400">
+            <p className="mt-3 max-w-xs text-sm text-slate-500 dark:text-slate-400">
               Aprende ao teu ritmo com cursos criados por instrutores reais.
             </p>
           </div>
 
           {columns.map((col) => (
             <div key={col.title}>
-              <h2 className="text-sm font-semibold text-white">{col.title}</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{col.title}</h2>
               <ul className="mt-3 space-y-2">
                 {col.links.map((link) => (
                   <li key={link.href + link.label}>
-                    <Link href={link.href} className="text-sm text-slate-400 hover:text-white hover:underline">
+                    <Link
+                      href={link.href}
+                      className="text-sm text-slate-500 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-white"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -89,7 +92,7 @@ export async function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 text-sm text-slate-500">
+        <div className="mt-10 border-t border-slate-200 pt-6 text-sm text-slate-500 dark:border-white/10">
           © {year} E-Learn. Todos os direitos reservados.
         </div>
       </div>

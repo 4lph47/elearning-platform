@@ -74,7 +74,7 @@ export function FrequentlyBoughtTogether({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{name}</p>
 
       <ul className="space-y-3">
@@ -91,29 +91,29 @@ export function FrequentlyBoughtTogether({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.thumbnailUrl} alt={item.title} className="h-10 w-14 shrink-0 rounded object-cover" />
             ) : (
-              <div className="h-10 w-14 shrink-0 rounded bg-slate-800" />
+              <div className="h-10 w-14 shrink-0 rounded bg-slate-200 dark:bg-slate-800" />
             )}
             <div className="min-w-0 flex-1">
               <Link
                 href={`/courses/${item.slug}`}
-                className="line-clamp-1 text-xs font-medium text-slate-100 hover:text-blue-400"
+                className="line-clamp-1 text-xs font-medium text-slate-800 hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400"
               >
                 {item.title}
               </Link>
               <p className="text-[11px] text-slate-500">{item.instructorName}</p>
             </div>
-            <span className="shrink-0 text-xs font-semibold text-white">
+            <span className="shrink-0 text-xs font-semibold text-slate-900 dark:text-white">
               {item.price === 0 ? "Grátis" : `${item.price.toFixed(2)}€`}
             </span>
           </li>
         ))}
       </ul>
 
-      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
-        <p className="text-xs text-slate-400">
+      <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3 dark:border-white/10">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Preço para {1 + checkedExtras.length} curso{checkedExtras.length !== 0 ? "s" : ""}
         </p>
-        <p className="text-lg font-bold text-white">{total.toFixed(2)}€</p>
+        <p className="text-lg font-bold text-slate-900 dark:text-white">{total.toFixed(2)}€</p>
       </div>
       <button
         onClick={addAll}
@@ -130,7 +130,7 @@ export function FrequentlyBoughtTogether({
           </>
         )}
       </button>
-      {error && <p className="mt-1.5 text-center text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-1.5 text-center text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   );
 }

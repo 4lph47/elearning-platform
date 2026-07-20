@@ -31,10 +31,10 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-white/10 bg-slate-950 p-8 text-center">
-        <ShoppingCart size={28} className="mx-auto text-slate-600" />
-        <p className="mt-3 text-slate-400">O teu carrinho está vazio.</p>
-        <Link href="/courses" className="mt-4 inline-block text-sm font-medium text-blue-400 hover:underline">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950">
+        <ShoppingCart size={28} className="mx-auto text-slate-400 dark:text-slate-600" />
+        <p className="mt-3 text-slate-500 dark:text-slate-400">O teu carrinho está vazio.</p>
+        <Link href="/courses" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
           Explorar cursos
         </Link>
       </div>
@@ -47,20 +47,20 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
     <div className="space-y-4">
       <ul className="space-y-3">
         {items.map((item) => (
-          <li key={item.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950 p-4">
+          <li key={item.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
             {item.thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.thumbnailUrl} alt={item.title} className="h-14 w-20 shrink-0 rounded-md object-cover" />
             ) : (
-              <div className="h-14 w-20 shrink-0 rounded-md bg-slate-800" />
+              <div className="h-14 w-20 shrink-0 rounded-md bg-slate-200 dark:bg-slate-800" />
             )}
             <div className="min-w-0 flex-1">
-              <Link href={`/courses/${item.slug}`} className="line-clamp-1 font-medium text-slate-100 hover:text-blue-400">
+              <Link href={`/courses/${item.slug}`} className="line-clamp-1 font-medium text-slate-800 hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400">
                 {item.title}
               </Link>
               <p className="text-xs text-slate-500">{item.instructorName}</p>
             </div>
-            <span className="shrink-0 font-semibold text-white">
+            <span className="shrink-0 font-semibold text-slate-900 dark:text-white">
               {item.price === 0 ? "Grátis" : `${item.price.toFixed(2)}€`}
             </span>
             <button
@@ -75,9 +75,9 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
         ))}
       </ul>
 
-      <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-4 py-3">
-        <span className="text-sm text-slate-300">Total ({items.length} curso{items.length !== 1 ? "s" : ""})</span>
-        <span className="text-lg font-bold text-white">{total.toFixed(2)}€</span>
+      <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+        <span className="text-sm text-slate-600 dark:text-slate-300">Total ({items.length} curso{items.length !== 1 ? "s" : ""})</span>
+        <span className="text-lg font-bold text-slate-900 dark:text-white">{total.toFixed(2)}€</span>
       </div>
 
       <Link

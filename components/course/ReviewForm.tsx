@@ -58,8 +58,8 @@ export function ReviewForm({
   }
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-white/10 bg-slate-900/60 p-4">
-      <p className="mb-2 text-sm font-medium text-slate-200">
+    <form onSubmit={submit} className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-900/60">
+      <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
         {initialRating ? "Editar a tua avaliação" : "Deixa a tua avaliação"}
       </p>
       <div className="flex items-center gap-1">
@@ -74,7 +74,7 @@ export function ReviewForm({
           >
             <Star
               size={22}
-              className={(hoverRating || rating) >= n ? "fill-blue-400 text-blue-400" : "text-slate-600"}
+              className={(hoverRating || rating) >= n ? "fill-blue-400 text-blue-400" : "text-slate-300 dark:text-slate-600"}
             />
           </button>
         ))}
@@ -84,9 +84,9 @@ export function ReviewForm({
         onChange={(e) => setComment(e.target.value)}
         placeholder="Conta a tua experiência com este curso..."
         rows={3}
-        className="mt-3 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+        className="mt-3 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
       />
-      {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-red-500 dark:text-red-400">{error}</p>}
       <Button type="submit" variant="accent" disabled={loading} className="mt-3">
         {loading ? "A enviar..." : "Enviar avaliação"}
       </Button>

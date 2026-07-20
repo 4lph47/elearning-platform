@@ -1,11 +1,15 @@
-function Star({ fill, tone }: { fill: number; tone: "light" | "dark" }) {
+function Star({ fill, tone }: { fill: number; tone: "auto" | "dark" }) {
   return (
-    <span className={`relative inline-block h-4 w-4 ${tone === "dark" ? "text-slate-600" : "text-slate-200"}`}>
+    <span
+      className={`relative inline-block h-4 w-4 ${
+        tone === "dark" ? "text-slate-600" : "text-slate-200 dark:text-slate-600"
+      }`}
+    >
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
         <path d="M10 1.5l2.6 5.6 6.1.6-4.6 4.2 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.2 6.1-.6z" />
       </svg>
       <span
-        className={`absolute inset-0 overflow-hidden ${tone === "dark" ? "text-white" : "text-slate-800"}`}
+        className={`absolute inset-0 overflow-hidden ${tone === "dark" ? "text-white" : "text-slate-800 dark:text-white"}`}
         style={{ width: `${fill * 100}%` }}
       >
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -20,18 +24,18 @@ export function StarRating({
   rating,
   count,
   size = "sm",
-  tone = "light",
+  tone = "auto",
 }: {
   rating: number;
   count?: number;
   size?: "sm" | "md";
-  tone?: "light" | "dark";
+  tone?: "auto" | "dark";
 }) {
   const stars = [0, 1, 2, 3, 4].map((i) => Math.max(0, Math.min(1, rating - i)));
 
   return (
     <div className={`flex items-center gap-1.5 ${size === "md" ? "text-base" : "text-sm"}`}>
-      <span className={`font-semibold ${tone === "dark" ? "text-white" : "text-slate-800"}`}>
+      <span className={`font-semibold ${tone === "dark" ? "text-white" : "text-slate-800 dark:text-white"}`}>
         {rating.toFixed(1)}
       </span>
       <span className="flex items-center gap-0.5">
@@ -40,7 +44,7 @@ export function StarRating({
         ))}
       </span>
       {typeof count === "number" && (
-        <span className={tone === "dark" ? "text-slate-500" : "text-slate-400"}>
+        <span className={tone === "dark" ? "text-slate-500" : "text-slate-400 dark:text-slate-500"}>
           ({count.toLocaleString("pt-PT")})
         </span>
       )}

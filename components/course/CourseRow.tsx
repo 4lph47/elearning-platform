@@ -29,7 +29,7 @@ export function CourseRow({
 
   return (
     <section className="group/row relative py-5">
-      <h2 className="mb-3 px-4 text-lg font-semibold text-white sm:px-8 sm:text-xl">{title}</h2>
+      <h2 className="mb-3 px-4 text-lg font-semibold text-slate-900 dark:text-white sm:px-8 sm:text-xl">{title}</h2>
 
       <button
         onClick={() => scrollBy(-1)}

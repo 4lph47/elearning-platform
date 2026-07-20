@@ -79,11 +79,13 @@ export function CourseDetailTabs({
 
   return (
     <div>
-      <div className="flex gap-6 border-b border-white/10">
+      <div className="flex gap-6 border-b border-slate-200 dark:border-white/10">
         <button
           onClick={() => setTab("programa")}
           className={`border-b-2 px-1 py-2 text-sm font-medium ${
-            tab === "programa" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
+            tab === "programa"
+              ? "border-blue-500 text-slate-900 dark:text-white"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
         >
           Programa
@@ -91,7 +93,9 @@ export function CourseDetailTabs({
         <button
           onClick={() => setTab("avaliacoes")}
           className={`border-b-2 px-1 py-2 text-sm font-medium ${
-            tab === "avaliacoes" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
+            tab === "avaliacoes"
+              ? "border-blue-500 text-slate-900 dark:text-white"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
         >
           Avaliações {reviews.length > 0 && `(${reviews.length})`}
@@ -99,7 +103,9 @@ export function CourseDetailTabs({
         <button
           onClick={() => setTab("certificado")}
           className={`border-b-2 px-1 py-2 text-sm font-medium ${
-            tab === "certificado" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
+            tab === "certificado"
+              ? "border-blue-500 text-slate-900 dark:text-white"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
         >
           Certificado
@@ -109,43 +115,45 @@ export function CourseDetailTabs({
       <div className="py-5">
         {tab === "programa" && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {modules.length} módulos · {allLessons.length} aulas · {formatDuration(totalDuration)} de vídeo
             </p>
-            <div className="divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10">
+            <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-white/10 dark:border-white/10">
               {modules.map((module, mi) => {
                 const moduleDuration = module.lessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
                 return (
                   <div key={module.id}>
-                    <details open={mi === 0} className="group bg-slate-950">
-                      <summary className="flex cursor-pointer list-none items-center justify-between bg-slate-900/60 px-4 py-3 hover:bg-slate-800/60">
-                        <span className="font-medium text-slate-100">
+                    <details open={mi === 0} className="group bg-white dark:bg-slate-950">
+                      <summary className="flex cursor-pointer list-none items-center justify-between bg-slate-50 px-4 py-3 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60">
+                        <span className="font-medium text-slate-800 dark:text-slate-100">
                           Módulo {mi + 1} · {module.title}
                         </span>
-                        <span className="flex items-center gap-2 text-xs text-slate-400">
+                        <span className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                           {module.lessons.length} aulas · {formatDuration(moduleDuration)}
                           <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
                         </span>
                       </summary>
-                      <ul className="divide-y divide-white/5">
+                      <ul className="divide-y divide-slate-100 dark:divide-white/5">
                         {module.lessons.map((lesson) => {
                           const accessible = isEnrolled || isOwner || lesson.isFreePreview;
                           const content = (
-                            <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-900/50">
+                            <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
                               <span className="flex items-center gap-2">
                                 {lesson.type === "TEXT" ? (
-                                  <TypeIcon size={16} className="shrink-0 text-slate-600" />
+                                  <TypeIcon size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
                                 ) : (
-                                  <Monitor size={16} className="shrink-0 text-slate-600" />
+                                  <Monitor size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
                                 )}
-                                <span className={accessible ? "text-slate-200" : "text-slate-500"}>{lesson.title}</span>
+                                <span className={accessible ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"}>
+                                  {lesson.title}
+                                </span>
                                 {lesson.isFreePreview && !isEnrolled && !isOwner && (
-                                  <span className="whitespace-nowrap rounded-full bg-blue-600/20 px-2 py-0.5 text-xs font-medium text-blue-400">
+                                  <span className="whitespace-nowrap rounded-full bg-blue-600/20 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
                                     Preview grátis
                                   </span>
                                 )}
                               </span>
-                              <span className="flex items-center gap-2 text-xs text-slate-500">
+                              <span className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                                 {lesson.durationSeconds ? formatDuration(lesson.durationSeconds) : ""}
                                 {!accessible && <Lock size={14} />}
                               </span>
@@ -163,20 +171,20 @@ export function CourseDetailTabs({
                                 <div className="pl-6">
                                   {quizAccessible && accessible ? (
                                     <Link href={`/courses/${courseSlug}/quiz/${lesson.quiz.id}`}>
-                                      <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-900/50">
+                                      <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
                                         <span className="flex items-center gap-2">
-                                          <HelpCircle size={16} className="shrink-0 text-slate-600" />
-                                          <span className="text-slate-200">Quiz · {lesson.title}</span>
+                                          <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
+                                          <span className="text-slate-700 dark:text-slate-200">Quiz · {lesson.title}</span>
                                         </span>
                                       </div>
                                     </Link>
                                   ) : (
                                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                                       <span className="flex items-center gap-2">
-                                        <HelpCircle size={16} className="shrink-0 text-slate-600" />
-                                        <span className="text-slate-500">Quiz · {lesson.title}</span>
+                                        <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
+                                        <span className="text-slate-400 dark:text-slate-500">Quiz · {lesson.title}</span>
                                       </span>
-                                      <Lock size={14} className="text-slate-500" />
+                                      <Lock size={14} className="text-slate-400 dark:text-slate-500" />
                                     </div>
                                   )}
                                 </div>
@@ -189,20 +197,20 @@ export function CourseDetailTabs({
                           <li>
                             {quizAccessible ? (
                               <Link href={`/courses/${courseSlug}/quiz/${module.quiz.id}`}>
-                                <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-900/50">
+                                <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
                                   <span className="flex items-center gap-2">
-                                    <HelpCircle size={16} className="shrink-0 text-slate-600" />
-                                    <span className="text-slate-200">Quiz · {module.title}</span>
+                                    <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
+                                    <span className="text-slate-700 dark:text-slate-200">Quiz · {module.title}</span>
                                   </span>
                                 </div>
                               </Link>
                             ) : (
                               <div className="flex items-center justify-between px-4 py-3 text-sm">
                                 <span className="flex items-center gap-2">
-                                  <HelpCircle size={16} className="shrink-0 text-slate-600" />
-                                  <span className="text-slate-500">Quiz · {module.title}</span>
+                                  <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
+                                  <span className="text-slate-400 dark:text-slate-500">Quiz · {module.title}</span>
                                 </span>
-                                <Lock size={14} className="text-slate-500" />
+                                <Lock size={14} className="text-slate-400 dark:text-slate-500" />
                               </div>
                             )}
                           </li>
@@ -220,7 +228,7 @@ export function CourseDetailTabs({
           <div className="space-y-5">
             {reviews.length > 0 && (
               <div className="flex items-center gap-3">
-                <StarRating rating={reviewsAvg} count={reviews.length} tone="dark" size="md" />
+                <StarRating rating={reviewsAvg} count={reviews.length} size="md" />
               </div>
             )}
 
@@ -231,17 +239,17 @@ export function CourseDetailTabs({
             ) : (
               <ul className="space-y-4">
                 {reviews.map((r) => (
-                  <li key={r.id} className="rounded-lg border border-white/10 bg-slate-950 p-4">
+                  <li key={r.id} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-slate-200">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                         {initials(r.userName)}
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-slate-100">{r.userName}</p>
-                        <StarRating rating={r.rating} tone="dark" />
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{r.userName}</p>
+                        <StarRating rating={r.rating} />
                       </div>
                     </div>
-                    <p className="mt-2 text-sm text-slate-300">{r.comment}</p>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{r.comment}</p>
                   </li>
                 ))}
               </ul>
@@ -254,44 +262,44 @@ export function CourseDetailTabs({
             <div>
               <div
                 id="certificate"
-                className="rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-slate-900 to-slate-950 p-10 text-center"
+                className="rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-white p-10 text-center dark:from-slate-900 dark:to-slate-950"
               >
-                <Award size={40} className="mx-auto text-blue-400" />
-                <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-400">
+                <Award size={40} className="mx-auto text-blue-600 dark:text-blue-400" />
+                <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
                   Certificado de conclusão
                 </p>
-                <h3 className="mt-4 text-2xl font-bold text-white">{studentName ?? "Aluno"}</h3>
-                <p className="mt-2 text-sm text-slate-300">concluiu com sucesso o curso</p>
-                <p className="mt-1 text-xl font-semibold text-white">{courseTitle}</p>
+                <h3 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{studentName ?? "Aluno"}</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">concluiu com sucesso o curso</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">{courseTitle}</p>
                 <p className="mt-4 text-xs text-slate-500">
                   {new Date().toLocaleDateString("pt-PT", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </div>
               <button
                 onClick={() => window.print()}
-                className="mx-auto mt-4 flex items-center gap-2 rounded-md border border-white/15 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-white/5"
+                className="mx-auto mt-4 flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
               >
                 <Printer size={16} /> Imprimir / Guardar PDF
               </button>
             </div>
           ) : (
             <div>
-              <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-slate-900 to-slate-950 p-10 text-center">
+              <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-white p-10 text-center dark:from-slate-900 dark:to-slate-950">
                 <div className="pointer-events-none select-none blur-[3px]">
-                  <Award size={40} className="mx-auto text-blue-400" />
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-400">
+                  <Award size={40} className="mx-auto text-blue-600 dark:text-blue-400" />
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
                     Certificado de conclusão
                   </p>
-                  <h3 className="mt-4 text-2xl font-bold text-white">{studentName ?? "O teu nome aqui"}</h3>
-                  <p className="mt-2 text-sm text-slate-300">concluiu com sucesso o curso</p>
-                  <p className="mt-1 text-xl font-semibold text-white">{courseTitle}</p>
+                  <h3 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{studentName ?? "O teu nome aqui"}</h3>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">concluiu com sucesso o curso</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">{courseTitle}</p>
                   <p className="mt-4 text-xs text-slate-500">
                     {new Date().toLocaleDateString("pt-PT", { year: "numeric", month: "long", day: "numeric" })}
                   </p>
                 </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/55 px-6 text-center">
-                  <Lock size={22} className="text-slate-300" />
-                  <p className="text-sm font-medium text-slate-100">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/70 px-6 text-center dark:bg-black/55">
+                  <Lock size={22} className="text-slate-600 dark:text-slate-300" />
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     {!isEnrolled
                       ? "Inscreve-te no curso para poderes ganhar este certificado"
                       : "Completa o curso para desbloquear o teu certificado"}
@@ -300,8 +308,8 @@ export function CourseDetailTabs({
               </div>
 
               {isEnrolled && (
-                <div className="mt-4 rounded-xl border border-white/10 bg-slate-950 p-4">
-                  <div className="h-2 w-full rounded-full bg-slate-800">
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+                  <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
                     <div
                       className="h-2 rounded-full bg-blue-600 transition-all"
                       style={{ width: `${completion?.percent ?? 0}%` }}

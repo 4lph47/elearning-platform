@@ -42,25 +42,25 @@ export function LessonTabs({
       <div className="flex gap-6">
         <button
           onClick={() => setTab("overview")}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-            tab === "overview" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+          className={`border-b-2 px-1 py-2 text-sm font-medium ${
+            tab === "overview" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
           }`}
         >
           Geral
         </button>
         <button
           onClick={() => setTab("resources")}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-            tab === "resources" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+          className={`border-b-2 px-1 py-2 text-sm font-medium ${
+            tab === "resources" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
           }`}
         >
-          Recursos {resources.length > 0 && `(${resources.length})`}
+          Recursos
         </button>
         {progress && (
           <button
             onClick={() => setTab("progress")}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium lg:hidden ${
-              tab === "progress" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+            className={`border-b-2 px-1 py-2 text-sm font-medium lg:hidden ${
+              tab === "progress" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
             }`}
           >
             Progresso
@@ -69,8 +69,8 @@ export function LessonTabs({
         {comments && (
           <button
             onClick={() => setTab("comments")}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium lg:hidden ${
-              tab === "comments" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+            className={`border-b-2 px-1 py-2 text-sm font-medium lg:hidden ${
+              tab === "comments" ? "border-blue-500 text-white" : "border-transparent text-slate-500 hover:text-slate-300"
             }`}
           >
             Comentários

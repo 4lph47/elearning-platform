@@ -198,6 +198,7 @@ export default async function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/courses/${course.slug}`}
+                    prefetch
                     className="font-medium text-slate-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
                   >
                     {course.title}
@@ -219,6 +220,7 @@ export default async function DashboardPage() {
                 {nextLesson && (
                   <Link
                     href={`/courses/${course.slug}/lessons/${nextLesson.id}`}
+                    prefetch
                     className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
                   >
                     {percent === 0 ? "Começar" : percent === 100 ? "Rever" : "Continuar"}

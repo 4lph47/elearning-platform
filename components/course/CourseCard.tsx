@@ -31,7 +31,7 @@ const LEVEL_TONE: Record<string, "info" | "warning" | "danger"> = {
 
 export function CourseCard({ course }: { course: CourseCardData }) {
   return (
-    <Link href={`/courses/${course.slug}`} className="group block h-full">
+    <Link href={`/courses/${course.slug}`} prefetch className="group block h-full">
       <Card className="h-full overflow-hidden transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
         <div className="flex h-36 items-center justify-center overflow-hidden bg-slate-200 text-3xl font-bold text-slate-500">
           {course.thumbnailUrl ? (

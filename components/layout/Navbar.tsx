@@ -123,6 +123,7 @@ export function Navbar() {
           {status === "authenticated" && (
             <Link
               href="/dashboard"
+              prefetch
               aria-label="A minha aprendizagem"
               className={`hidden h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium sm:flex ${
                 transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
@@ -221,6 +222,7 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/courses"
+                prefetch
                 className={`hidden font-medium transition-colors sm:inline ${
                   transparent
                     ? "text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white"

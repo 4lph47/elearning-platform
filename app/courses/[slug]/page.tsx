@@ -310,7 +310,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                     </p>
                   </Link>
                 ) : isEnrolled ? (
-                  <Link href={firstLesson ? `/courses/${course.slug}/lessons/${firstLesson.id}` : "#"}>
+                  <Link href={firstLesson ? `/courses/${course.slug}/lessons/${firstLesson.id}` : "#"} prefetch>
                     <p className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500">
                       Continuar curso
                     </p>

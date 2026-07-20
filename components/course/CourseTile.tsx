@@ -47,6 +47,7 @@ export function CourseTile({
   return (
     <Link
       href={href ?? `/courses/${course.slug}`}
+      prefetch
       className={`group block ${className}`}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}

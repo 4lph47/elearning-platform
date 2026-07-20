@@ -188,6 +188,7 @@ export default async function LessonPage({
               {previousHref && previousItem && (
                 <Link
                   href={previousHref}
+                  prefetch
                   className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                 >
                   <ArrowLeft size={14} className="shrink-0" />
@@ -199,6 +200,7 @@ export default async function LessonPage({
               {nextHref && nextItem && (
                 <Link
                   href={nextHref}
+                  prefetch
                   className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
                 >
                   <span className="truncate">

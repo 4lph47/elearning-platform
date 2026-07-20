@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Video } from "lucide-react";
+import { Video, Type as TypeIcon } from "lucide-react";
 import { Badge } from "@/components/ui/Card";
 import { LessonForm } from "@/components/instructor/LessonForm";
 import type { QuizData } from "@/components/instructor/QuizEditor";
@@ -19,7 +19,9 @@ export interface LessonData {
   title: string;
   order: number;
   isFreePreview: boolean;
-  contentUrl: string;
+  type: "VIDEO" | "TEXT";
+  contentUrl: string | null;
+  textContent?: string | null;
   durationSeconds: number | null;
   description?: string | null;
   contributors?: { id: string }[];
@@ -64,7 +66,11 @@ export function LessonRow({
   return (
     <div className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
       <div className="flex items-center gap-2 text-sm">
-        <Video size={16} className="text-slate-400" />
+        {lesson.type === "TEXT" ? (
+          <TypeIcon size={16} className="text-slate-400" />
+        ) : (
+          <Video size={16} className="text-slate-400" />
+        )}
         <span>{lesson.title}</span>
         {lesson.isFreePreview && <Badge tone="success">Preview grátis</Badge>}
         {lesson.resources.length > 0 && <Badge>{lesson.resources.length} anexo(s)</Badge>}

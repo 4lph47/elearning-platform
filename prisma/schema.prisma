@@ -28,6 +28,11 @@ enum QuizScope {
   COURSE
 }
 
+enum LessonType {
+  VIDEO
+  TEXT
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -131,11 +136,13 @@ model Module {
 }
 
 model Lesson {
-  id              String   @id @default(cuid())
+  id              String     @id @default(cuid())
   title           String
   order           Int
-  isFreePreview   Boolean  @default(false)
-  contentUrl      String
+  isFreePreview   Boolean    @default(false)
+  type            LessonType @default(VIDEO)
+  contentUrl      String?
+  textContent     String?
   durationSeconds Int?
   description     String?
 

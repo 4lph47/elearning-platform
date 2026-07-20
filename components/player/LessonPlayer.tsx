@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
@@ -8,19 +8,24 @@ import { getYouTubeId } from "@/lib/youtube";
 
 export function LessonPlayer({
   lessonId,
+  type,
   contentUrl,
+  textContent,
   initialCompleted,
   initialWatchedSeconds,
 }: {
   lessonId: string;
-  contentUrl: string;
+  type: "VIDEO" | "TEXT";
+  contentUrl: string | null;
+  textContent?: string | null;
   initialCompleted: boolean;
   initialWatchedSeconds: number;
 }) {
   const [completed, setCompleted] = useState(initialCompleted);
   const lastSentRef = useRef(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const collapsed = useSidebarCollapsed();
-  const youtubeId = getYouTubeId(contentUrl);
+  const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
 
   async function sendProgress(payload: { watchedSeconds?: number; completed?: boolean }) {
     await fetch("/api/progress", {
@@ -52,25 +57,61 @@ export function LessonPlayer({
     setCompleted(true);
   }
 
+  // API de mensagens do YouTube (enablejsapi=1): estado 0 = vídeo terminou.
+  useEffect(() => {
+    if (!youtubeId) return;
+    function onMessage(e: MessageEvent) {
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      let data: unknown;
+      try {
+        data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+      } catch {
+        return;
+      }
+      const info = (data as { info?: unknown })?.info;
+      if ((data as { event?: string })?.event === "onStateChange" && info === 0) {
+        markComplete();
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [youtubeId]);
+
   const playerClassName = `aspect-video w-full rounded-lg bg-black lg:max-w-none ${
     collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
   }`;
 
   return (
     <div className="space-y-4">
-      {youtubeId ? (
+      {type === "TEXT" ? (
+        <div
+          className={`overflow-y-auto rounded-lg border border-white/10 bg-slate-950 p-6 lg:max-w-none ${
+            collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
+          }`}
+        >
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">{textContent}</p>
+        </div>
+      ) : youtubeId ? (
         <iframe
-          src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0`}
+          ref={iframeRef}
+          src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1`}
           title="Vídeo da aula"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
+          onLoad={() => {
+            iframeRef.current?.contentWindow?.postMessage(
+              JSON.stringify({ event: "listening", id: youtubeId, channel: "widget" }),
+              "*"
+            );
+          }}
           className={playerClassName}
         />
       ) : (
         <video
           controls
           className={playerClassName}
-          src={contentUrl}
+          src={contentUrl ?? undefined}
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdate}
           onEnded={markComplete}

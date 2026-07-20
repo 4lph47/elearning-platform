@@ -28,7 +28,9 @@ export function LessonForm({
   const [title, setTitle] = useState(lesson?.title ?? "");
   const [description, setDescription] = useState(lesson?.description ?? "");
   const [isFreePreview, setIsFreePreview] = useState(lesson?.isFreePreview ?? false);
+  const [type, setType] = useState<"VIDEO" | "TEXT">(lesson?.type ?? "VIDEO");
   const [contentUrl, setContentUrl] = useState<string | null>(lesson?.contentUrl ?? null);
+  const [textContent, setTextContent] = useState(lesson?.textContent ?? "");
   const [contributorIds, setContributorIds] = useState<string[]>(
     lesson?.contributors?.map((c) => c.id) ?? []
   );
@@ -45,8 +47,12 @@ export function LessonForm({
     e.preventDefault();
     setError(null);
 
-    if (!contentUrl) {
+    if (type === "VIDEO" && !contentUrl) {
       setError("Envia o vídeo desta aula antes de guardar");
+      return;
+    }
+    if (type === "TEXT" && !textContent.trim()) {
+      setError("Escreve o conteúdo desta aula antes de guardar");
       return;
     }
 
@@ -55,7 +61,9 @@ export function LessonForm({
       title,
       order: lesson?.order ?? nextOrder,
       isFreePreview,
-      contentUrl,
+      type,
+      contentUrl: type === "VIDEO" ? contentUrl : null,
+      textContent: type === "TEXT" ? textContent : null,
       description: description.trim() || null,
       contributorIds,
     };
@@ -120,16 +128,47 @@ export function LessonForm({
       </div>
 
       <div>
-        <Label>Vídeo da aula (obrigatório)</Label>
-        <FileUploadInput kind="VIDEO" onUploaded={(r) => setContentUrl(r.url)} />
-        <p className="my-1.5 text-center text-xs text-slate-400">ou</p>
-        <Input
-          placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
-          defaultValue={contentUrl?.includes("youtu") ? contentUrl : ""}
-          onBlur={(e) => e.target.value && setContentUrl(e.target.value)}
-        />
-        {contentUrl && <p className="mt-1 text-xs text-slate-500">Vídeo atual: {contentUrl}</p>}
+        <Label>Tipo de aula</Label>
+        <div className="flex gap-2">
+          {(["VIDEO", "TEXT"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setType(t)}
+              className={`flex-1 rounded-md border px-3 py-1.5 text-sm ${
+                type === t ? "border-slate-700 bg-slate-800 text-white" : "border-slate-300 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {t === "VIDEO" ? "Vídeo" : "Texto"}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {type === "VIDEO" ? (
+        <div>
+          <Label>Vídeo da aula (obrigatório)</Label>
+          <FileUploadInput kind="VIDEO" onUploaded={(r) => setContentUrl(r.url)} />
+          <p className="my-1.5 text-center text-xs text-slate-400">ou</p>
+          <Input
+            placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
+            defaultValue={contentUrl?.includes("youtu") ? contentUrl : ""}
+            onBlur={(e) => e.target.value && setContentUrl(e.target.value)}
+          />
+          {contentUrl && <p className="mt-1 text-xs text-slate-500">Vídeo atual: {contentUrl}</p>}
+        </div>
+      ) : (
+        <div>
+          <Label htmlFor={`lesson-text-${lesson?.id ?? "new"}`}>Conteúdo da aula (obrigatório)</Label>
+          <Textarea
+            id={`lesson-text-${lesson?.id ?? "new"}`}
+            rows={8}
+            value={textContent}
+            onChange={(e) => setTextContent(e.target.value)}
+            placeholder="Escreve o conteúdo desta aula em texto..."
+          />
+        </div>
+      )}
 
       <div>
         <Label htmlFor={`lesson-description-${lesson?.id ?? "new"}`}>Descrição da aula (opcional)</Label>

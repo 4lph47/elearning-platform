@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { lessonSchema } from "@/lib/validations";
+import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
 
 export async function POST(request: Request, { params }: { params: Promise<{ moduleId: string }> }) {
@@ -17,6 +17,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
   const parsed = lessonSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
+  const contentError = validateLessonContent(parsed.data);
+  if (contentError) {
+    return NextResponse.json({ error: contentError }, { status: 400 });
   }
 
   const authorIds = new Set([courseModule.course.instructorId, ...courseModule.course.collaborators.map((c) => c.id)]);

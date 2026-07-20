@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ChevronDown, Check, CheckCircle2, Lock } from "lucide-react";
+import { ChevronDown, Check, Monitor, Type as TypeIcon, HelpCircle, ClipboardCheck, Lock } from "lucide-react";
 
 interface LessonItem {
   id: string;
   title: string;
   isFreePreview: boolean;
   durationSeconds: number | null;
+  type: "VIDEO" | "TEXT";
 }
 
 interface ModuleItem {
@@ -15,11 +16,28 @@ interface ModuleItem {
   quizId: string | null;
 }
 
+function LessonTypeIcon({ type }: { type: "VIDEO" | "TEXT" }) {
+  return type === "TEXT" ? (
+    <TypeIcon size={16} className="shrink-0 text-slate-600" />
+  ) : (
+    <Monitor size={16} className="shrink-0 text-slate-600" />
+  );
+}
+
+function DoneBadge() {
+  return (
+    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
+      <Check size={10} strokeWidth={3} className="text-white" />
+    </span>
+  );
+}
+
 export function CourseProgressSidebar({
   slug,
   modules,
   progressByLessonId,
   doneQuizIds,
+  finalQuizId,
   isOwner,
   isEnrolled,
   currentLessonId,
@@ -31,6 +49,7 @@ export function CourseProgressSidebar({
   modules: ModuleItem[];
   progressByLessonId: Record<string, boolean>;
   doneQuizIds: Set<string>;
+  finalQuizId?: string | null;
   isOwner: boolean;
   isEnrolled: boolean;
   currentLessonId?: string;
@@ -86,13 +105,7 @@ export function CourseProgressSidebar({
                               : "border-transparent text-slate-300 hover:bg-white/5"
                           }`}
                         >
-                          {isDone ? (
-                            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                              <Check size={10} strokeWidth={3} className="text-white" />
-                            </span>
-                          ) : (
-                            <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
-                          )}
+                          {isDone ? <DoneBadge /> : <LessonTypeIcon type={l.type} />}
                           <span className="flex-1">{l.title}</span>
                           {l.durationSeconds && (
                             <span className="text-xs text-slate-500">{Math.round(l.durationSeconds / 60)}min</span>
@@ -115,13 +128,7 @@ export function CourseProgressSidebar({
                         href={`/courses/${slug}/quiz/${module.quizId}`}
                         className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
                       >
-                        {doneQuizIds.has(module.quizId) ? (
-                          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                            <Check size={10} strokeWidth={3} className="text-white" />
-                          </span>
-                        ) : (
-                          <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
-                        )}
+                        {doneQuizIds.has(module.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
                         <span className="flex-1">Quiz · {module.title}</span>
                       </Link>
                     ) : (
@@ -136,6 +143,25 @@ export function CourseProgressSidebar({
             </details>
           </div>
         ))}
+
+        {finalQuizId && (
+          <div className="border-b border-white/10 last:border-0">
+            {quizAccessible ? (
+              <Link
+                href={`/courses/${slug}/quiz/${finalQuizId}`}
+                className="flex items-center gap-2 px-4 py-3 text-sm text-slate-300 hover:bg-white/5"
+              >
+                {doneQuizIds.has(finalQuizId) ? <DoneBadge /> : <ClipboardCheck size={16} className="shrink-0 text-slate-600" />}
+                <span className="flex-1 font-medium">Exame final do curso</span>
+              </Link>
+            ) : (
+              <span className="flex items-center gap-2 px-4 py-3 text-sm text-slate-500">
+                <Lock size={16} className="shrink-0" />
+                <span className="flex-1 font-medium">Exame final do curso</span>
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

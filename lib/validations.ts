@@ -41,11 +41,24 @@ export const lessonSchema = z.object({
   title: z.string().min(2, "Título é obrigatório"),
   order: z.number().int().min(0),
   isFreePreview: z.boolean().optional().default(false),
-  contentUrl: z.string().min(1, "É obrigatório enviar um vídeo para a aula"),
+  type: z.enum(["VIDEO", "TEXT"]).optional().default("VIDEO"),
+  contentUrl: z.string().optional().nullable(),
+  textContent: z.string().optional().nullable(),
   durationSeconds: z.number().int().min(0).optional().nullable(),
   description: z.string().optional().nullable(),
 });
 export type LessonInput = z.infer<typeof lessonSchema>;
+
+export function validateLessonContent(data: Partial<LessonInput>): string | null {
+  if (data.type === "TEXT") {
+    if (!data.textContent || data.textContent.trim().length === 0) {
+      return "É obrigatório escrever o conteúdo da aula de texto";
+    }
+  } else if (!data.contentUrl || data.contentUrl.trim().length === 0) {
+    return "É obrigatório enviar um vídeo para a aula";
+  }
+  return null;
+}
 
 export const quizSchema = z.object({
   title: z.string().min(2, "Título do quiz é obrigatório"),

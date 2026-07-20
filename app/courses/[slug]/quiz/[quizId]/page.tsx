@@ -92,10 +92,12 @@ export default async function CourseQuizPage({
               title: l.title,
               isFreePreview: l.isFreePreview,
               durationSeconds: l.durationSeconds,
+              type: l.type,
             })),
           }))}
           progressByLessonId={progressByLessonId}
           doneQuizIds={doneQuizIds}
+          finalQuizId={course.quiz?.id ?? null}
           isOwner={isOwner}
           isEnrolled={isEnrolled}
           percent={percent}

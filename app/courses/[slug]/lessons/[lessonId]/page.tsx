@@ -113,10 +113,12 @@ export default async function LessonPage({
           title: l.title,
           isFreePreview: l.isFreePreview,
           durationSeconds: l.durationSeconds,
+          type: l.type,
         })),
       }))}
       progressByLessonId={progressByLessonId}
       doneQuizIds={doneQuizIds}
+      finalQuizId={course.quiz?.id ?? null}
       isOwner={isOwner}
       isEnrolled={isEnrolled}
       currentLessonId={lesson.id}
@@ -141,17 +143,23 @@ export default async function LessonPage({
                 {previousLesson && (isOwner || isEnrolled || previousLesson.isFreePreview) && (
                   <Link
                     href={`/courses/${slug}/lessons/${previousLesson.id}`}
-                    className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white"
+                    className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-400 hover:text-white"
                   >
-                    <ArrowLeft size={14} /> Aula anterior: {previousLesson.title}
+                    <ArrowLeft size={14} className="shrink-0" />
+                    <span className="truncate">
+                      Aula anterior<span className="hidden sm:inline">: {previousLesson.title}</span>
+                    </span>
                   </Link>
                 )}
                 {nextLesson && (isOwner || isEnrolled || nextLesson.isFreePreview) && (
                   <Link
                     href={`/courses/${slug}/lessons/${nextLesson.id}`}
-                    className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
+                    className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
                   >
-                    Próxima aula: {nextLesson.title} <ArrowRight size={14} />
+                    <span className="truncate">
+                      Próxima aula<span className="hidden sm:inline">: {nextLesson.title}</span>
+                    </span>
+                    <ArrowRight size={14} className="shrink-0" />
                   </Link>
                 )}
               </div>
@@ -164,7 +172,9 @@ export default async function LessonPage({
             </>
           }
           lessonId={lesson.id}
+          type={lesson.type}
           contentUrl={lesson.contentUrl}
+          textContent={lesson.textContent}
           initialCompleted={progress?.completed ?? false}
           initialWatchedSeconds={progress?.watchedSeconds ?? 0}
           overview={lesson.description || course.description}

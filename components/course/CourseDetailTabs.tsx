@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, CheckCircle2, Lock, Printer, Award } from "lucide-react";
+import { ChevronDown, Lock, Printer, Award, Monitor, Type as TypeIcon, HelpCircle } from "lucide-react";
 import { StarRating } from "@/components/ui/StarRating";
 import { ReviewForm } from "@/components/course/ReviewForm";
 
@@ -11,6 +11,7 @@ interface LessonItem {
   title: string;
   isFreePreview: boolean;
   durationSeconds: number | null;
+  type: "VIDEO" | "TEXT";
 }
 
 interface ModuleItem {
@@ -131,7 +132,11 @@ export function CourseDetailTabs({
                           const content = (
                             <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-900/50">
                               <span className="flex items-center gap-2">
-                                <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
+                                {lesson.type === "TEXT" ? (
+                                  <TypeIcon size={16} className="shrink-0 text-slate-600" />
+                                ) : (
+                                  <Monitor size={16} className="shrink-0 text-slate-600" />
+                                )}
                                 <span className={accessible ? "text-slate-200" : "text-slate-500"}>{lesson.title}</span>
                                 {lesson.isFreePreview && (
                                   <span className="whitespace-nowrap rounded-full bg-blue-600/20 px-2 py-0.5 text-xs font-medium text-blue-400">
@@ -163,7 +168,7 @@ export function CourseDetailTabs({
                               <Link href={`/courses/${courseSlug}/quiz/${module.quiz.id}`}>
                                 <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-900/50">
                                   <span className="flex items-center gap-2">
-                                    <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
+                                    <HelpCircle size={16} className="shrink-0 text-slate-600" />
                                     <span className="text-slate-200">Quiz · {module.title}</span>
                                   </span>
                                 </div>
@@ -171,7 +176,7 @@ export function CourseDetailTabs({
                             ) : (
                               <div className="flex items-center justify-between px-4 py-3 text-sm">
                                 <span className="flex items-center gap-2">
-                                  <CheckCircle2 size={16} className="shrink-0 text-slate-600" />
+                                  <HelpCircle size={16} className="shrink-0 text-slate-600" />
                                   <span className="text-slate-500">Quiz · {module.title}</span>
                                 </span>
                                 <Lock size={14} className="text-slate-500" />

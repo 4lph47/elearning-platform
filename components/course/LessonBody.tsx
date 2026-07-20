@@ -46,7 +46,9 @@ function PreviewContent({ resource }: { resource: LessonResourceData }) {
 export function LessonBody({
   header,
   lessonId,
+  type,
   contentUrl,
+  textContent,
   initialCompleted,
   initialWatchedSeconds,
   overview,
@@ -56,7 +58,9 @@ export function LessonBody({
 }: {
   header: React.ReactNode;
   lessonId: string;
-  contentUrl: string;
+  type: "VIDEO" | "TEXT";
+  contentUrl: string | null;
+  textContent?: string | null;
   initialCompleted: boolean;
   initialWatchedSeconds: number;
   overview: string;
@@ -86,7 +90,9 @@ export function LessonBody({
           <div className="lg:shrink-0">
             <LessonPlayer
               lessonId={lessonId}
+              type={type}
               contentUrl={contentUrl}
+              textContent={textContent}
               initialCompleted={initialCompleted}
               initialWatchedSeconds={initialWatchedSeconds}
             />

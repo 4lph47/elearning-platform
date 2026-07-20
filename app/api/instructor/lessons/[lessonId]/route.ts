@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { lessonSchema } from "@/lib/validations";
+import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedLesson } from "@/lib/instructor-guard";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
@@ -17,6 +17,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
   const parsed = lessonSchema.partial().safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
+  if ("type" in parsed.data || "contentUrl" in parsed.data || "textContent" in parsed.data) {
+    const contentError = validateLessonContent({ type: lesson.type, contentUrl: lesson.contentUrl, textContent: lesson.textContent, ...parsed.data });
+    if (contentError) {
+      return NextResponse.json({ error: contentError }, { status: 400 });
+    }
   }
 
   const updated = await prisma.lesson.update({ where: { id: lessonId }, data: parsed.data });

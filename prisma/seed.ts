@@ -146,6 +146,8 @@ interface LessonSeed {
   title: string;
   durationSeconds: number;
   isFreePreview?: boolean;
+  type?: "VIDEO" | "TEXT";
+  textContent?: string;
   resources?: { name: string; type: "PDF" | "IMAGE" | "VIDEO" | "OTHER" | "SLIDES"; sizeBytes: number }[];
 }
 
@@ -207,6 +209,9 @@ const courseSeeds: CourseSeed[] = [
             title: "Bem-vindo ao curso",
             durationSeconds: 180,
             isFreePreview: true,
+            type: "TEXT",
+            textContent:
+              "Bem-vindo ao curso de Next.js 14!\n\nNeste curso vais aprender a construir uma aplicação completa, do zero até ao deploy, usando o App Router, Server Components e Prisma.\n\nAntes de começares, recomendamos que tenhas o Node.js instalado e conhecimentos básicos de JavaScript e React. Cada módulo tem exercícios práticos — não saltes nenhum!\n\nVamos a isto.",
             resources: [{ name: "Slides - Boas-vindas.pptx", type: "SLIDES", sizeBytes: 610_000 }],
           },
           { title: "Instalação e setup do projeto", durationSeconds: 320, isFreePreview: true },
@@ -1397,7 +1402,9 @@ async function main() {
                 title: l.title,
                 order: li,
                 isFreePreview: l.isFreePreview ?? false,
-                contentUrl: SAMPLE_VIDEO,
+                type: l.type ?? "VIDEO",
+                contentUrl: l.type === "TEXT" ? null : SAMPLE_VIDEO,
+                textContent: l.type === "TEXT" ? l.textContent ?? null : null,
                 durationSeconds: l.durationSeconds,
                 resources: l.resources
                   ? {
@@ -1480,6 +1487,18 @@ async function main() {
       });
     }
   }
+
+  // Converte a aula "Bem-vindo ao curso" para aula de texto (demonstra o tipo TEXT);
+  // não afeta reseeds — só atualiza a aula já existente com esse título.
+  await prisma.lesson.updateMany({
+    where: { module: { courseId: courses["introducao-ao-nextjs"].id }, title: "Bem-vindo ao curso" },
+    data: {
+      type: "TEXT",
+      contentUrl: null,
+      textContent:
+        "Bem-vindo ao curso de Next.js 14!\n\nNeste curso vais aprender a construir uma aplicação completa, do zero até ao deploy, usando o App Router, Server Components e Prisma.\n\nAntes de começares, recomendamos que tenhas o Node.js instalado e conhecimentos básicos de JavaScript e React. Cada módulo tem exercícios práticos — não saltes nenhum!\n\nVamos a isto.",
+    },
+  });
 
   await enroll(bruno.id, "introducao-ao-nextjs", 1);
   await enroll(bruno.id, "python-ciencia-de-dados", 0.4);

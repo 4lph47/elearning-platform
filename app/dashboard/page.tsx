@@ -16,21 +16,22 @@ function dateKey(d: Date) {
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
-  const enrollments = await prisma.enrollment.findMany({
-    where: { userId: session!.user.id },
-    include: {
-      course: {
-        include: {
-          modules: { include: { lessons: true }, orderBy: { order: "asc" } },
+  const [enrollments, allProgress] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { userId: session!.user.id },
+      include: {
+        course: {
+          include: {
+            modules: { include: { lessons: true }, orderBy: { order: "asc" } },
+          },
         },
       },
-    },
-    orderBy: { enrolledAt: "desc" },
-  });
-
-  const allProgress = await prisma.lessonProgress.findMany({
-    where: { userId: session!.user.id },
-  });
+      orderBy: { enrolledAt: "desc" },
+    }),
+    prisma.lessonProgress.findMany({
+      where: { userId: session!.user.id },
+    }),
+  ]);
   const progressByLesson = new Map(allProgress.map((p) => [p.lessonId, p]));
 
   const courseSummaries = enrollments.map(({ course }) => {

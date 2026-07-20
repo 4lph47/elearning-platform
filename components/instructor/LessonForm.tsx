@@ -263,7 +263,7 @@ export function LessonForm({
         </div>
       )}
 
-      {isEditing && (
+      {isEditing && type === "VIDEO" && (
         <div className="border-t border-slate-200 pt-3">
           <QuizEditor scope="LESSON" parentId={lesson!.id} label="Quiz da aula" existingQuiz={lesson?.quiz} />
         </div>

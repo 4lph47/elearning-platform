@@ -151,6 +151,15 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
       : Promise.resolve([]),
   ]);
 
+  const sideRailCourseIds = [...relatedCourses, ...instructorOtherCourses, ...recommendedCourses].map((c) => c.id);
+  const sideRailEnrollments = session && sideRailCourseIds.length > 0
+    ? await prisma.enrollment.findMany({
+        where: { userId: session.user.id, courseId: { in: sideRailCourseIds } },
+        select: { courseId: true },
+      })
+    : [];
+  const sideRailEnrolledIds = new Set(sideRailEnrollments.map((e) => e.courseId));
+
   const isEnrolled = Boolean(enrollment);
 
   let completion: { percent: number; completedCount: number; totalItems: number } | null = null;
@@ -246,6 +255,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
       trailerUrl: c.trailerUrl ?? (lessons.find((l) => l.isFreePreview) ?? lessons[0])?.contentUrl ?? null,
     };
   });
+
+  const hidePriceBySlug = Object.fromEntries(
+    [...relatedCourses, ...instructorOtherCourses, ...recommendedCourses]
+      .filter((c) => sideRailEnrolledIds.has(c.id))
+      .map((c) => [c.slug, true])
+  );
 
   return (
     <div className="min-h-screen bg-black">
@@ -538,10 +553,18 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
       <div className="mx-auto max-w-7xl">
         {moreFromInstructor.length > 0 && (
-          <CourseRow title={`Mais cursos de ${course.instructor.name}`} courses={moreFromInstructor} />
+          <CourseRow
+            title={`Mais cursos de ${course.instructor.name}`}
+            courses={moreFromInstructor}
+            hidePriceBySlug={hidePriceBySlug}
+          />
         )}
-        {recommended.length > 0 && <CourseRow title="Também pode interessar-te" courses={recommended} />}
-        {alsoBought.length > 0 && <CourseRow title="Os alunos também compraram" courses={alsoBought} />}
+        {recommended.length > 0 && (
+          <CourseRow title="Também pode interessar-te" courses={recommended} hidePriceBySlug={hidePriceBySlug} />
+        )}
+        {alsoBought.length > 0 && (
+          <CourseRow title="Os alunos também compraram" courses={alsoBought} hidePriceBySlug={hidePriceBySlug} />
+        )}
       </div>
     </div>
   );

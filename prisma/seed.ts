@@ -283,6 +283,9 @@ const courseSeeds: CourseSeed[] = [
             title: "O que é um bom design",
             durationSeconds: 260,
             isFreePreview: true,
+            type: "TEXT",
+            textContent:
+              "Bom design não é sobre parecer bonito — é sobre ser claro.\n\nUma interface bem desenhada guia o utilizador sem que ele precise de pensar: os botões parecem clicáveis, a informação mais importante salta à vista primeiro, e os erros são fáceis de entender e corrigir.\n\nNeste curso vamos focar-nos em três pilares: hierarquia visual, consistência e feedback. Não precisas de ser designer para aplicar isto — precisas de saber olhar para uma interface e perguntar 'o que é que o utilizador precisa de ver primeiro?'",
             resources: [{ name: "Slides - Fundamentos visuais.pptx", type: "SLIDES", sizeBytes: 720_000 }],
           },
           {
@@ -343,6 +346,9 @@ const courseSeeds: CourseSeed[] = [
             title: "Variáveis, tipos e estruturas de dados",
             durationSeconds: 500,
             isFreePreview: true,
+            type: "TEXT",
+            textContent:
+              "Python guarda dados em variáveis sem precisares de declarar o tipo à partida — o tipo é decidido pelo valor que atribuis.\n\nOs tipos base que vais usar mais são: int (números inteiros), float (números decimais), str (texto) e bool (verdadeiro/falso).\n\nPara guardar várias informações juntas, tens as estruturas de dados: list (lista ordenada e alterável), tuple (lista ordenada e imutável), dict (pares chave-valor) e set (coleção sem duplicados).\n\nExperimenta no teu terminal Python: cria uma lista de números, um dicionário com o teu nome e idade, e usa type() para confirmares o tipo de cada variável.",
             resources: [{ name: "Slides - Fundamentos Python.pptx", type: "SLIDES", sizeBytes: 680_000 }],
           },
           { title: "Funções e módulos", durationSeconds: 470 },
@@ -691,6 +697,9 @@ const courseSeeds: CourseSeed[] = [
             title: "Porque usar TypeScript",
             durationSeconds: 260,
             isFreePreview: true,
+            type: "TEXT",
+            textContent:
+              "TypeScript é JavaScript com um sistema de tipos por cima. Todo o código JavaScript válido já é TypeScript válido — a diferença é que TypeScript te avisa de erros antes de correres o código.\n\nSem tipos, um erro como chamar .toUpperCase() num número só aparece quando o código corre (às vezes só em produção). Com TypeScript, o editor sublinha o erro enquanto escreves.\n\nOutras vantagens práticas: autocomplete muito mais preciso, refactors mais seguros (o compilador avisa-te de tudo o que quebraste), e documentação viva — os tipos dizem-te exatamente o que uma função espera receber e devolver, sem precisares de ler a implementação.",
             resources: [{ name: "Slides - Porque TypeScript.pptx", type: "SLIDES", sizeBytes: 560_000 }],
           },
           { title: "Tipos básicos e inferência", durationSeconds: 380 },
@@ -1301,16 +1310,41 @@ async function main() {
   const carlosBio =
     "Analista de dados e consultor de negócio há 13 anos. Já ajudei dezenas de equipas a tomar decisões melhores com dados — agora traz essa experiência para os cursos.";
 
+  const anaSocials = {
+    websiteUrl: "https://anarodrigues.dev",
+    twitterUrl: "https://x.com/anarodrigues",
+    linkedinUrl: "https://linkedin.com/in/anarodrigues",
+    youtubeUrl: "https://youtube.com/@anarodrigues",
+  };
+  const carlosSocials = {
+    websiteUrl: "https://carlosmendes.consulting",
+    linkedinUrl: "https://linkedin.com/in/carlosmendes",
+  };
+
   const ana = await prisma.user.upsert({
     where: { email: "instrutor@example.com" },
-    update: { bio: anaBio },
-    create: { name: "Ana Rodrigues", email: "instrutor@example.com", passwordHash, role: "INSTRUCTOR", bio: anaBio },
+    update: { bio: anaBio, ...anaSocials },
+    create: {
+      name: "Ana Rodrigues",
+      email: "instrutor@example.com",
+      passwordHash,
+      role: "INSTRUCTOR",
+      bio: anaBio,
+      ...anaSocials,
+    },
   });
 
   const carlos = await prisma.user.upsert({
     where: { email: "carlos@example.com" },
-    update: { bio: carlosBio },
-    create: { name: "Carlos Mendes", email: "carlos@example.com", passwordHash, role: "INSTRUCTOR", bio: carlosBio },
+    update: { bio: carlosBio, ...carlosSocials },
+    create: {
+      name: "Carlos Mendes",
+      email: "carlos@example.com",
+      passwordHash,
+      role: "INSTRUCTOR",
+      bio: carlosBio,
+      ...carlosSocials,
+    },
   });
 
   const bruno = await prisma.user.upsert({
@@ -1497,6 +1531,35 @@ async function main() {
       contentUrl: null,
       textContent:
         "Bem-vindo ao curso de Next.js 14!\n\nNeste curso vais aprender a construir uma aplicação completa, do zero até ao deploy, usando o App Router, Server Components e Prisma.\n\nAntes de começares, recomendamos que tenhas o Node.js instalado e conhecimentos básicos de JavaScript e React. Cada módulo tem exercícios práticos — não saltes nenhum!\n\nVamos a isto.",
+    },
+  });
+
+  // Mesma conversão para mais algumas aulas, para haver aulas de texto em vários cursos.
+  await prisma.lesson.updateMany({
+    where: { module: { courseId: courses["design-de-interfaces"].id }, title: "O que é um bom design" },
+    data: {
+      type: "TEXT",
+      contentUrl: null,
+      textContent:
+        "Bom design não é sobre parecer bonito — é sobre ser claro.\n\nUma interface bem desenhada guia o utilizador sem que ele precise de pensar: os botões parecem clicáveis, a informação mais importante salta à vista primeiro, e os erros são fáceis de entender e corrigir.\n\nNeste curso vamos focar-nos em três pilares: hierarquia visual, consistência e feedback. Não precisas de ser designer para aplicar isto — precisas de saber olhar para uma interface e perguntar 'o que é que o utilizador precisa de ver primeiro?'",
+    },
+  });
+  await prisma.lesson.updateMany({
+    where: { module: { courseId: courses["python-ciencia-de-dados"].id }, title: "Variáveis, tipos e estruturas de dados" },
+    data: {
+      type: "TEXT",
+      contentUrl: null,
+      textContent:
+        "Python guarda dados em variáveis sem precisares de declarar o tipo à partida — o tipo é decidido pelo valor que atribuis.\n\nOs tipos base que vais usar mais são: int (números inteiros), float (números decimais), str (texto) e bool (verdadeiro/falso).\n\nPara guardar várias informações juntas, tens as estruturas de dados: list (lista ordenada e alterável), tuple (lista ordenada e imutável), dict (pares chave-valor) e set (coleção sem duplicados).\n\nExperimenta no teu terminal Python: cria uma lista de números, um dicionário com o teu nome e idade, e usa type() para confirmares o tipo de cada variável.",
+    },
+  });
+  await prisma.lesson.updateMany({
+    where: { module: { courseId: courses["typescript-para-iniciantes"].id }, title: "Porque usar TypeScript" },
+    data: {
+      type: "TEXT",
+      contentUrl: null,
+      textContent:
+        "TypeScript é JavaScript com um sistema de tipos por cima. Todo o código JavaScript válido já é TypeScript válido — a diferença é que TypeScript te avisa de erros antes de correres o código.\n\nSem tipos, um erro como chamar .toUpperCase() num número só aparece quando o código corre (às vezes só em produção). Com TypeScript, o editor sublinha o erro enquanto escreves.\n\nOutras vantagens práticas: autocomplete muito mais preciso, refactors mais seguros (o compilador avisa-te de tudo o que quebraste), e documentação viva — os tipos dizem-te exatamente o que uma função espera receber e devolver, sem precisares de ler a implementação.",
     },
   });
 

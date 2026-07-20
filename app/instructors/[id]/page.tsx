@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
 import { Star, Users, BookOpen, MessageSquare, Globe, Link2 } from "lucide-react";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CourseTile } from "@/components/course/CourseTile";
 
@@ -19,6 +21,7 @@ function initials(name: string) {
 
 export default async function InstructorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
 
   const instructor = await prisma.user.findUnique({
     where: { id },
@@ -69,6 +72,14 @@ export default async function InstructorProfilePage({ params }: { params: Promis
   const courses = [...instructor.coursesTaught, ...instructor.collaboratingCourses].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
   );
+
+  const enrollments = session
+    ? await prisma.enrollment.findMany({
+        where: { userId: session.user.id, courseId: { in: courses.map((c) => c.id) } },
+        select: { courseId: true },
+      })
+    : [];
+  const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
   const totalStudents = courses.reduce((sum, c) => sum + c._count.enrollments, 0);
   const ratedCourses = courses.filter((c) => c.ratingCount > 0);
   const avgRating =
@@ -174,6 +185,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
                     ratingCount: course.ratingCount,
                     trailerUrl: course.trailerUrl ?? trailerLesson?.contentUrl ?? null,
                   }}
+                  hidePrice={enrolledCourseIds.has(course.id)}
                 />
               );
             })}

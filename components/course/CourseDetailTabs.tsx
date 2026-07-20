@@ -138,7 +138,7 @@ export function CourseDetailTabs({
                                   <Monitor size={16} className="shrink-0 text-slate-600" />
                                 )}
                                 <span className={accessible ? "text-slate-200" : "text-slate-500"}>{lesson.title}</span>
-                                {lesson.isFreePreview && (
+                                {lesson.isFreePreview && !isEnrolled && !isOwner && (
                                   <span className="whitespace-nowrap rounded-full bg-blue-600/20 px-2 py-0.5 text-xs font-medium text-blue-400">
                                     Preview grátis
                                   </span>

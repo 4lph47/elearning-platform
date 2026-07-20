@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedLesson } from "@/lib/instructor-guard";
+import { deleteQuiz } from "@/lib/quiz";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -26,6 +27,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
   }
 
   const updated = await prisma.lesson.update({ where: { id: lessonId }, data: parsed.data });
+
+  if (parsed.data.type === "TEXT" && lesson.type !== "TEXT") {
+    await deleteQuiz("LESSON", lessonId);
+  }
 
   if ("contributorIds" in body) {
     const authorIds = new Set([

@@ -12,6 +12,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ less
   const { lessonId } = await params;
   const lesson = await getOwnedLesson(lessonId, session);
   if (!lesson) return NextResponse.json({ error: "Aula não encontrada" }, { status: 404 });
+  if (lesson.type === "TEXT") {
+    return NextResponse.json({ error: "Aulas de texto não podem ter quiz" }, { status: 400 });
+  }
 
   const body = await request.json();
   const parsed = quizSchema.safeParse(body);

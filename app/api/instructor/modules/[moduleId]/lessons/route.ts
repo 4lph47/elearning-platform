@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent } from "@/lib/validations";
@@ -35,6 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
       contributors: contributorIds.length > 0 ? { connect: contributorIds.map((id) => ({ id })) } : undefined,
     },
   });
+  revalidateTag("courses");
 
   return NextResponse.json(lesson, { status: 201 });
 }

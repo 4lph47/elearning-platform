@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { moduleSchema } from "@/lib/validations";
@@ -20,6 +21,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mo
   }
 
   const updated = await prisma.module.update({ where: { id: moduleId }, data: parsed.data });
+  revalidateTag("courses");
   return NextResponse.json(updated);
 }
 
@@ -32,5 +34,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!courseModule) return NextResponse.json({ error: "Módulo não encontrado" }, { status: 404 });
 
   await prisma.module.delete({ where: { id: moduleId } });
+  revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

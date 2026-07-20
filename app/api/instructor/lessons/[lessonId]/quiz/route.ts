@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { quizSchema } from "@/lib/validations";
 import { getOwnedLesson } from "@/lib/instructor-guard";
@@ -25,6 +26,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ less
   const result = await upsertQuiz("LESSON", lessonId, parsed.data);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
+  revalidateTag("courses");
   return NextResponse.json(result.quiz);
 }
 
@@ -37,5 +39,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!lesson) return NextResponse.json({ error: "Aula não encontrada" }, { status: 404 });
 
   await deleteQuiz("LESSON", lessonId);
+  revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

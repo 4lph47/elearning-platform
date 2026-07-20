@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { moduleSchema } from "@/lib/validations";
@@ -22,6 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cou
   const courseModule = await prisma.module.create({
     data: { ...parsed.data, courseId },
   });
+  revalidateTag("courses");
 
   return NextResponse.json(courseModule, { status: 201 });
 }

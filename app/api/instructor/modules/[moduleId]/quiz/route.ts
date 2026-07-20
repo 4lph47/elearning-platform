@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { quizSchema } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
@@ -22,6 +23,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ modu
   const result = await upsertQuiz("MODULE", moduleId, parsed.data);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
+  revalidateTag("courses");
   return NextResponse.json(result.quiz);
 }
 
@@ -34,5 +36,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!courseModule) return NextResponse.json({ error: "Módulo não encontrado" }, { status: 404 });
 
   await deleteQuiz("MODULE", moduleId);
+  revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

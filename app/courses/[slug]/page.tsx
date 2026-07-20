@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { CheckCircle2, Video, ListChecks, Paperclip, Infinity as InfinityIcon, HelpCircle, Lock, Star, Users, BookOpen, Smartphone, Award, MessageSquare } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getCachedCourseBySlug, getCachedRelatedCourses } from "@/lib/courseCache";
 import { EnrollButton } from "@/components/course/EnrollButton";
 import { AddToCartButton } from "@/components/course/AddToCartButton";
 import { CourseDetailTabs } from "@/components/course/CourseDetailTabs";
@@ -25,37 +26,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   const { slug } = await params;
   const session = await getServerSession(authOptions);
 
-  const course = await prisma.course.findUnique({
-    where: { slug },
-    include: {
-      instructor: { select: { id: true, name: true, bio: true } },
-      collaborators: { select: { id: true, name: true, bio: true } },
-      quiz: { select: { id: true } },
-      bundle: {
-        include: {
-          courses: {
-            where: { published: true },
-            include: { instructor: { select: { name: true } } },
-          },
-        },
-      },
-      modules: {
-        orderBy: { order: "asc" },
-        include: {
-          quiz: { select: { id: true } },
-          lessons: {
-            orderBy: { order: "asc" },
-            include: { _count: { select: { resources: true } }, quiz: { select: { id: true } } },
-          },
-        },
-      },
-      reviews: {
-        orderBy: { createdAt: "desc" },
-        include: { user: { select: { name: true } } },
-      },
-      _count: { select: { enrollments: true } },
-    },
-  });
+  const course = await getCachedCourseBySlug(slug);
 
   if (!course || (!course.published && course.instructorId !== session?.user.id)) {
     notFound();
@@ -78,10 +49,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     enrollment,
     doneLessons,
     doneQuizzes,
-    relatedCourses,
-    instructorCourses,
-    instructorOtherCourses,
-    recommendedCourses,
+    { relatedCourses, instructorCourses, instructorOtherCourses, recommendedCourses },
     bundleEnrollments,
   ] = await Promise.all([
     session
@@ -101,52 +69,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           distinct: ["quizId"],
         })
       : Promise.resolve([]),
-    prisma.course.findMany({
-      where: { published: true, category: course.category, id: { not: course.id } },
-      include: {
-        instructor: { select: { name: true } },
-        modules: {
-          include: {
-            _count: { select: { lessons: true } },
-            lessons: { orderBy: { order: "asc" }, select: { contentUrl: true, isFreePreview: true } },
-          },
-        },
-      },
-      orderBy: { ratingCount: "desc" },
-      take: 12,
-    }),
-    prisma.course.findMany({
-      where: { instructorId: course.instructorId, published: true },
-      select: { rating: true, ratingCount: true, _count: { select: { enrollments: true } } },
-    }),
-    prisma.course.findMany({
-      where: { instructorId: course.instructorId, published: true, id: { not: course.id } },
-      include: {
-        instructor: { select: { name: true } },
-        modules: {
-          include: {
-            _count: { select: { lessons: true } },
-            lessons: { orderBy: { order: "asc" }, select: { contentUrl: true, isFreePreview: true } },
-          },
-        },
-      },
-      orderBy: { ratingCount: "desc" },
-      take: 8,
-    }),
-    prisma.course.findMany({
-      where: { published: true, category: { not: course.category }, instructorId: { not: course.instructorId } },
-      include: {
-        instructor: { select: { name: true } },
-        modules: {
-          include: {
-            _count: { select: { lessons: true } },
-            lessons: { orderBy: { order: "asc" }, select: { contentUrl: true, isFreePreview: true } },
-          },
-        },
-      },
-      orderBy: { ratingCount: "desc" },
-      take: 12,
-    }),
+    getCachedRelatedCourses(course.id, course.category, course.instructorId),
     session && bundleCourses.length > 0
       ? prisma.enrollment.findMany({
           where: { userId: session.user.id, courseId: { in: bundleCourses.map((c) => c.id) } },

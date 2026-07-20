@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getCachedCourseBySlug } from "@/lib/courseCache";
 import { QuizPlayer } from "@/components/course/QuizPlayer";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
@@ -20,19 +21,7 @@ export default async function CourseQuizPage({
   }
 
   const [course, quiz] = await Promise.all([
-    prisma.course.findUnique({
-      where: { slug },
-      include: {
-        quiz: { select: { id: true } },
-        modules: {
-          orderBy: { order: "asc" },
-          include: {
-            quiz: { select: { id: true } },
-            lessons: { orderBy: { order: "asc" }, include: { quiz: { select: { id: true } } } },
-          },
-        },
-      },
-    }),
+    getCachedCourseBySlug(slug),
     prisma.quiz.findUnique({
       where: { id: quizId },
       include: { questions: { include: { options: true }, orderBy: { order: "asc" } } },

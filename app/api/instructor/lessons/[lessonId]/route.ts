@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent } from "@/lib/validations";
@@ -47,6 +48,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
     });
   }
 
+  revalidateTag("courses");
   return NextResponse.json(updated);
 }
 
@@ -59,5 +61,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!lesson) return NextResponse.json({ error: "Aula não encontrada" }, { status: 404 });
 
   await prisma.lesson.delete({ where: { id: lessonId } });
+  revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

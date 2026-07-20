@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getCachedCourseBySlug } from "@/lib/courseCache";
 import { LessonBody } from "@/components/course/LessonBody";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
@@ -25,27 +26,7 @@ export default async function LessonPage({
   }
 
   const [course, resources, progress] = await Promise.all([
-    prisma.course.findUnique({
-      where: { slug },
-      include: {
-        instructor: { select: { id: true, name: true } },
-        collaborators: { select: { id: true, name: true } },
-        quiz: { select: { id: true } },
-        modules: {
-          orderBy: { order: "asc" },
-          include: {
-            quiz: { select: { id: true } },
-            lessons: {
-              orderBy: { order: "asc" },
-              include: {
-                quiz: { select: { id: true } },
-                contributors: { select: { id: true, name: true } },
-              },
-            },
-          },
-        },
-      },
-    }),
+    getCachedCourseBySlug(slug),
     prisma.lessonResource.findMany({ where: { lessonId } }),
     prisma.lessonProgress.findUnique({
       where: { userId_lessonId: { userId: session.user.id, lessonId } },

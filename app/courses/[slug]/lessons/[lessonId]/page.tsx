@@ -117,6 +117,15 @@ export default async function LessonPage({
     redirect(`/courses/${slug}`);
   }
 
+  const previousHref =
+    previousLesson && (isOwner || isEnrolled || previousLesson.isFreePreview)
+      ? `/courses/${slug}/lessons/${previousLesson.id}`
+      : null;
+  const nextHref =
+    nextLesson && (isOwner || isEnrolled || nextLesson.isFreePreview)
+      ? `/courses/${slug}/lessons/${nextLesson.id}`
+      : null;
+
   const progressByLessonId = Object.fromEntries(progressRows.map((p) => [p.lessonId, p.completed]));
   const completedLessonsCount = Object.values(progressByLessonId).filter(Boolean).length;
   const doneQuizIds = new Set(doneQuizAttempts.map((a) => a.quizId));
@@ -253,6 +262,8 @@ export default async function LessonPage({
             likeCount: likeReactions,
             createdAt: lesson.createdAt.toISOString(),
           }}
+          previousHref={previousHref}
+          nextHref={nextHref}
         />
       </LessonLayoutShell>
     </>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, cloneElement, type ReactElement } from "react";
+import { useState, useRef, cloneElement, type ReactElement } from "react";
+import { useRouter } from "next/navigation";
 import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
@@ -48,6 +49,8 @@ export function LessonBody({
   engagement,
   comments,
   videoMeta,
+  previousHref,
+  nextHref,
 }: {
   nav: React.ReactNode;
   title: React.ReactNode;
@@ -63,7 +66,11 @@ export function LessonBody({
   engagement?: ReactElement<{ completeButton?: React.ReactNode }>;
   comments?: React.ReactNode;
   videoMeta?: VideoMeta;
+  previousHref?: string | null;
+  nextHref?: string | null;
 }) {
+  const router = useRouter();
+  const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
   const [previewResource, setPreviewResource] = useState<LessonResourceData | null>(null);
@@ -109,8 +116,29 @@ export function LessonBody({
 
   const engagementWithButton = engagement && cloneElement(engagement, { completeButton });
 
+  function handleTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || window.innerWidth >= 1024) return;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const elapsed = Date.now() - start.t;
+    const isSwipe = Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 600;
+    if (!isSwipe) return;
+
+    if (dx < 0 && nextHref) router.push(nextHref);
+    else if (dx > 0 && previousHref) router.push(previousHref);
+  }
+
   return (
-    <div>
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {nav}
 
       <div className="mt-4">

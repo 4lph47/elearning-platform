@@ -81,6 +81,7 @@ export function LessonBody({
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
+  const belowVideoWidth = `lg:max-w-none ${collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"}`;
 
   function closePreview() {
     setPreviewResource(null);
@@ -158,25 +159,27 @@ export function LessonBody({
           </div>
         )}
 
-        <div className="mt-4">
-          {title}
-          {engagement && <div className="mt-3">{engagement}</div>}
-        </div>
-
-        {quiz && (
-          <div className="mt-6">
-            <QuizPlayer
-              quizId={quiz.id}
-              title={quiz.title}
-              questions={quiz.questions}
-              maxAttempts={quiz.maxAttempts}
-              timeLimitMinutes={quiz.timeLimitMinutes}
-              attemptsUsed={quiz.attemptsUsed}
-            />
+        <div className={belowVideoWidth}>
+          <div className="mt-4">
+            {title}
+            {engagement && <div className="mt-3">{engagement}</div>}
           </div>
-        )}
 
-        {comments}
+          {quiz && (
+            <div className="mt-6">
+              <QuizPlayer
+                quizId={quiz.id}
+                title={quiz.title}
+                questions={quiz.questions}
+                maxAttempts={quiz.maxAttempts}
+                timeLimitMinutes={quiz.timeLimitMinutes}
+                attemptsUsed={quiz.attemptsUsed}
+              />
+            </div>
+          )}
+
+          {comments}
+        </div>
       </div>
 
       {previewResource && maximized && (

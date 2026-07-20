@@ -46,25 +46,25 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
     if (dx < 0 && nextHref) {
       setSwipeExit("left");
       sessionStorage.setItem(STORAGE_KEY, "left");
-      setTimeout(() => router.push(nextHref), 180);
+      setTimeout(() => router.push(nextHref), 1180);
     } else if (dx > 0 && previousHref) {
       setSwipeExit("right");
       sessionStorage.setItem(STORAGE_KEY, "right");
-      setTimeout(() => router.push(previousHref), 180);
+      setTimeout(() => router.push(previousHref), 1180);
     }
   }
 
   let swipeClassName: string;
   if (swipeExit === "left") {
-    swipeClassName = "transition-all duration-200 ease-in -translate-x-10 opacity-0";
+    swipeClassName = "transition-all duration-[1200ms] ease-in -translate-x-10 opacity-0";
   } else if (swipeExit === "right") {
-    swipeClassName = "transition-all duration-200 ease-in translate-x-10 opacity-0";
+    swipeClassName = "transition-all duration-[1200ms] ease-in translate-x-10 opacity-0";
   } else if (swipeEnter === "left") {
-    swipeClassName = "transition-all duration-200 ease-out translate-x-10 opacity-0";
+    swipeClassName = "transition-all duration-[1200ms] ease-out translate-x-10 opacity-0";
   } else if (swipeEnter === "right") {
-    swipeClassName = "transition-all duration-200 ease-out -translate-x-10 opacity-0";
+    swipeClassName = "transition-all duration-[1200ms] ease-out -translate-x-10 opacity-0";
   } else {
-    swipeClassName = "transition-all duration-200 ease-out translate-x-0 opacity-100";
+    swipeClassName = "transition-all duration-[1200ms] ease-out translate-x-0 opacity-100";
   }
 
   return { handleTouchStart, handleTouchEnd, swipeClassName };

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { maybeCreateAutoReview } from "@/lib/autoReview";
 
 export async function POST(request: Request, { params }: { params: Promise<{ quizId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -67,6 +68,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ qui
       answers,
     },
   });
+
+  await maybeCreateAutoReview(session.user.id, course.id);
 
   return NextResponse.json({ scorePercent, correctOptionByQuestion });
 }

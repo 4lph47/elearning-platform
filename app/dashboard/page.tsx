@@ -98,6 +98,13 @@ export default async function DashboardPage() {
     { label: "Primeiro certificado", icon: Award, unlocked: completed >= 1 },
   ];
 
+  const statTiles = [
+    { label: "Nível", value: String(level), icon: Zap, hint: `${xpIntoLevel}/100 XP` },
+    { label: "Sequência", value: `${streak} dia${streak !== 1 ? "s" : ""}`, icon: Flame, hint: "atual" },
+    { label: "Matriculados", value: String(courseSummaries.length), icon: BookMarked, hint: "cursos" },
+    { label: "Concluídos", value: String(completed), icon: Award, hint: `${inProgress} em progresso` },
+  ];
+
   return (
     <div className="min-h-screen bg-black px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl">
@@ -106,60 +113,28 @@ export default async function DashboardPage() {
 
         {courseSummaries.length > 0 && (
           <>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600/15 text-blue-400">
-                    <Zap size={20} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-semibold text-white">Nível {level}</span>
-                      <span className="text-xs text-slate-500">{xpIntoLevel}/100 XP</span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/10">
+            <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {statTiles.map((tile) => (
+                <div key={tile.label} className="rounded-xl border border-white/10 bg-slate-950 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tile.label}</p>
+                    <tile.icon size={15} className="text-slate-600" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-white">{tile.value}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{tile.hint}</p>
+                  {tile.label === "Nível" && (
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
                       <div
                         className="h-1.5 rounded-full bg-blue-500 transition-all"
                         style={{ width: `${xpIntoLevel}%` }}
                       />
                     </div>
-                  </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-400">
-                    <Flame size={20} />
-                  </span>
-                  <div>
-                    <div className="text-lg font-bold text-white">
-                      {streak} dia{streak !== 1 ? "s" : ""}
-                    </div>
-                    <div className="text-xs text-slate-500">Sequência atual</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-                <div className="flex items-center justify-around text-center">
-                  <div>
-                    <div className="text-lg font-bold text-white">{courseSummaries.length}</div>
-                    <div className="text-[11px] text-slate-500">Matriculados</div>
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-white">{inProgress}</div>
-                    <div className="text-[11px] text-slate-500">Em progresso</div>
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-white">{completed}</div>
-                    <div className="text-[11px] text-slate-500">Concluídos</div>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Atividade dos últimos 7 dias
@@ -180,13 +155,11 @@ export default async function DashboardPage() {
                 {achievements.map((a) => (
                   <span
                     key={a.label}
-                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
-                      a.unlocked
-                        ? "border-blue-500/40 bg-blue-600/10 text-blue-300"
-                        : "border-white/10 text-slate-600"
+                    className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${
+                      a.unlocked ? "border-white/15 bg-white/5 text-slate-200" : "border-white/5 text-slate-600"
                     }`}
                   >
-                    <a.icon size={13} /> {a.label}
+                    <a.icon size={13} className={a.unlocked ? "text-blue-400" : "text-slate-600"} /> {a.label}
                   </span>
                 ))}
               </div>
@@ -204,11 +177,13 @@ export default async function DashboardPage() {
             </p>
           </div>
         ) : (
-          <div className="mt-6 space-y-3">
-            {courseSummaries.map(({ course, lessons, completedCount, percent, nextLesson }) => (
+          <div className="mt-6 overflow-hidden rounded-xl border border-white/10 bg-slate-950">
+            {courseSummaries.map(({ course, lessons, completedCount, percent, nextLesson }, i) => (
               <div
                 key={course.id}
-                className="flex items-center gap-4 rounded-xl border border-white/10 bg-slate-950 p-4 transition-colors hover:border-white/20"
+                className={`flex items-center gap-4 p-4 transition-colors hover:bg-white/[0.03] ${
+                  i > 0 ? "border-t border-white/10" : ""
+                }`}
               >
                 <ProgressRing percent={percent} />
                 <div className="min-w-0 flex-1">
@@ -216,9 +191,9 @@ export default async function DashboardPage() {
                     {course.title}
                   </Link>
                   <div className="mt-1 flex items-center gap-2 text-xs">
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-slate-300">{course.category}</span>
+                    <span className="rounded-md bg-white/5 px-2 py-0.5 text-slate-400">{course.category}</span>
                     {percent === 100 && (
-                      <span className="rounded-full bg-green-600/15 px-2 py-0.5 font-medium text-green-400">
+                      <span className="rounded-md bg-green-600/10 px-2 py-0.5 font-medium text-green-400">
                         Concluído
                       </span>
                     )}

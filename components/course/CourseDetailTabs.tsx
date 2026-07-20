@@ -12,6 +12,7 @@ interface LessonItem {
   isFreePreview: boolean;
   durationSeconds: number | null;
   type: "VIDEO" | "TEXT";
+  quiz: { id: string } | null;
 }
 
 interface ModuleItem {
@@ -157,6 +158,28 @@ export function CourseDetailTabs({
                                 <Link href={`/courses/${courseSlug}/lessons/${lesson.id}`}>{content}</Link>
                               ) : (
                                 content
+                              )}
+                              {lesson.quiz && (
+                                <div className="pl-6">
+                                  {quizAccessible && accessible ? (
+                                    <Link href={`/courses/${courseSlug}/quiz/${lesson.quiz.id}`}>
+                                      <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-900/50">
+                                        <span className="flex items-center gap-2">
+                                          <HelpCircle size={16} className="shrink-0 text-slate-600" />
+                                          <span className="text-slate-200">Quiz · {lesson.title}</span>
+                                        </span>
+                                      </div>
+                                    </Link>
+                                  ) : (
+                                    <div className="flex items-center justify-between px-4 py-3 text-sm">
+                                      <span className="flex items-center gap-2">
+                                        <HelpCircle size={16} className="shrink-0 text-slate-600" />
+                                        <span className="text-slate-500">Quiz · {lesson.title}</span>
+                                      </span>
+                                      <Lock size={14} className="text-slate-500" />
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </li>
                           );

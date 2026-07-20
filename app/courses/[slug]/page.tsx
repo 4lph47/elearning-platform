@@ -43,7 +43,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         orderBy: { order: "asc" },
         include: {
           quiz: { select: { id: true } },
-          lessons: { orderBy: { order: "asc" }, include: { _count: { select: { resources: true } } } },
+          lessons: {
+            orderBy: { order: "asc" },
+            include: { _count: { select: { resources: true } }, quiz: { select: { id: true } } },
+          },
         },
       },
       reviews: {
@@ -66,7 +69,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   const totalDuration = allLessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
   const totalResources = allLessons.reduce((sum, l) => sum + l._count.resources, 0);
   const moduleQuizIds = course.modules.map((m) => m.quiz?.id).filter((id): id is string => Boolean(id));
-  const allQuizIds = [...moduleQuizIds, ...(course.quiz ? [course.quiz.id] : [])];
+  const lessonQuizIds = allLessons.map((l) => l.quiz?.id).filter((id): id is string => Boolean(id));
+  const allQuizIds = [...moduleQuizIds, ...lessonQuizIds, ...(course.quiz ? [course.quiz.id] : [])];
 
   const bundleCourses = (course.bundle?.courses ?? []).filter((c) => c.id !== course.id);
 

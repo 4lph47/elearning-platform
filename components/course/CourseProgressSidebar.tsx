@@ -7,6 +7,7 @@ interface LessonItem {
   isFreePreview: boolean;
   durationSeconds: number | null;
   type: "VIDEO" | "TEXT";
+  quizId: string | null;
 }
 
 interface ModuleItem {
@@ -116,6 +117,22 @@ export function CourseProgressSidebar({
                           <Lock size={16} className="shrink-0" />
                           <span className="flex-1">{l.title}</span>
                         </span>
+                      )}
+                      {l.quizId && (
+                        accessible ? (
+                          <Link
+                            href={`/courses/${slug}/quiz/${l.quizId}`}
+                            className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 pl-8 text-sm text-slate-300 hover:bg-white/5"
+                          >
+                            {doneQuizIds.has(l.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
+                            <span className="flex-1">Quiz · {l.title}</span>
+                          </Link>
+                        ) : (
+                          <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 pl-8 text-sm text-slate-500">
+                            <Lock size={16} className="shrink-0" />
+                            <span className="flex-1">Quiz · {l.title}</span>
+                          </span>
+                        )
                       )}
                     </li>
                   );

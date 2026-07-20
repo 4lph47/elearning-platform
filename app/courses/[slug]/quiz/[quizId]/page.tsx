@@ -39,13 +39,14 @@ export default async function CourseQuizPage({
     }),
   ]);
   if (!course) notFound();
-  if (!quiz || (quiz.moduleId === null && quiz.courseId !== course.id)) notFound();
 
   const isOwner = course.instructorId === session.user.id;
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const moduleQuizIds = course.modules.map((m) => m.quiz?.id).filter((id): id is string => Boolean(id));
   const lessonQuizIds = allLessons.map((l) => l.quiz?.id).filter((id): id is string => Boolean(id));
   const allQuizIds = [...moduleQuizIds, ...lessonQuizIds, ...(course.quiz ? [course.quiz.id] : [])];
+
+  if (!quiz || !allQuizIds.includes(quiz.id)) notFound();
 
   const [enrollment, attemptsUsed, progressRows, doneQuizAttempts] = await Promise.all([
     prisma.enrollment.findUnique({
@@ -93,6 +94,7 @@ export default async function CourseQuizPage({
               isFreePreview: l.isFreePreview,
               durationSeconds: l.durationSeconds,
               type: l.type,
+              quizId: l.quiz?.id ?? null,
             })),
           }))}
           progressByLessonId={progressByLessonId}

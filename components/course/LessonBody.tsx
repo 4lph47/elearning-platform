@@ -4,21 +4,11 @@ import { useState, cloneElement, type ReactElement } from "react";
 import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
-import { QuizPlayer } from "@/components/course/QuizPlayer";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { SlideDeckViewer } from "@/components/course/SlideDeckViewer";
 import { buildSlideDeck } from "@/lib/slideDeck";
 import { SpreadsheetPreviewViewer } from "@/components/course/SpreadsheetPreviewViewer";
 import { buildSpreadsheetPreview } from "@/lib/spreadsheetPreview";
-
-interface QuizData {
-  id: string;
-  title: string;
-  maxAttempts: number | null;
-  timeLimitMinutes: number | null;
-  attemptsUsed: number;
-  questions: { id: string; text: string; options: { id: string; text: string }[] }[];
-}
 
 function PreviewContent({ resource }: { resource: LessonResourceData }) {
   if (resource.type === "IMAGE") {
@@ -54,7 +44,6 @@ export function LessonBody({
   initialWatchedSeconds,
   overview,
   resources,
-  quiz,
   progress,
   engagement,
   comments,
@@ -70,7 +59,6 @@ export function LessonBody({
   initialWatchedSeconds: number;
   overview: string;
   resources: LessonResourceData[];
-  quiz: QuizData | null;
   progress?: React.ReactNode;
   engagement?: ReactElement<{ completeButton?: React.ReactNode }>;
   comments?: React.ReactNode;
@@ -204,19 +192,6 @@ export function LessonBody({
             {title}
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
-
-          {quiz && (
-            <div className="mt-6">
-              <QuizPlayer
-                quizId={quiz.id}
-                title={quiz.title}
-                questions={quiz.questions}
-                maxAttempts={quiz.maxAttempts}
-                timeLimitMinutes={quiz.timeLimitMinutes}
-                attemptsUsed={quiz.attemptsUsed}
-              />
-            </div>
-          )}
 
           <div className="hidden lg:block">{comments}</div>
         </div>

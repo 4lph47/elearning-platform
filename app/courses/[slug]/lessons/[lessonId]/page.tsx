@@ -38,7 +38,7 @@ export default async function LessonPage({
             lessons: {
               orderBy: { order: "asc" },
               include: {
-                quiz: { select: { id: true, title: true, maxAttempts: true, timeLimitMinutes: true } },
+                quiz: { select: { id: true } },
                 contributors: { select: { id: true, name: true } },
               },
             },
@@ -69,8 +69,6 @@ export default async function LessonPage({
 
   const [
     enrollment,
-    fullQuiz,
-    quizAttemptsUsed,
     progressRows,
     doneQuizAttempts,
     topLevelComments,
@@ -81,15 +79,6 @@ export default async function LessonPage({
     prisma.enrollment.findUnique({
       where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
     }),
-    lesson.quiz
-      ? prisma.quiz.findUnique({
-          where: { id: lesson.quiz.id },
-          include: { questions: { include: { options: true }, orderBy: { order: "asc" } } },
-        })
-      : Promise.resolve(null),
-    lesson.quiz
-      ? prisma.quizAttempt.count({ where: { quizId: lesson.quiz.id, userId: session.user.id } })
-      : Promise.resolve(0),
     prisma.lessonProgress.findMany({
       where: { userId: session.user.id, lessonId: { in: allLessons.map((l) => l.id) } },
     }),
@@ -168,6 +157,7 @@ export default async function LessonPage({
           isFreePreview: l.isFreePreview,
           durationSeconds: l.durationSeconds,
           type: l.type,
+          quizId: l.quiz?.id ?? null,
         })),
       }))}
       progressByLessonId={progressByLessonId}
@@ -263,22 +253,6 @@ export default async function LessonPage({
             likeCount: likeReactions,
             createdAt: lesson.createdAt.toISOString(),
           }}
-          quiz={
-            fullQuiz
-              ? {
-                  id: fullQuiz.id,
-                  title: fullQuiz.title,
-                  maxAttempts: fullQuiz.maxAttempts,
-                  timeLimitMinutes: fullQuiz.timeLimitMinutes,
-                  attemptsUsed: quizAttemptsUsed,
-                  questions: fullQuiz.questions.map((q) => ({
-                    id: q.id,
-                    text: q.text,
-                    options: q.options.map((o) => ({ id: o.id, text: o.text })),
-                  })),
-                }
-              : null
-          }
         />
       </LessonLayoutShell>
     </>

@@ -1,4 +1,6 @@
-const SLOT_COLORS = ["#3987e5", "#008300", "#c98500", "#d95926"];
+// Ordem validada (skill dataviz): maximiza a distância de cor entre vizinhos,
+// incluindo para daltonismo — não trocar a ordem sem revalidar.
+const SLOT_COLORS = ["#3987e5", "#008300", "#d55181", "#c98500"];
 
 export function CategoryBreakdown({ data }: { data: { category: string; count: number }[] }) {
   const top = data.slice(0, 4);

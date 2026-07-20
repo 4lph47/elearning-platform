@@ -257,17 +257,6 @@ export default async function LessonPage({
               isAuthenticated={Boolean(session)}
             />
           }
-          commentsMobile={
-            <LessonComments
-              lessonId={lesson.id}
-              comments={commentTree}
-              currentUserId={session.user.id}
-              currentUserName={session.user.name ?? null}
-              canModerate={isOwner}
-              isAuthenticated={Boolean(session)}
-              startCollapsed
-            />
-          }
           quiz={
             fullQuiz
               ? {

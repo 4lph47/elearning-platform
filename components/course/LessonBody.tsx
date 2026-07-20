@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, cloneElement, type ReactElement } from "react";
 import { X, Maximize2, Minimize2, Check, Circle } from "lucide-react";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData } from "@/components/course/LessonTabs";
@@ -58,7 +58,6 @@ export function LessonBody({
   progress,
   engagement,
   comments,
-  commentsMobile,
 }: {
   nav: React.ReactNode;
   title: React.ReactNode;
@@ -72,9 +71,8 @@ export function LessonBody({
   resources: LessonResourceData[];
   quiz: QuizData | null;
   progress?: React.ReactNode;
-  engagement?: React.ReactNode;
+  engagement?: ReactElement<{ completeButton?: React.ReactNode }>;
   comments?: React.ReactNode;
-  commentsMobile?: React.ReactNode;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -107,7 +105,7 @@ export function LessonBody({
       disabled={completed}
       aria-label={completed ? "Aula concluída" : "Marcar como concluída"}
       title={completed ? "Aula concluída" : "Marcar como concluída"}
-      className="shrink-0 rounded-full p-1 disabled:cursor-default"
+      className="shrink-0 disabled:cursor-default"
     >
       {completed ? (
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
@@ -118,6 +116,8 @@ export function LessonBody({
       )}
     </button>
   );
+
+  const engagementWithButton = engagement && cloneElement(engagement, { completeButton });
 
   return (
     <div>
@@ -137,12 +137,8 @@ export function LessonBody({
           </div>
 
           <div className="mt-4 lg:hidden">
-            <div className="flex items-start justify-between gap-3">
-              {title}
-              {completeButton}
-            </div>
-            {engagement && <div className="mt-3">{engagement}</div>}
-            {commentsMobile && <div className="mt-4">{commentsMobile}</div>}
+            {title}
+            {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
           <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
@@ -171,6 +167,7 @@ export function LessonBody({
                 overview={overview}
                 resources={resources}
                 progress={progress}
+                comments={comments}
                 onSelectResource={(r) => setPreviewResource((prev) => (prev?.id === r.id ? null : r))}
               />
             )}
@@ -201,11 +198,8 @@ export function LessonBody({
 
         <div className={belowVideoWidth}>
           <div className="mt-4 hidden lg:block">
-            <div className="flex items-start justify-between gap-3">
-              {title}
-              {completeButton}
-            </div>
-            {engagement && <div className="mt-3">{engagement}</div>}
+            {title}
+            {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
           {quiz && (

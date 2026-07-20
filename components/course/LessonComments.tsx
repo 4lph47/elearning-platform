@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ThumbsUp, MessageSquare, Trash2, ChevronDown, MessageCircle } from "lucide-react";
+import { ThumbsUp, MessageSquare, Trash2, ChevronDown } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
 
 export interface CommentData {
@@ -181,7 +181,6 @@ export function LessonComments({
   currentUserName,
   canModerate,
   isAuthenticated,
-  startCollapsed,
 }: {
   lessonId: string;
   comments: CommentData[];
@@ -189,14 +188,12 @@ export function LessonComments({
   currentUserName: string | null;
   canModerate: boolean;
   isAuthenticated: boolean;
-  startCollapsed?: boolean;
 }) {
   const router = useRouter();
   const [comments, setComments] = useState(initialComments);
   const [sort, setSort] = useState<"top" | "recent">("recent");
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
-  const [expanded, setExpanded] = useState(!startCollapsed);
 
   const totalCount = comments.reduce((sum, c) => sum + 1 + c.replies.length, 0);
   const sorted = [...comments].sort((a, b) =>
@@ -205,32 +202,6 @@ export function LessonComments({
       : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  if (!expanded) {
-    const preview = sorted[0];
-    return (
-      <button
-        onClick={() => setExpanded(true)}
-        className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-left hover:bg-white/10"
-      >
-        <p className="flex items-center gap-2 text-sm font-semibold text-white">
-          <MessageCircle size={15} className="text-slate-400" />
-          Comentários {totalCount > 0 && totalCount}
-        </p>
-        {preview ? (
-          <div className="mt-2 flex items-start gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[11px] font-semibold text-slate-200">
-              {initials(preview.user.name)}
-            </span>
-            <p className="min-w-0 truncate text-xs text-slate-400">
-              <span className="font-medium text-slate-200">{preview.user.name}</span> {preview.content}
-            </p>
-          </div>
-        ) : (
-          <p className="mt-1 text-xs text-slate-500">Sê o primeiro a comentar.</p>
-        )}
-      </button>
-    );
-  }
 
   async function submitComment(e: React.FormEvent) {
     e.preventDefault();

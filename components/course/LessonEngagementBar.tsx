@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ThumbsUp, ThumbsDown, Share2, Check } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Forward, Check } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
 
 interface Author {
@@ -18,6 +18,7 @@ export function LessonEngagementBar({
   initialLikeCount,
   initialReaction,
   isAuthenticated,
+  completeButton,
 }: {
   lessonId: string;
   authors: Author[];
@@ -26,10 +27,12 @@ export function LessonEngagementBar({
   initialLikeCount: number;
   initialReaction: "LIKE" | "DISLIKE" | null;
   isAuthenticated: boolean;
+  completeButton?: ReactNode;
 }) {
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [reaction, setReaction] = useState(initialReaction);
   const [copied, setCopied] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const primaryAuthor = authors[0];
 
   async function react(type: "LIKE" | "DISLIKE") {
@@ -60,15 +63,36 @@ export function LessonEngagementBar({
         <span className="font-medium text-slate-200">{authors.map((a) => a.name).join(", ")}</span>
         <span>·</span>
         <span>
-          {likeCount} gosto{likeCount !== 1 ? "s" : ""}
-        </span>
-        <span>·</span>
-        <span>
           {viewCount} visualizaç{viewCount !== 1 ? "ões" : "ão"}
         </span>
         <span>·</span>
         <span>{timeAgo(createdAt)}</span>
+        <button onClick={() => setShowDetails((v) => !v)} className="font-medium text-slate-200 hover:text-white">
+          {showDetails ? "menos" : "...mais"}
+        </button>
       </div>
+
+      {showDetails && (
+        <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
+          <p className="text-sm font-semibold text-white">Detalhes do vídeo</p>
+          <dl className="mt-2 space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-slate-400">Data</dt>
+              <dd className="text-slate-200">
+                {new Date(createdAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-slate-400">Visualizações</dt>
+              <dd className="text-slate-200">{viewCount.toLocaleString("pt-PT")}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-slate-400">Gostos</dt>
+              <dd className="text-slate-200">{likeCount.toLocaleString("pt-PT")}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between gap-3">
         {primaryAuthor && (
@@ -84,35 +108,32 @@ export function LessonEngagementBar({
           </Link>
         )}
 
-        <div className="flex items-center gap-2">
-          <div className="flex overflow-hidden rounded-full border border-white/15">
-            <button
-              onClick={() => react("LIKE")}
-              disabled={!isAuthenticated}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed ${
-                reaction === "LIKE" ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-white/5"
-              }`}
-            >
-              <ThumbsUp size={15} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
-            </button>
-            <div className="w-px bg-white/15" />
-            <button
-              onClick={() => react("DISLIKE")}
-              disabled={!isAuthenticated}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed ${
-                reaction === "DISLIKE" ? "bg-red-600/20 text-red-400" : "text-slate-300 hover:bg-white/5"
-              }`}
-            >
-              <ThumbsDown size={15} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
-            </button>
-          </div>
+        <div className="flex items-center gap-5">
+          {completeButton}
 
           <button
-            onClick={share}
-            className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-white/5"
+            onClick={() => react("LIKE")}
+            disabled={!isAuthenticated}
+            className={`flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed ${
+              reaction === "LIKE" ? "text-blue-400" : "text-slate-300 hover:text-white"
+            }`}
           >
-            {copied ? <Check size={15} className="text-blue-400" /> : <Share2 size={15} />}
-            <span className="hidden sm:inline">{copied ? "Link copiado" : "Partilhar"}</span>
+            <ThumbsUp size={19} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
+            {likeCount}
+          </button>
+
+          <button
+            onClick={() => react("DISLIKE")}
+            disabled={!isAuthenticated}
+            className={`disabled:cursor-not-allowed ${
+              reaction === "DISLIKE" ? "text-red-400" : "text-slate-300 hover:text-white"
+            }`}
+          >
+            <ThumbsDown size={19} className={reaction === "DISLIKE" ? "fill-red-400" : ""} />
+          </button>
+
+          <button onClick={share} className="text-slate-300 hover:text-white" aria-label="Partilhar">
+            {copied ? <Check size={19} className="text-blue-400" /> : <Forward size={19} />}
           </button>
         </div>
       </div>

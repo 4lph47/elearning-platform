@@ -103,7 +103,7 @@ export function Navbar() {
               placeholder="Procurar cursos..."
               className={`w-full rounded-full border py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 ${
                 transparent
-                  ? "border-white/20 bg-white/10 text-white placeholder-slate-300 focus:border-white/40 focus:ring-white/30"
+                  ? "border-slate-900/20 bg-slate-900/10 text-slate-900 placeholder-slate-600 focus:border-slate-900/40 focus:ring-slate-900/30 dark:border-white/20 dark:bg-white/10 dark:text-white dark:placeholder-slate-300 dark:focus:border-white/40 dark:focus:ring-white/30"
                   : "border-slate-300 bg-slate-50 text-slate-900 focus:border-slate-500 focus:bg-white focus:ring-slate-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:focus:bg-white/10"
               }`}
             />

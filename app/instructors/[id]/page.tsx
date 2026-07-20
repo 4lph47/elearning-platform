@@ -105,21 +105,21 @@ export default async function InstructorProfilePage({ params }: { params: Promis
             // eslint-disable-next-line @next/next/no-img-element
             <img src={backdropUrl} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-blue-950 via-slate-900 to-black" />
+            <div className="h-full w-full bg-gradient-to-br from-blue-100 via-slate-100 to-white dark:from-blue-950 dark:via-slate-900 dark:to-black" />
           )}
-          <div className="absolute inset-0 bg-black/70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/40" />
+          <div className="absolute inset-0 bg-white/70 dark:bg-black/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-white/40 dark:from-black dark:via-black/50 dark:to-black/40" />
         </div>
 
         <div className="relative mx-auto max-w-5xl px-4 py-14 sm:px-8 sm:py-20">
-          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-3xl font-bold text-white shadow-lg shadow-blue-950/40 ring-4 ring-black/40">
+          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-3xl font-bold text-white shadow-lg shadow-blue-950/40 ring-4 ring-white/40 dark:ring-black/40">
             {initials(instructor.name)}
           </span>
-          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-blue-400">Instrutor</p>
-          <h1 className="mt-1 text-3xl font-bold text-white sm:text-5xl">{instructor.name}</h1>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Instrutor</p>
+          <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white sm:text-5xl">{instructor.name}</h1>
 
           {instructor.bio && (
-            <p className="mt-4 max-w-2xl whitespace-pre-wrap text-slate-300">{instructor.bio}</p>
+            <p className="mt-4 max-w-2xl whitespace-pre-wrap text-slate-700 dark:text-slate-300">{instructor.bio}</p>
           )}
 
           {socialLinks.length > 0 && (
@@ -130,7 +130,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/60 hover:text-white"
+                  className="flex items-center gap-1.5 rounded-full border border-slate-900/15 px-3 py-1 text-xs font-medium text-slate-600 hover:border-blue-500/60 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:text-white"
                 >
                   <Icon size={13} /> {label}
                 </a>
@@ -138,7 +138,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
             </div>
           )}
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-300">
+          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
             {avgRating !== null && (
               <span className="flex items-center gap-1.5">
                 <Star size={15} className="fill-blue-400 text-blue-400" /> {avgRating.toFixed(1)} média

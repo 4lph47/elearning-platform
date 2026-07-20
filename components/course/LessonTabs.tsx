@@ -36,6 +36,7 @@ export function LessonTabs({
   videoMeta?: VideoMeta;
 }) {
   const [tab, setTab] = useState<"overview" | "resources" | "progress" | "comments">("overview");
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <div>
@@ -88,6 +89,15 @@ export function LessonTabs({
             <p className="whitespace-pre-wrap leading-relaxed">{linkify(overview)}</p>
 
             {videoMeta && (
+              <button
+                onClick={() => setShowDetails((v) => !v)}
+                className="mt-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                {showDetails ? "menos" : "mais"}
+              </button>
+            )}
+
+            {videoMeta && showDetails && (
               <div className="mt-5 space-y-4">
                 {videoMeta.authors[0] && (
                   <Link

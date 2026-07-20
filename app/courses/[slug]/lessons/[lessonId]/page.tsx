@@ -37,6 +37,9 @@ export default async function LessonPage({
   const allLessons = course.modules.flatMap((m) => m.lessons);
   const lesson = allLessons.find((l) => l.id === lessonId);
   if (!lesson) notFound();
+  // lesson vem de dados em cache (unstable_cache serializa para JSON), por isso
+  // createdAt pode chegar já como string em vez de Date — normalizar sempre.
+  const lessonCreatedAt = new Date(lesson.createdAt).toISOString();
 
   const isOwner =
     course.instructorId === session.user.id || course.collaborators.some((c) => c.id === session.user.id);
@@ -221,7 +224,7 @@ export default async function LessonPage({
               lessonId={lesson.id}
               authors={authors}
               viewCount={updatedLesson.viewCount}
-              createdAt={lesson.createdAt.toISOString()}
+              createdAt={lessonCreatedAt}
               initialLikeCount={likeReactions}
               initialReaction={myReaction?.type ?? null}
               isAuthenticated={Boolean(session)}
@@ -241,7 +244,7 @@ export default async function LessonPage({
             authors,
             viewCount: updatedLesson.viewCount,
             likeCount: likeReactions,
-            createdAt: lesson.createdAt.toISOString(),
+            createdAt: lessonCreatedAt,
           }}
           previousHref={previousHref}
           nextHref={nextHref}

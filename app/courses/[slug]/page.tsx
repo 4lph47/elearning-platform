@@ -285,7 +285,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                 id: r.id,
                 rating: r.rating,
                 comment: r.comment,
-                createdAt: r.createdAt.toISOString(),
+                createdAt: new Date(r.createdAt).toISOString(),
                 userName: r.user.name,
               }))}
               myReview={myReview ? { rating: myReview.rating, comment: myReview.comment } : null}

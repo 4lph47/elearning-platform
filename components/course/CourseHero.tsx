@@ -136,12 +136,12 @@ export function CourseHero({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={thumbnailUrl} alt={title} className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full bg-slate-900" />
+          <div className="h-full w-full bg-slate-200 dark:bg-slate-900" />
         )}
         {!maximized && (
           <>
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/20 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white via-white/70 to-white/30 dark:from-black dark:via-black/70 dark:to-black/30" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/85 via-white/20 to-transparent dark:from-black/85 dark:via-black/20 dark:to-transparent" />
           </>
         )}
       </div>
@@ -185,12 +185,15 @@ export function CourseHero({
               visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
             }`}
           >
-            <nav className="mb-2 flex items-center gap-1.5 text-xs text-slate-400">
-              <Link href="/courses" className="hover:text-white hover:underline">
+            <nav className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <Link href="/courses" className="hover:text-slate-900 hover:underline dark:hover:text-white">
                 Cursos
               </Link>
               <span>/</span>
-              <Link href={`/courses?category=${encodeURIComponent(category)}`} className="hover:text-white hover:underline">
+              <Link
+                href={`/courses?category=${encodeURIComponent(category)}`}
+                className="hover:text-slate-900 hover:underline dark:hover:text-white"
+              >
                 {category}
               </Link>
             </nav>
@@ -199,23 +202,26 @@ export function CourseHero({
                 {category}
               </span>
               {isDraft && (
-                <span className="inline-block rounded border border-white/25 px-2 py-0.5 text-xs font-medium text-slate-300">
+                <span className="inline-block rounded border border-slate-900/25 px-2 py-0.5 text-xs font-medium text-slate-600 dark:border-white/25 dark:text-slate-300">
                   Rascunho
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-white sm:text-4xl">{title}</h1>
-            <p className="mt-3 text-slate-300">{description}</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">{title}</h1>
+            <p className="mt-3 text-slate-700 dark:text-slate-300">{description}</p>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              {ratingCount > 0 && <StarRating rating={rating} count={ratingCount} tone="dark" />}
-              <span className="text-slate-400">
+              {ratingCount > 0 && <StarRating rating={rating} count={ratingCount} />}
+              <span className="text-slate-500 dark:text-slate-400">
                 {enrollmentsCount} aluno{enrollmentsCount !== 1 ? "s" : ""} matriculado{enrollmentsCount !== 1 ? "s" : ""}
               </span>
             </div>
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
               Criado por{" "}
-              <Link href={`/instructors/${instructorId}`} className="font-medium text-slate-200 hover:text-blue-400">
+              <Link
+                href={`/instructors/${instructorId}`}
+                className="font-medium text-slate-700 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400"
+              >
                 {instructorName}
               </Link>
             </p>

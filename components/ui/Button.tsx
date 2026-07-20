@@ -10,7 +10,7 @@ const variantClasses: Record<Variant, string> = {
   danger: "bg-red-600 text-white hover:bg-red-700",
   light: "bg-white text-slate-900 shadow-md hover:bg-slate-100",
   accent: "bg-blue-600 text-white hover:bg-blue-500",
-  "outline-dark": "border border-white/25 text-white hover:bg-white/10",
+  "outline-dark": "border border-slate-900/25 text-slate-900 hover:bg-slate-900/10 dark:border-white/25 dark:text-white dark:hover:bg-white/10",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

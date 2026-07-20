@@ -79,16 +79,14 @@ export function Navbar() {
     <header
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
         transparent
-          ? "bg-gradient-to-b from-black/70 via-black/30 to-transparent"
+          ? "bg-gradient-to-b from-white/70 via-white/30 to-transparent dark:from-black/70 dark:via-black/30 dark:to-transparent"
           : "border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-black/90"
       }`}
     >
       <div className="grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-5">
         <Link
           href="/"
-          className={`flex shrink-0 items-center gap-2 text-lg font-bold ${
-            transparent ? "text-white" : "text-slate-900 dark:text-white"
-          }`}
+          className="flex shrink-0 items-center gap-2 text-lg font-bold text-slate-900 dark:text-white"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
             <GraduationCap className="h-4.5 w-4.5" size={18} />
@@ -112,7 +110,7 @@ export function Navbar() {
             <button
               type="submit"
               className={`absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full ${
-                transparent ? "text-slate-200 hover:bg-white/15" : "text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-white/10"
+                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-white/10"
               }`}
               aria-label="Procurar"
             >
@@ -127,7 +125,7 @@ export function Navbar() {
               href="/dashboard"
               aria-label="A minha aprendizagem"
               className={`hidden h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium sm:flex ${
-                transparent ? "text-slate-200 hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
               <BookOpen size={15} /> A minha aprendizagem
@@ -138,7 +136,7 @@ export function Navbar() {
               href="/cart"
               aria-label="Carrinho"
               className={`relative flex h-8 w-8 items-center justify-center rounded-full ${
-                transparent ? "text-slate-200 hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
               <ShoppingCart size={16} />
@@ -155,7 +153,7 @@ export function Navbar() {
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               aria-label="Alternar tema claro/escuro"
               className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                transparent ? "text-slate-200 hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
               {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -166,14 +164,14 @@ export function Navbar() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((v) => !v)}
-                className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-2 ${transparent ? "hover:bg-white/10" : "hover:bg-slate-100 dark:hover:bg-white/10"}`}
+                className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-2 ${transparent ? "hover:bg-slate-900/10 dark:hover:bg-white/10" : "hover:bg-slate-100 dark:hover:bg-white/10"}`}
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                   {initials}
                 </span>
                 <ChevronDown
                   size={14}
-                  className={`transition-transform ${menuOpen ? "rotate-180" : ""} ${transparent ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}
+                  className={`transition-transform ${menuOpen ? "rotate-180" : ""} ${transparent ? "text-slate-600 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"}`}
                 />
               </button>
 
@@ -224,7 +222,9 @@ export function Navbar() {
               <Link
                 href="/courses"
                 className={`hidden font-medium transition-colors sm:inline ${
-                  transparent ? "text-slate-200 hover:text-white" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                  transparent
+                    ? "text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                 }`}
               >
                 Catálogo

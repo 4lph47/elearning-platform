@@ -76,6 +76,7 @@ export function LessonBody({
   const [previewResource, setPreviewResource] = useState<LessonResourceData | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
+  const [swipeExit, setSwipeExit] = useState<"left" | "right" | null>(null);
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
@@ -109,7 +110,7 @@ export function LessonBody({
           <Check size={14} strokeWidth={3} className="text-white" />
         </span>
       ) : (
-        <CircleCheck size={22} className="text-slate-500 hover:text-slate-300" />
+        <CircleCheck size={22} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" />
       )}
     </button>
   );
@@ -133,12 +134,27 @@ export function LessonBody({
     const isSwipe = Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2 && elapsed < 600;
     if (!isSwipe) return;
 
-    if (dx < 0 && nextHref) router.push(nextHref);
-    else if (dx > 0 && previousHref) router.push(previousHref);
+    if (dx < 0 && nextHref) {
+      setSwipeExit("left");
+      setTimeout(() => router.push(nextHref), 180);
+    } else if (dx > 0 && previousHref) {
+      setSwipeExit("right");
+      setTimeout(() => router.push(previousHref), 180);
+    }
   }
 
   return (
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className={`transition-all duration-200 ease-in ${
+        swipeExit === "left"
+          ? "-translate-x-10 opacity-0"
+          : swipeExit === "right"
+            ? "translate-x-10 opacity-0"
+            : "translate-x-0 opacity-100"
+      }`}
+    >
       {nav}
 
       <div className="mt-4">
@@ -161,7 +177,7 @@ export function LessonBody({
 
           <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
             {inlinePreview ? (
-              <div className={`relative overflow-hidden rounded-lg border border-white/10 bg-slate-950 ${inlinePreviewHeight}`}>
+              <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
                   <button
                     onClick={() => setMaximized(true)}
@@ -194,7 +210,7 @@ export function LessonBody({
         </div>
 
         {!sideBySide && previewResource && (
-          <div className="relative mt-3 h-[80vh] w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+          <div className="relative mt-3 h-[80vh] w-full overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
               <button
                 onClick={() => setMaximized(true)}
@@ -226,20 +242,20 @@ export function LessonBody({
       </div>
 
       {previewResource && maximized && (
-        <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-950 shadow-2xl lg:inset-10">
+        <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 lg:inset-10">
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="truncate text-sm font-medium text-slate-200">{previewResource.name}</span>
+            <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{previewResource.name}</span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setMaximized(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-white/10"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
                 aria-label="Restaurar preview"
               >
                 <Minimize2 size={14} />
               </button>
               <button
                 onClick={closePreview}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-white/10"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
                 aria-label="Fechar preview"
               >
                 <X size={14} />

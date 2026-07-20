@@ -25,12 +25,12 @@ export function LessonLayoutShell({
 
   return (
     <div
-      className={`min-h-screen bg-black transition-[padding] duration-200 ${effectiveChatOpen ? "lg:pr-[440px]" : ""}`}
+      className={`min-h-screen bg-white transition-[padding] duration-200 dark:bg-black ${effectiveChatOpen ? "lg:pr-[440px]" : ""}`}
     >
       <div className="mx-auto max-w-[1600px] px-4 pt-6">
         <Link
           href={`/courses/${courseSlug}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-200 hover:text-blue-400"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400"
         >
           <ArrowLeft size={15} /> {courseTitle}
         </Link>
@@ -47,7 +47,7 @@ export function LessonLayoutShell({
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="mb-3 hidden items-center gap-1.5 rounded-md border border-white/15 px-2 py-1 text-xs text-slate-300 hover:bg-white/5 lg:inline-flex"
+            className="mb-3 hidden items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5 lg:inline-flex"
           >
             {collapsed ? (
               <>

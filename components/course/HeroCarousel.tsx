@@ -44,7 +44,7 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.card.thumbnailUrl} alt={item.card.title} className="h-full w-full object-cover" />
             ) : (
-              <div className="h-full w-full bg-slate-900" />
+              <div className="h-full w-full bg-slate-200 dark:bg-slate-900" />
             )}
           </div>
         ))}
@@ -71,8 +71,8 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
           )
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-white/10 dark:from-black dark:via-black/40 dark:to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/30 to-transparent dark:from-black/90 dark:via-black/30 dark:to-transparent" />
       </div>
 
       <div className="relative flex min-h-[520px] items-end sm:min-h-[460px] sm:items-center lg:min-h-[600px]">
@@ -89,8 +89,10 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
               <span className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
                 {item.card.category}
               </span>
-              <h1 className="mt-3 text-3xl font-bold text-white drop-shadow sm:text-5xl">{item.card.title}</h1>
-              <p className="mt-3 line-clamp-3 text-sm text-slate-200 drop-shadow sm:text-base">
+              <h1 className="mt-3 text-3xl font-bold text-slate-900 drop-shadow-sm dark:text-white dark:drop-shadow sm:text-5xl">
+                {item.card.title}
+              </h1>
+              <p className="mt-3 line-clamp-3 text-sm text-slate-700 drop-shadow-sm dark:text-slate-200 dark:drop-shadow sm:text-base">
                 {item.card.description}
               </p>
               <div className="mt-6 flex gap-3">
@@ -116,7 +118,9 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
                   onClick={() => setIndex(i)}
                   aria-label={`Ver ${item.card.title}`}
                   className={`h-1 rounded-full transition-all ${
-                    i === index ? "w-8 bg-blue-500" : "w-4 bg-white/30 hover:bg-white/50"
+                    i === index
+                      ? "w-8 bg-blue-500"
+                      : "w-4 bg-slate-900/20 hover:bg-slate-900/40 dark:bg-white/30 dark:hover:bg-white/50"
                   }`}
                 />
               ))}

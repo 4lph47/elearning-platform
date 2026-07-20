@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -89,6 +90,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     });
   }
 
+  revalidateTag("courses");
   return NextResponse.json(updated);
 }
 
@@ -101,5 +103,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!course) return NextResponse.json({ error: "Curso não encontrado" }, { status: 404 });
 
   await prisma.course.delete({ where: { id: courseId } });
+  revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

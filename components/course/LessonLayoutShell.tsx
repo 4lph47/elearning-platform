@@ -41,7 +41,7 @@ export function LessonLayoutShell({
           collapsed ? "" : "lg:grid-cols-[300px_1fr]"
         }`}
       >
-        {!collapsed && <div>{sidebar}</div>}
+        <div className={`hidden ${collapsed ? "lg:hidden" : "lg:block"}`}>{sidebar}</div>
 
         <div className={collapsed ? "lg:pl-10" : ""}>
           <button

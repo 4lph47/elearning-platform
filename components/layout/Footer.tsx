@@ -1,20 +1,29 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { GraduationCap } from "lucide-react";
 import { prisma } from "@/lib/db";
 
-async function fetchCategories() {
-  const rows = await prisma.course.findMany({
-    where: { published: true },
-    distinct: ["category"],
-    select: { category: true },
-    orderBy: { category: "asc" },
-    take: 8,
-  });
-  return rows.map((r) => r.category);
-}
+// Rodapé é igual em todas as páginas — cache partilhado evita 1 query à BD
+// por página carregada (e por página gerada no build).
+const fetchCategories = unstable_cache(
+  async () => {
+    const rows = await prisma.course.findMany({
+      where: { published: true },
+      distinct: ["category"],
+      select: { category: true },
+      orderBy: { category: "asc" },
+      take: 8,
+    });
+    return rows.map((r) => r.category);
+  },
+  ["footer-categories"],
+  { revalidate: 300, tags: ["courses"] }
+);
 
 export async function Footer() {
-  const categories = await fetchCategories();
+  // Nunca deixar uma falha transitória da BD (rede, pooler) derrubar a página
+  // toda por causa do rodapé — degrada para sem categorias em vez de rebentar.
+  const categories = await fetchCategories().catch(() => []);
   const year = new Date().getFullYear();
 
   const columns: { title: string; links: { label: string; href: string }[] }[] = [

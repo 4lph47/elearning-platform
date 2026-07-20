@@ -52,6 +52,7 @@ export function LessonBody({
   overview,
   resources,
   quiz,
+  progress,
 }: {
   header: React.ReactNode;
   lessonId: string;
@@ -61,6 +62,7 @@ export function LessonBody({
   overview: string;
   resources: LessonResourceData[];
   quiz: QuizData | null;
+  progress?: React.ReactNode;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -115,6 +117,7 @@ export function LessonBody({
               <LessonTabs
                 overview={overview}
                 resources={resources}
+                progress={progress}
                 onSelectResource={(r) => setPreviewResource((prev) => (prev?.id === r.id ? null : r))}
               />
             )}

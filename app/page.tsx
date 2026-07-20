@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -28,6 +29,22 @@ function fetchCourses() {
   });
 }
 
+// Catálogo + contadores não dependem da sessão — cache partilhado entre todos os
+// visitantes, evita ida à BD em cada pedido enquanto os cursos não mudam.
+const getCachedHomeData = unstable_cache(
+  async () => {
+    const [courses, courseCount, studentCount, instructorCount] = await Promise.all([
+      fetchCourses(),
+      prisma.course.count({ where: { published: true } }),
+      prisma.user.count({ where: { role: "STUDENT" } }),
+      prisma.user.count({ where: { role: "INSTRUCTOR" } }),
+    ]);
+    return { courses, courseCount, studentCount, instructorCount };
+  },
+  ["home-public-data"],
+  { revalidate: 60, tags: ["courses"] }
+);
+
 function getTrailerUrl(course: CourseWithRelations): string | null {
   if (course.trailerUrl) return course.trailerUrl;
   const allLessons = course.modules.flatMap((m) => m.lessons);
@@ -55,11 +72,8 @@ function toCardData(course: CourseWithRelations): CourseCardData {
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
-  const [courses, courseCount, studentCount, instructorCount, enrollments] = await Promise.all([
-    fetchCourses(),
-    prisma.course.count({ where: { published: true } }),
-    prisma.user.count({ where: { role: "STUDENT" } }),
-    prisma.user.count({ where: { role: "INSTRUCTOR" } }),
+  const [{ courses, courseCount, studentCount, instructorCount }, enrollments] = await Promise.all([
+    getCachedHomeData(),
     session
       ? prisma.enrollment.findMany({
           where: { userId: session.user.id, course: { published: true } },

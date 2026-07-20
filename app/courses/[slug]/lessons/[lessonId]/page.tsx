@@ -101,36 +101,38 @@ export default async function LessonPage({
   const completedCount = completedLessonsCount + doneQuizIds.size;
   const percent = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
 
+  const progressSidebar = (
+    <CourseProgressSidebar
+      slug={slug}
+      modules={course.modules.map((m) => ({
+        id: m.id,
+        title: m.title,
+        quizId: m.quiz?.id ?? null,
+        lessons: m.lessons.map((l) => ({
+          id: l.id,
+          title: l.title,
+          isFreePreview: l.isFreePreview,
+          durationSeconds: l.durationSeconds,
+        })),
+      }))}
+      progressByLessonId={progressByLessonId}
+      doneQuizIds={doneQuizIds}
+      isOwner={isOwner}
+      isEnrolled={isEnrolled}
+      currentLessonId={lesson.id}
+      percent={percent}
+      completedCount={completedCount}
+      totalLessons={totalItems}
+    />
+  );
+
   return (
     <>
       <LessonLayoutShell
         courseSlug={slug}
         courseTitle={course.title}
         chat={{ courseId: course.id, lessonId: lesson.id, courseTitle: course.title }}
-        sidebar={
-          <CourseProgressSidebar
-            slug={slug}
-            modules={course.modules.map((m) => ({
-              id: m.id,
-              title: m.title,
-              quizId: m.quiz?.id ?? null,
-              lessons: m.lessons.map((l) => ({
-                id: l.id,
-                title: l.title,
-                isFreePreview: l.isFreePreview,
-                durationSeconds: l.durationSeconds,
-              })),
-            }))}
-            progressByLessonId={progressByLessonId}
-            doneQuizIds={doneQuizIds}
-            isOwner={isOwner}
-            isEnrolled={isEnrolled}
-            currentLessonId={lesson.id}
-            percent={percent}
-            completedCount={completedCount}
-            totalLessons={totalItems}
-          />
-        }
+        sidebar={progressSidebar}
       >
         <LessonBody
           header={
@@ -167,6 +169,7 @@ export default async function LessonPage({
           initialWatchedSeconds={progress?.watchedSeconds ?? 0}
           overview={lesson.description || course.description}
           resources={resources.map((r) => ({ id: r.id, name: r.name, url: r.url, type: r.type }))}
+          progress={progressSidebar}
           quiz={
             fullQuiz
               ? {

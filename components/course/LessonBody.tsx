@@ -44,7 +44,8 @@ function PreviewContent({ resource }: { resource: LessonResourceData }) {
 }
 
 export function LessonBody({
-  header,
+  nav,
+  title,
   lessonId,
   type,
   contentUrl,
@@ -58,7 +59,8 @@ export function LessonBody({
   engagement,
   comments,
 }: {
-  header: React.ReactNode;
+  nav: React.ReactNode;
+  title: React.ReactNode;
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
@@ -87,8 +89,7 @@ export function LessonBody({
 
   return (
     <div>
-      {header}
-      {engagement && <div className="mt-3">{engagement}</div>}
+      {nav}
 
       <div className="mt-4">
         <div className={sideBySide ? "lg:flex lg:items-stretch lg:gap-6" : ""}>
@@ -156,6 +157,11 @@ export function LessonBody({
             <PreviewContent resource={previewResource} />
           </div>
         )}
+
+        <div className="mt-4">
+          {title}
+          {engagement && <div className="mt-3">{engagement}</div>}
+        </div>
 
         {quiz && (
           <div className="mt-6">

@@ -193,33 +193,35 @@ export default async function LessonPage({
         sidebar={progressSidebar}
       >
         <LessonBody
-          header={
+          nav={
+            <div className="flex items-center justify-between">
+              {previousLesson && (isOwner || isEnrolled || previousLesson.isFreePreview) && (
+                <Link
+                  href={`/courses/${slug}/lessons/${previousLesson.id}`}
+                  className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-400 hover:text-white"
+                >
+                  <ArrowLeft size={14} className="shrink-0" />
+                  <span className="truncate">
+                    Aula anterior<span className="hidden sm:inline">: {previousLesson.title}</span>
+                  </span>
+                </Link>
+              )}
+              {nextLesson && (isOwner || isEnrolled || nextLesson.isFreePreview) && (
+                <Link
+                  href={`/courses/${slug}/lessons/${nextLesson.id}`}
+                  className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
+                >
+                  <span className="truncate">
+                    Próxima aula<span className="hidden sm:inline">: {nextLesson.title}</span>
+                  </span>
+                  <ArrowRight size={14} className="shrink-0" />
+                </Link>
+              )}
+            </div>
+          }
+          title={
             <>
-              <div className="flex items-center justify-between">
-                {previousLesson && (isOwner || isEnrolled || previousLesson.isFreePreview) && (
-                  <Link
-                    href={`/courses/${slug}/lessons/${previousLesson.id}`}
-                    className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-400 hover:text-white"
-                  >
-                    <ArrowLeft size={14} className="shrink-0" />
-                    <span className="truncate">
-                      Aula anterior<span className="hidden sm:inline">: {previousLesson.title}</span>
-                    </span>
-                  </Link>
-                )}
-                {nextLesson && (isOwner || isEnrolled || nextLesson.isFreePreview) && (
-                  <Link
-                    href={`/courses/${slug}/lessons/${nextLesson.id}`}
-                    className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
-                  >
-                    <span className="truncate">
-                      Próxima aula<span className="hidden sm:inline">: {nextLesson.title}</span>
-                    </span>
-                    <ArrowRight size={14} className="shrink-0" />
-                  </Link>
-                )}
-              </div>
-              <h1 className="mt-2 text-2xl font-bold text-white">{lesson.title}</h1>
+              <h1 className="text-2xl font-bold text-white">{lesson.title}</h1>
               {lesson.contributors.length > 0 && (
                 <p className="mt-1 text-sm text-slate-400">
                   Envolvidos nesta aula: {lesson.contributors.map((c) => c.name).join(", ")}

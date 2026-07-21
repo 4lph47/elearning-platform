@@ -1,10 +1,16 @@
 import type { AuthOptions } from "next-auth";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import GitHubProvider from "next-auth/providers/github";
+import AzureADProvider from "next-auth/providers/azure-ad";
+import EmailProvider from "next-auth/providers/email";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { loginSchema } from "@/lib/validations";
 
 export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -23,7 +29,7 @@ export const authOptions: AuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
         });
-        if (!user) return null;
+        if (!user || !user.passwordHash) return null;
 
         const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!isValid) return null;
@@ -35,6 +41,23 @@ export const authOptions: AuthOptions = {
           role: user.role,
         };
       },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
+    AzureADProvider({
+      clientId: process.env.AZURE_AD_CLIENT_ID!,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      tenantId: process.env.AZURE_AD_TENANT_ID,
+    }),
+    EmailProvider({
+      server: process.env.EMAIL_SERVER,
+      from: process.env.EMAIL_FROM,
     }),
   ],
   callbacks: {

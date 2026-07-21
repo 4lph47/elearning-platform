@@ -177,7 +177,7 @@ export function Navbar() {
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg dark:border-white/10 dark:bg-slate-950">
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg dark:border-white/10 dark:bg-neutral-900">
                   <div className="border-b border-slate-100 px-3 py-2 dark:border-white/10">
                     <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{session.user.name}</p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">{session.user.email}</p>

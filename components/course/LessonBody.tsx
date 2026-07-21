@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, cloneElement, type ReactElement } from "react";
+import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
 import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
@@ -10,6 +10,7 @@ import { SlideDeckViewer } from "@/components/course/SlideDeckViewer";
 import { buildSlideDeck } from "@/lib/slideDeck";
 import { SpreadsheetPreviewViewer } from "@/components/course/SpreadsheetPreviewViewer";
 import { buildSpreadsheetPreview } from "@/lib/spreadsheetPreview";
+import { boxFromRect, useCardTransition } from "@/components/course/CardTransitionContext";
 
 function PreviewContent({ resource }: { resource: LessonResourceData }) {
   if (resource.type === "IMAGE") {
@@ -37,6 +38,7 @@ function PreviewContent({ resource }: { resource: LessonResourceData }) {
 export function LessonBody({
   nav,
   title,
+  courseSlug,
   lessonId,
   type,
   contentUrl,
@@ -54,6 +56,7 @@ export function LessonBody({
 }: {
   nav: React.ReactNode;
   title: React.ReactNode;
+  courseSlug: string;
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
@@ -74,11 +77,24 @@ export function LessonBody({
   const [previewResource, setPreviewResource] = useState<LessonResourceData | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
+  const [cinemaMode, setCinemaMode] = useState(false);
   const { handleTouchStart, handleTouchEnd, swipeClassName } = useSwipeNav(previousHref, nextHref);
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
   const belowVideoWidth = `lg:max-w-none ${collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"}`;
+
+  const playerBoxRef = useRef<HTMLDivElement>(null);
+  const { state, arrive } = useCardTransition();
+  const pending = state?.slug === courseSlug && !state.arrived;
+
+  useEffect(() => {
+    if (!pending) return;
+    const rect = playerBoxRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    arrive(courseSlug, { video: boxFromRect(rect), title: null, category: null, instructor: null, rating: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, courseSlug]);
 
   function closePreview() {
     setPreviewResource(null);
@@ -116,12 +132,13 @@ export function LessonBody({
   const engagementWithButton = engagement && cloneElement(engagement, { completeButton });
 
   return (
+    <div className="overflow-x-hidden">
     <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
       {nav}
 
       <div className="mt-4">
         <div className={sideBySide ? "lg:flex lg:items-stretch lg:gap-6" : ""}>
-          <div className="lg:shrink-0">
+          <div ref={playerBoxRef} className="lg:shrink-0">
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -129,6 +146,8 @@ export function LessonBody({
               textContent={textContent}
               initialWatchedSeconds={initialWatchedSeconds}
               onComplete={markComplete}
+              cinemaMode={cinemaMode}
+              onToggleCinemaMode={type === "VIDEO" ? () => setCinemaMode((c) => !c) : undefined}
             />
           </div>
 
@@ -139,7 +158,7 @@ export function LessonBody({
 
           <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
             {inlinePreview ? (
-              <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950 ${inlinePreviewHeight}`}>
+              <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
                   <button
                     onClick={() => setMaximized(true)}
@@ -172,7 +191,7 @@ export function LessonBody({
         </div>
 
         {!sideBySide && previewResource && (
-          <div className="relative mt-3 h-[80vh] w-full overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
+          <div className="relative mt-3 h-[80vh] w-full overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900">
             <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
               <button
                 onClick={() => setMaximized(true)}
@@ -204,7 +223,7 @@ export function LessonBody({
       </div>
 
       {previewResource && maximized && (
-        <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 lg:inset-10">
+        <div className="fixed inset-4 z-50 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 lg:inset-10">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{previewResource.name}</span>
             <div className="flex items-center gap-1.5">
@@ -229,6 +248,7 @@ export function LessonBody({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

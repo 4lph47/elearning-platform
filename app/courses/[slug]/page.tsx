@@ -192,6 +192,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <CourseHero
+        slug={course.slug}
         title={course.title}
         description={course.description}
         category={course.category}
@@ -295,7 +296,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           </div>
 
           <div className="sticky top-20 space-y-4">
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60 dark:border-white/10 dark:bg-slate-950 dark:shadow-black/40">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
               {course.thumbnailUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={course.thumbnailUrl} alt={course.title} className="h-40 w-full object-cover" />
@@ -438,7 +439,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
               <Link
                 key={author.id}
                 href={`/instructors/${author.id}`}
-                className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:hover:border-white/20 sm:flex-row sm:items-start"
+                className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20 sm:flex-row sm:items-start"
               >
                 <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
                   {author.name

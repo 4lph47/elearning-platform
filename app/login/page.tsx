@@ -88,7 +88,7 @@ function LoginForm() {
           <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Entra na tua conta para continuar a aprender</p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-slate-950 dark:shadow-black/40">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
           <div className="space-y-2">
             <button
               type="button"

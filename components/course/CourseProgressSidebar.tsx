@@ -42,6 +42,7 @@ export function CourseProgressSidebar({
   isOwner,
   isEnrolled,
   currentLessonId,
+  currentQuizId,
   percent,
   completedCount,
   totalLessons,
@@ -54,6 +55,7 @@ export function CourseProgressSidebar({
   isOwner: boolean;
   isEnrolled: boolean;
   currentLessonId?: string;
+  currentQuizId?: string;
   percent: number;
   completedCount: number;
   totalLessons: number;
@@ -61,7 +63,7 @@ export function CourseProgressSidebar({
   const quizAccessible = isOwner || isEnrolled;
 
   return (
-    <div className="sticky top-20 rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
+    <div className="sticky top-20 rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900">
       <div className="border-b border-slate-200 p-4 dark:border-white/10">
         <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">O teu progresso</h2>
         {isEnrolled ? (
@@ -122,7 +124,11 @@ export function CourseProgressSidebar({
                         accessible ? (
                           <Link
                             href={`/courses/${slug}/quiz/${l.quizId}`}
-                            className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 pl-8 text-sm text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+                            className={`flex items-center gap-2 border-l-4 px-4 py-2 pl-8 text-sm ${
+                              l.quizId === currentQuizId
+                                ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
+                                : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                            }`}
                           >
                             {doneQuizIds.has(l.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
                             <span className="flex-1">Quiz · {l.title}</span>
@@ -143,7 +149,11 @@ export function CourseProgressSidebar({
                     {quizAccessible ? (
                       <Link
                         href={`/courses/${slug}/quiz/${module.quizId}`}
-                        className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+                        className={`flex items-center gap-2 border-l-4 px-4 py-2 text-sm ${
+                          module.quizId === currentQuizId
+                            ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
+                            : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                        }`}
                       >
                         {doneQuizIds.has(module.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
                         <span className="flex-1">Quiz · {module.title}</span>
@@ -166,7 +176,11 @@ export function CourseProgressSidebar({
             {quizAccessible ? (
               <Link
                 href={`/courses/${slug}/quiz/${finalQuizId}`}
-                className="flex items-center gap-2 px-4 py-3 text-sm text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+                className={`flex items-center gap-2 px-4 py-3 text-sm ${
+                  finalQuizId === currentQuizId
+                    ? "text-slate-900 dark:text-white"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+                }`}
               >
                 {doneQuizIds.has(finalQuizId) ? <DoneBadge /> : <ClipboardCheck size={16} className="shrink-0 text-slate-600" />}
                 <span className="flex-1 font-medium">Exame final do curso</span>

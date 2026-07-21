@@ -115,6 +115,7 @@ export default async function CourseQuizPage({
           finalQuizId={course.quiz?.id ?? null}
           isOwner={isOwner}
           isEnrolled={isEnrolled}
+          currentQuizId={quizId}
           percent={percent}
           completedCount={completedCount}
           totalLessons={totalItems}

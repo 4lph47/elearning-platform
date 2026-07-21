@@ -97,7 +97,7 @@ export function QuizPlayer({
 
   if (outOfAttempts && !result) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-950">
+      <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
           Já usaste todas as tentativas disponíveis para este quiz ({maxAttempts}).
@@ -109,12 +109,12 @@ export function QuizPlayer({
   const canRetry = !result ? false : maxAttempts == null || attemptsSoFar < maxAttempts;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-950">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+    <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="min-w-0 flex-1 break-words text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
         {secondsLeft !== null && !result && (
           <span
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
               secondsLeft <= 30
                 ? "bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400"
                 : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
@@ -156,7 +156,7 @@ export function QuizPlayer({
                   return (
                     <label
                       key={o.id}
-                      className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-slate-700 dark:text-slate-200 ${
+                      className={`flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-sm text-slate-700 dark:text-slate-200 ${
                         isCorrect
                           ? "border-blue-500 bg-blue-600/10"
                           : isWrongSelected
@@ -172,7 +172,7 @@ export function QuizPlayer({
                         onChange={() => setAnswers((prev) => ({ ...prev, [q.id]: o.id }))}
                         className="accent-blue-600"
                       />
-                      <span className="flex-1">{o.text}</span>
+                      <span className="min-w-0 flex-1 break-words">{o.text}</span>
                       {isCorrect && <Check size={16} className="text-blue-400" />}
                       {isWrongSelected && <X size={16} className="text-red-400" />}
                     </label>

@@ -5,12 +5,25 @@ import Link from "next/link";
 import { Play, Pause, X } from "lucide-react";
 import { StarRating } from "@/components/ui/StarRating";
 import { getYouTubeId } from "@/lib/youtube";
+import { boxFromRect, textBoxFromElement, useCardTransition } from "@/components/course/CardTransitionContext";
 
 function ytCommand(iframe: HTMLIFrameElement | null, func: string) {
   iframe?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*");
 }
 
+// Têm de bater certo com CardTransitionOverlay.tsx: tempo desde arrived() até
+// o wipe do FadeOutScrim terminar de vez (voo + espera parado + revelação).
+// Calculado aqui em vez de depender de ler state.revealed (que só outro
+// componente define mais tarde) — evita corrida com o finish() dele.
+const FLY_MS = 450;
+const SETTLE_MS = 1;
+const HOLD_MS = 1000;
+const REVEAL_MS = 700;
+const REMAINING_START_DELAY_MS = FLY_MS + SETTLE_MS + HOLD_MS + REVEAL_MS;
+const REMAINING_FADE_MS = 500;
+
 export function CourseHero({
+  slug,
   title,
   description,
   category,
@@ -23,6 +36,7 @@ export function CourseHero({
   videoUrl,
   thumbnailUrl,
 }: {
+  slug: string;
   title: string;
   description: string;
   category: string;
@@ -37,18 +51,51 @@ export function CourseHero({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const mediaBoxRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const categoryRef = useRef<HTMLSpanElement>(null);
+  const instructorRef = useRef<HTMLAnchorElement>(null);
+  const ratingBoxRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visible, setVisible] = useState(true);
   const [paused, setPaused] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null;
+  const { state, arrive } = useCardTransition();
+  const pending = state?.slug === slug && !state.arrived;
+  // Se ao montar já existe uma transição de card a apontar para esta página,
+  // o texto que não voa (breadcrumb, descrição, "alunos matriculados", etc.)
+  // começa escondido — só aparece REMAINING_REVEAL_DELAY_MS depois do resto
+  // (título/categoria/instrutor/rating) ter aterrado e revelado por completo.
+  // Numa visita direta (sem transição), aparece logo, sem atraso nenhum.
+  const [remainingVisible, setRemainingVisible] = useState(() => state?.slug !== slug);
+
+  useEffect(() => {
+    if (state?.slug !== slug || !state.arrived) return;
+    const timer = setTimeout(() => setRemainingVisible(true), REMAINING_START_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [state?.slug, state?.arrived, slug]);
+
+  useEffect(() => {
+    if (!pending) return;
+    const rect = mediaBoxRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    arrive(slug, {
+      video: boxFromRect(rect),
+      title: titleRef.current ? textBoxFromElement(titleRef.current) : null,
+      category: categoryRef.current ? textBoxFromElement(categoryRef.current) : null,
+      instructor: instructorRef.current ? textBoxFromElement(instructorRef.current) : null,
+      rating: ratingBoxRef.current ? boxFromRect(ratingBoxRef.current.getBoundingClientRect()) : null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, slug]);
 
   function scheduleHide() {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     if (!videoUrl || maximized) return;
     hideTimer.current = setTimeout(() => {
       if (youtubeId || !videoRef.current?.paused) setVisible(false);
-    }, 3000);
+    }, 5000);
   }
 
   useEffect(() => {
@@ -88,6 +135,11 @@ export function CourseHero({
     }
   }
 
+  const remainingStyle: React.CSSProperties = {
+    opacity: remainingVisible ? 1 : 0,
+    transition: `opacity ${REMAINING_FADE_MS}ms ease-out`,
+  };
+
   return (
     <div
       className="relative -mt-16 overflow-hidden"
@@ -96,6 +148,7 @@ export function CourseHero({
       onMouseLeave={() => videoUrl && !paused && !maximized && setVisible(false)}
     >
       <div
+        ref={mediaBoxRef}
         className={
           videoUrl
             ? maximized
@@ -185,7 +238,10 @@ export function CourseHero({
               visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
             }`}
           >
-            <nav className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <nav
+              className="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"
+              style={remainingStyle}
+            >
               <Link href="/courses" className="hover:text-slate-900 hover:underline dark:hover:text-white">
                 Cursos
               </Link>
@@ -198,27 +254,40 @@ export function CourseHero({
               </Link>
             </nav>
             <div className="mb-3 flex items-center gap-2">
-              <span className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+              <span
+                ref={categoryRef}
+                className="inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white"
+              >
                 {category}
               </span>
               {isDraft && (
-                <span className="inline-block rounded border border-slate-900/25 px-2 py-0.5 text-xs font-medium text-slate-600 dark:border-white/25 dark:text-slate-300">
+                <span
+                  className="inline-block rounded border border-slate-900/25 px-2 py-0.5 text-xs font-medium text-slate-600 dark:border-white/25 dark:text-slate-300"
+                  style={remainingStyle}
+                >
                   Rascunho
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">{title}</h1>
-            <p className="mt-3 text-slate-700 dark:text-slate-300">{description}</p>
+            <h1 ref={titleRef} className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">{title}</h1>
+            <p className="mt-3 text-slate-700 dark:text-slate-300" style={remainingStyle}>
+              {description}
+            </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              {ratingCount > 0 && <StarRating rating={rating} count={ratingCount} />}
-              <span className="text-slate-500 dark:text-slate-400">
+              {ratingCount > 0 && (
+                <div ref={ratingBoxRef}>
+                  <StarRating rating={rating} count={ratingCount} />
+                </div>
+              )}
+              <span className="text-slate-500 dark:text-slate-400" style={remainingStyle}>
                 {enrollmentsCount} aluno{enrollmentsCount !== 1 ? "s" : ""} matriculado{enrollmentsCount !== 1 ? "s" : ""}
               </span>
             </div>
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              Criado por{" "}
+              <span style={remainingStyle}>Criado por </span>
               <Link
+                ref={instructorRef}
                 href={`/instructors/${instructorId}`}
                 className="font-medium text-slate-700 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400"
               >

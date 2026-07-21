@@ -96,7 +96,7 @@ export function CourseChatbot({
 
       {rendered && (
         <div
-          className={`fixed right-6 top-20 z-40 flex h-[calc(100vh-6.5rem)] w-[400px] max-w-[calc(100vw-3rem)] flex-col rounded-2xl border border-slate-200 bg-white shadow-xl transition-all duration-150 ease-out dark:border-white/10 dark:bg-slate-950 ${
+          className={`fixed right-6 top-20 z-40 flex h-[calc(100vh-6.5rem)] w-[400px] max-w-[calc(100vw-3rem)] flex-col rounded-2xl border border-slate-200 bg-white shadow-xl transition-all duration-150 ease-out dark:border-white/10 dark:bg-neutral-900 ${
             open ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
           }`}
         >

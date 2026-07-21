@@ -183,6 +183,7 @@ export default async function LessonPage({
         sidebar={progressSidebar}
       >
         <LessonBody
+          courseSlug={slug}
           nav={
             <div className="flex items-center justify-between">
               {previousHref && previousItem && (

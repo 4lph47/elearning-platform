@@ -16,9 +16,11 @@ export function SwipeNavShell({
   const { handleTouchStart, handleTouchEnd, swipeClassName } = useSwipeNav(previousHref, nextHref);
 
   return (
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
-      {nav}
-      {children}
+    <div className="overflow-x-hidden">
+      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
+        {nav}
+        {children}
+      </div>
     </div>
   );
 }

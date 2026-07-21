@@ -19,7 +19,11 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
   // mostra o texto do novo slide (em vez de trocar tudo em simultâneo).
   const [textIndex, setTextIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
+  // Vídeo/gif de fundo também atrasa a troca: desaparece, só depois troca a fonte.
+  const [mediaIndex, setMediaIndex] = useState(0);
+  const [mediaVisible, setMediaVisible] = useState(true);
   const mounted = useRef(false);
+  const mediaMounted = useRef(false);
 
   useEffect(() => {
     if (items.length <= 1 || paused) return;
@@ -40,8 +44,21 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
     return () => clearTimeout(timer);
   }, [index]);
 
+  useEffect(() => {
+    if (!mediaMounted.current) {
+      mediaMounted.current = true;
+      return;
+    }
+    setMediaVisible(false);
+    const timer = setTimeout(() => {
+      setMediaIndex(index);
+      setMediaVisible(true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [index]);
+
   const featured = items[index].card;
-  const activeVideoUrl = items[index].videoUrl;
+  const activeVideoUrl = items[mediaIndex].videoUrl;
   const activeYoutubeId = activeVideoUrl ? getYouTubeId(activeVideoUrl) : null;
   const textCard = items[textIndex].card;
 
@@ -68,27 +85,33 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
           </div>
         ))}
 
-        {activeYoutubeId ? (
-          <iframe
-            key={activeYoutubeId}
-            src={`https://www.youtube.com/embed/${activeYoutubeId}?autoplay=1&mute=1&loop=1&playlist=${activeYoutubeId}&controls=0&modestbranding=1&rel=0&playsinline=1`}
-            title={featured.title}
-            allow="autoplay; encrypted-media"
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2"
-          />
-        ) : (
-          activeVideoUrl && (
-            <video
-              key={activeVideoUrl}
-              src={activeVideoUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        <div
+          className={`absolute inset-0 transition-opacity duration-500 ${
+            mediaVisible ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {activeYoutubeId ? (
+            <iframe
+              key={activeYoutubeId}
+              src={`https://www.youtube.com/embed/${activeYoutubeId}?autoplay=1&mute=1&loop=1&playlist=${activeYoutubeId}&controls=0&modestbranding=1&rel=0&playsinline=1`}
+              title={featured.title}
+              allow="autoplay; encrypted-media"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2"
             />
-          )
-        )}
+          ) : (
+            activeVideoUrl && (
+              <video
+                key={activeVideoUrl}
+                src={activeVideoUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+              />
+            )
+          )}
+        </div>
 
         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-white/10 dark:from-black dark:via-black/40 dark:to-black/10" />
         <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/30 to-transparent dark:from-black/90 dark:via-black/30 dark:to-transparent" />

@@ -31,7 +31,7 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900">
         <ShoppingCart size={28} className="mx-auto text-slate-400 dark:text-slate-600" />
         <p className="mt-3 text-slate-500 dark:text-slate-400">O teu carrinho está vazio.</p>
         <Link href="/courses" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
@@ -47,7 +47,7 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
     <div className="space-y-4">
       <ul className="space-y-3">
         {items.map((item) => (
-          <li key={item.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+          <li key={item.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
             {item.thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.thumbnailUrl} alt={item.title} className="h-14 w-20 shrink-0 rounded-md object-cover" />

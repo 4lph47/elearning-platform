@@ -71,7 +71,7 @@ export function CheckoutForm({
 
   if (result) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600">
           <Check size={26} className="text-white" />
         </span>

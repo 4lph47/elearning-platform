@@ -2,7 +2,7 @@ import type { SpreadsheetPreview } from "@/lib/spreadsheetPreview";
 
 export function SpreadsheetPreviewViewer({ preview }: { preview: SpreadsheetPreview }) {
   return (
-    <div className="h-full w-full overflow-auto bg-white p-4 dark:bg-slate-950">
+    <div className="h-full w-full overflow-auto bg-white p-4 dark:bg-neutral-900">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>

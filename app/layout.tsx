@@ -5,6 +5,10 @@ import { SessionProviderWrapper } from "@/components/layout/SessionProviderWrapp
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { CardTransitionProvider } from "@/components/course/CardTransitionContext";
+import { CardTransitionOverlay } from "@/components/course/CardTransitionOverlay";
+import { FadeOutScrim } from "@/components/course/FadeOutScrim";
+import { PageEntranceFade } from "@/components/course/PageEntranceFade";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,9 +38,15 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <SessionProviderWrapper>
-            <Navbar />
-            <main className="min-h-screen pt-16">{children}</main>
-            <Footer />
+            <CardTransitionProvider>
+              <Navbar />
+              <PageEntranceFade>
+                <main className="min-h-screen pt-16">{children}</main>
+              </PageEntranceFade>
+              <Footer />
+              <FadeOutScrim />
+              <CardTransitionOverlay />
+            </CardTransitionProvider>
           </SessionProviderWrapper>
         </ThemeProvider>
       </body>

@@ -9,7 +9,7 @@ export function SlideDeckViewer({ slides }: { slides: SlideDeckSlide[] }) {
   const slide = slides[index];
 
   return (
-    <div className="flex h-full w-full flex-col bg-white dark:bg-slate-950">
+    <div className="flex h-full w-full flex-col bg-white dark:bg-neutral-900">
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
         <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{slide.title}</h3>
         {slide.body && <p className="max-w-md text-sm text-slate-500 dark:text-slate-400">{slide.body}</p>}

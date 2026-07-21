@@ -123,7 +123,7 @@ export function CourseDetailTabs({
                 const moduleDuration = module.lessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
                 return (
                   <div key={module.id}>
-                    <details open={mi === 0} className="group bg-white dark:bg-slate-950">
+                    <details open={mi === 0} className="group bg-white dark:bg-neutral-900">
                       <summary className="flex cursor-pointer list-none items-center justify-between bg-slate-50 px-4 py-3 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-800/60">
                         <span className="font-medium text-slate-800 dark:text-slate-100">
                           Módulo {mi + 1} · {module.title}
@@ -239,7 +239,7 @@ export function CourseDetailTabs({
             ) : (
               <ul className="space-y-4">
                 {reviews.map((r) => (
-                  <li key={r.id} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+                  <li key={r.id} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                         {initials(r.userName)}
@@ -262,7 +262,7 @@ export function CourseDetailTabs({
             <div>
               <div
                 id="certificate"
-                className="rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-white p-10 text-center dark:from-slate-900 dark:to-slate-950"
+                className="rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-white p-10 text-center dark:from-slate-900 dark:to-neutral-900"
               >
                 <Award size={40} className="mx-auto text-blue-600 dark:text-blue-400" />
                 <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
@@ -284,7 +284,7 @@ export function CourseDetailTabs({
             </div>
           ) : (
             <div>
-              <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-white p-10 text-center dark:from-slate-900 dark:to-slate-950">
+              <div className="relative overflow-hidden rounded-xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-white p-10 text-center dark:from-slate-900 dark:to-neutral-900">
                 <div className="pointer-events-none select-none blur-[3px]">
                   <Award size={40} className="mx-auto text-blue-600 dark:text-blue-400" />
                   <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
@@ -308,7 +308,7 @@ export function CourseDetailTabs({
               </div>
 
               {isEnrolled && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
                   <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
                     <div
                       className="h-2 rounded-full bg-blue-600 transition-all"

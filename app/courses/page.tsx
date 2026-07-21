@@ -57,7 +57,7 @@ export default async function CoursesPage({
         </div>
       </div>
 
-      <div className="border-b border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-slate-950/60 sm:px-8">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-neutral-900/60 sm:px-8">
         <div className="mx-auto max-w-6xl">
           <SearchBar categories={categories.map((c) => c.category)} />
         </div>

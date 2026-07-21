@@ -49,7 +49,7 @@ export default async function CartCheckoutPage() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950"
+              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
             >
               {item.thumbnailUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

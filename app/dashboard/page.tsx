@@ -117,7 +117,7 @@ export default async function DashboardPage() {
               {statTiles.map((tile) => (
                 <div
                   key={tile.label}
-                  className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950"
+                  className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tile.label}</p>
@@ -138,13 +138,13 @@ export default async function DashboardPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Atividade dos últimos 7 dias
                 </p>
                 <WeeklyActivityChart data={weeklyActivity} />
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Cursos por categoria
                 </p>
@@ -152,7 +152,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Conquistas</p>
               <div className="flex flex-wrap gap-2.5">
                 {achievements.map((a) => (
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
         )}
 
         {courseSummaries.length === 0 ? (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950">
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900">
             <p className="text-slate-500 dark:text-slate-400">
               Ainda não estás matriculado em nenhum curso.{" "}
               <Link href="/courses" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
@@ -186,7 +186,7 @@ export default async function DashboardPage() {
             </p>
           </div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
+          <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900">
             {courseSummaries.map(({ course, lessons, completedCount, percent, nextLesson }, i) => (
               <div
                 key={course.id}

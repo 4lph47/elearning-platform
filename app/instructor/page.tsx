@@ -52,7 +52,7 @@ export default async function InstructorHomePage() {
 
         {courses.length > 0 && (
           <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
               <div className="flex items-center gap-2 text-slate-500">
                 <BookOpen size={15} />
                 <span className="text-xs font-medium uppercase tracking-wide">Cursos</span>
@@ -60,7 +60,7 @@ export default async function InstructorHomePage() {
               <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{courses.length}</p>
               <p className="text-xs text-slate-500">{publishedCount} publicado{publishedCount !== 1 ? "s" : ""}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
               <div className="flex items-center gap-2 text-slate-500">
                 <Users size={15} />
                 <span className="text-xs font-medium uppercase tracking-wide">Alunos</span>
@@ -68,7 +68,7 @@ export default async function InstructorHomePage() {
               <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{totalStudents}</p>
               <p className="text-xs text-slate-500">matrículas totais</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
               <div className="flex items-center gap-2 text-slate-500">
                 <Wallet size={15} />
                 <span className="text-xs font-medium uppercase tracking-wide">Receita</span>
@@ -76,7 +76,7 @@ export default async function InstructorHomePage() {
               <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{totalRevenue.toFixed(2)}€</p>
               <p className="text-xs text-slate-500">estimativa total</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
               <div className="flex items-center gap-2 text-slate-500">
                 <Star size={15} />
                 <span className="text-xs font-medium uppercase tracking-wide">Avaliação</span>
@@ -90,7 +90,7 @@ export default async function InstructorHomePage() {
         )}
 
         {courses.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-white/10 dark:bg-slate-950">
+          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-white/10 dark:bg-neutral-900">
             <p className="text-slate-500 dark:text-slate-400">Ainda não criaste nenhum curso.</p>
             <Link
               href="/instructor/courses/new"
@@ -106,7 +106,7 @@ export default async function InstructorHomePage() {
               const revenue = course.price * course.enrollments.length;
               return (
                 <Link key={course.id} href={`/instructor/courses/${course.id}`}>
-                  <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:hover:border-white/20">
+                  <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20">
                     {course.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

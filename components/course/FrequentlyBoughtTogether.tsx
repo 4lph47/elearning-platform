@@ -74,7 +74,7 @@ export function FrequentlyBoughtTogether({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{name}</p>
 
       <ul className="space-y-3">

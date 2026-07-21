@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/Button";
 import { CourseRow } from "@/components/course/CourseRow";
 import { HeroCarousel } from "@/components/course/HeroCarousel";
+import { ZIndexEscapeLayer } from "@/components/course/ZIndexEscapeLayer";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -129,7 +130,13 @@ export default async function Home() {
   }
 
   // Continue onde parou: matrículas com progresso incompleto, ordenadas por atividade recente.
-  const continueItems: { card: CourseCardData; href: string; percent: number; lastActivity: number }[] = [];
+  const continueItems: {
+    card: CourseCardData;
+    href: string;
+    percent: number;
+    lastActivity: number;
+    destinationKind: "lesson-video" | "lesson-text";
+  }[] = [];
   for (const enrollment of enrollments) {
     const course = enrollment.course;
     const allLessons = course.modules.flatMap((m) => m.lessons);
@@ -162,11 +169,15 @@ export default async function Home() {
       href: `/courses/${course.slug}/lessons/${nextLesson.id}`,
       percent,
       lastActivity,
+      destinationKind: nextLesson.type === "VIDEO" ? "lesson-video" : "lesson-text",
     });
   }
   continueItems.sort((a, b) => b.lastActivity - a.lastActivity);
   const continueWatching = continueItems.slice(0, 15);
   const continueHrefBySlug = Object.fromEntries(continueWatching.map((i) => [i.card.slug, i.href]));
+  const continueDestinationKindBySlug = Object.fromEntries(
+    continueWatching.map((i) => [i.card.slug, i.destinationKind])
+  );
   const continueProgressBySlug = Object.fromEntries(continueWatching.map((i) => [i.card.slug, i.percent]));
 
   // Recomendado para ti: cursos ainda não matriculados, priorizando categorias já exploradas.
@@ -190,7 +201,7 @@ export default async function Home() {
     <div className="-mt-16 bg-white pb-16 dark:bg-black">
       <HeroCarousel items={featuredCandidates} />
 
-      <div className="relative z-10 -mt-10 sm:-mt-20">
+      <ZIndexEscapeLayer className="relative z-10 -mt-10 sm:-mt-20">
         {firstName && (
           <p className="px-4 pt-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">Bem-vindo de volta, {firstName}.</p>
         )}
@@ -214,6 +225,7 @@ export default async function Home() {
               hrefBySlug={continueHrefBySlug}
               progressBySlug={continueProgressBySlug}
               hidePriceBySlug={hidePriceBySlug}
+              destinationKindBySlug={continueDestinationKindBySlug}
             />
           )}
           {recommended.length > 0 && <CourseRow title="Recomendado para ti" courses={recommended} />}
@@ -223,7 +235,7 @@ export default async function Home() {
             <CourseRow key={category} title={category} courses={list} hidePriceBySlug={hidePriceBySlug} />
           ))}
         </div>
-      </div>
+      </ZIndexEscapeLayer>
 
       <div className="mx-auto mt-6 max-w-6xl border-t border-slate-200 px-4 pt-10 text-center dark:border-white/10 sm:px-8">
         <div className="mx-auto grid max-w-lg grid-cols-3 gap-4">

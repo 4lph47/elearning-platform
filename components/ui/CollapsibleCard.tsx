@@ -1,14 +1,8 @@
 "use client";
 
-import { useLayoutEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-
-// Mesmo breakpoint usado no resto do layout (SidebarContext.tsx) — em
-// mobile há tantas destas cards a separar secções de edição (curso/aula)
-// que ver tudo aberto de uma vez é só scroll sem fim; em desktop há espaço
-// de sobra, ficam sempre abertas.
-const MOBILE_QUERY = "(max-width: 767px)";
 
 export function CollapsibleCard({
   title,
@@ -19,13 +13,10 @@ export function CollapsibleCard({
   children: ReactNode;
   className?: string;
 }) {
-  const [expanded, setExpanded] = useState(true);
-
-  // useLayoutEffect (não useEffect) — corre antes da 1ª pintura, evita um
-  // frame visível com a card aberta em mobile antes de fechar sozinha.
-  useLayoutEffect(() => {
-    setExpanded(!window.matchMedia(MOBILE_QUERY).matches);
-  }, []);
+  // Sempre começa fechada, em qualquer ecrã — sem correção nenhuma depois de
+  // montar (nem useLayoutEffect), por isso sem hipótese nenhuma de mostrar
+  // um frame aberta antes de fechar: já nasce assim, no HTML do servidor.
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <Card className={`overflow-hidden p-0 ${className}`}>

@@ -747,10 +747,10 @@ export function LessonPlayer({
               {likeBurst && (
                 <div
                   key={likeBurst.id}
-                  className="pointer-events-none absolute z-20 flex h-20 w-20 animate-like-pop items-center justify-center rounded-full bg-black/50"
+                  className="pointer-events-none absolute z-20 animate-like-pop"
                   style={{ left: likeBurst.x, top: likeBurst.y }}
                 >
-                  <ThumbsUp size={40} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                  <ThumbsUp size={72} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
                 </div>
               )}
 

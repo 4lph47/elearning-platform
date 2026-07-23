@@ -175,14 +175,20 @@ export function LessonPlayer({
     setHlsLevels([]);
     setHlsCurrentLevel(-1);
 
-    // Safari suporta HLS nativamente (sem hls.js) — tentar isso primeiro
-    // evita carregar a lib à toa nesses browsers.
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsMasterUrl;
+    // Sempre hls.js, mesmo em browsers com suporte nativo a HLS (Safari, e
+    // aparentemente Chrome mais recente também) — HLS nativo não expõe API
+    // nenhuma pra ler/escolher níveis de qualidade em JS, o seletor deste
+    // menu ficava sempre vazio nesses browsers mesmo com a master playlist
+    // certa (3 variantes, confirmado). hls.js dá controlo consistente em
+    // qualquer browser que suporte MediaSource Extensions.
+    if (!Hls.isSupported()) {
+      // Só chega aqui em browsers sem MSE nem HLS nativo — não deve
+      // acontecer em prática, mas sem isto o vídeo nem tentava tocar.
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = hlsMasterUrl;
+      }
       return;
     }
-
-    if (!Hls.isSupported()) return;
 
     const hls = new Hls();
     hlsRef.current = hls;

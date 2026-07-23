@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
+import { syncCourseThumbnail } from "@/lib/courseThumbnail";
 
 export async function POST(request: Request, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
       contributors: contributorIds.length > 0 ? { connect: contributorIds.map((id) => ({ id })) } : undefined,
     },
   });
+  await syncCourseThumbnail(courseModule.course.id);
   revalidateTag("courses");
 
   return NextResponse.json(lesson, { status: 201 });

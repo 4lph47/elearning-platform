@@ -4,7 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CourseDetailsForm } from "@/components/instructor/CourseDetailsForm";
 import { AddModuleForm } from "@/components/instructor/AddModuleForm";
-import { ModuleSection } from "@/components/instructor/ModuleSection";
+import { ModuleList } from "@/components/instructor/ModuleList";
+import { QuizEditor } from "@/components/instructor/QuizEditor";
+import { Card } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ cou
       modules: {
         orderBy: { order: "asc" },
         include: {
-          quiz: { include: quizInclude },
+          quizzes: { include: quizInclude, orderBy: { order: "asc" } },
           lessons: {
             orderBy: { order: "asc" },
             include: {
@@ -52,21 +54,24 @@ export default async function EditCoursePage({ params }: { params: Promise<{ cou
     orderBy: { title: "asc" },
   });
 
-  const courseAuthors = [course.instructor, ...course.collaborators];
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <CourseDetailsForm course={course} otherCourses={otherCourses} />
+    <div className="mx-auto max-w-[90rem] px-1 py-10 sm:px-2">
+      {/* Lado-a-lado no desktop (como os cards da própria página da aula),
+          uma coluna só no mobile. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <CourseDetailsForm course={course} otherCourses={otherCourses} />
 
-      <div className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold">Módulos e aulas</h2>
-        <div className="space-y-4">
-          {course.modules.map((module) => (
-            <ModuleSection key={module.id} module={module} courseSlug={course.slug} courseAuthors={courseAuthors} />
-          ))}
-        </div>
-        <div className="mt-4">
-          <AddModuleForm courseId={course.id} nextOrder={course.modules.length} />
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">Módulos e aulas</h2>
+          <ModuleList courseId={course.id} courseSlug={course.slug} modules={course.modules} />
+          <div className="mt-4">
+            <AddModuleForm courseId={course.id} nextOrder={course.modules.length} />
+          </div>
+
+          <Card className="mt-4 p-6">
+            <h2 className="mb-3 font-medium">Quiz final do curso</h2>
+            <QuizEditor scope="COURSE" parentId={course.id} label="Quiz final do curso" existingQuiz={course.quiz} />
+          </Card>
         </div>
       </div>
     </div>

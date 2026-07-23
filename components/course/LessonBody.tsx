@@ -1,42 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
-import { X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
-import { SlideDeckViewer } from "@/components/course/SlideDeckViewer";
-import { buildSlideDeck } from "@/lib/slideDeck";
-import { SpreadsheetPreviewViewer } from "@/components/course/SpreadsheetPreviewViewer";
-import { buildSpreadsheetPreview } from "@/lib/spreadsheetPreview";
-import { boxFromRect, useCardTransition } from "@/components/course/CardTransitionContext";
-
-function PreviewContent({ resource }: { resource: LessonResourceData }) {
-  if (resource.type === "IMAGE") {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={resource.url} alt={resource.name} className="h-full w-full object-contain" />;
-  }
-  if (resource.type === "VIDEO") {
-    return <video controls src={resource.url} className="h-full w-full bg-black" />;
-  }
-  if (resource.type === "SLIDES") {
-    return <SlideDeckViewer slides={buildSlideDeck(resource.name)} />;
-  }
-  if (resource.type === "OTHER" && /\.xlsx?$/i.test(resource.name)) {
-    return <SpreadsheetPreviewViewer preview={buildSpreadsheetPreview(resource.name)} />;
-  }
-  return (
-    <iframe
-      src={`${resource.url}#toolbar=0&navpanes=0&scrollbar=0`}
-      className="h-full w-full border-0"
-      title={resource.name}
-    />
-  );
-}
+import { ResourcePreviewContent as PreviewContent } from "@/components/course/ResourcePreviewContent";
+import { boxFromRect, toDocumentBox, useCardTransition } from "@/components/course/CardTransitionContext";
 
 export function LessonBody({
-  nav,
   title,
   courseSlug,
   lessonId,
@@ -52,9 +25,10 @@ export function LessonBody({
   comments,
   videoMeta,
   previousHref,
+  previousTitle,
   nextHref,
+  nextTitle,
 }: {
-  nav: React.ReactNode;
   title: React.ReactNode;
   courseSlug: string;
   lessonId: string;
@@ -70,7 +44,9 @@ export function LessonBody({
   comments?: React.ReactNode;
   videoMeta?: VideoMeta;
   previousHref?: string | null;
+  previousTitle?: string | null;
   nextHref?: string | null;
+  nextTitle?: string | null;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -78,7 +54,10 @@ export function LessonBody({
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
   const [cinemaMode, setCinemaMode] = useState(false);
-  const { handleTouchStart, handleTouchEnd, swipeClassName } = useSwipeNav(previousHref, nextHref);
+  const { handleTouchStart, handleTouchEnd, swipeClassName, goPrevious, goNext, showSpinner } = useSwipeNav(
+    previousHref,
+    nextHref
+  );
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
@@ -88,11 +67,13 @@ export function LessonBody({
   const { state, arrive } = useCardTransition();
   const pending = state?.slug === courseSlug && !state.arrived;
 
+  // Recebe o vídeo a voar de um card "Continuar onde paraste" (página
+  // principal) clicado diretamente para esta aula — ver CourseTile.tsx.
   useEffect(() => {
     if (!pending) return;
     const rect = playerBoxRef.current?.getBoundingClientRect();
     if (!rect) return;
-    arrive(courseSlug, { video: boxFromRect(rect), title: null, category: null, instructor: null, rating: null });
+    arrive(courseSlug, { video: toDocumentBox(boxFromRect(rect)), title: null, category: null, instructor: null, rating: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, courseSlug]);
 
@@ -133,8 +114,38 @@ export function LessonBody({
 
   return (
     <div className="overflow-x-hidden">
+    {showSpinner && (
+      <div className="pointer-events-none fixed inset-0 z-[998] flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-white/15 dark:border-t-white/70" />
+      </div>
+    )}
     <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
-      {nav}
+      <div className="flex items-center justify-between">
+        {previousHref && (
+          <button
+            type="button"
+            onClick={goPrevious}
+            className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          >
+            <ArrowLeft size={14} className="shrink-0" />
+            <span className="truncate">
+              Aula anterior{previousTitle && <span className="hidden sm:inline">: {previousTitle}</span>}
+            </span>
+          </button>
+        )}
+        {nextHref && (
+          <button
+            type="button"
+            onClick={goNext}
+            className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
+          >
+            <span className="truncate">
+              Próxima aula{nextTitle && <span className="hidden sm:inline">: {nextTitle}</span>}
+            </span>
+            <ArrowRight size={14} className="shrink-0" />
+          </button>
+        )}
+      </div>
 
       <div className="mt-4">
         <div className={sideBySide ? "lg:flex lg:items-stretch lg:gap-6" : ""}>

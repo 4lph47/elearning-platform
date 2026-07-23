@@ -13,12 +13,13 @@ import {
   Play,
   Repeat,
   Settings,
-  Theater,
+  Sparkles,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { getYouTubeId } from "@/lib/youtube";
+import { useAmbientColor } from "@/lib/useAmbientColor";
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const HEATMAP_BUCKETS = 40;
@@ -110,11 +111,10 @@ export function LessonPlayer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [ambientColor, setAmbientColor] = useState("rgb(0,0,0)");
   const collapsed = useSidebarCollapsed();
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
+  const ambientColor = useAmbientColor(videoRef, Boolean(cinemaMode) && !youtubeId && type === "VIDEO");
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -193,42 +193,6 @@ export function LessonPlayer({
       setCurrentTime(video.currentTime);
     }
   }, [youtubeId]);
-
-  // Modo cinema: amostra a cor média do frame atual para um glow ambiente atrás do vídeo.
-  // Só funciona com <video> nativo — o iframe do YouTube não expõe pixels por CORS.
-  useEffect(() => {
-    if (!cinemaMode || youtubeId || type !== "VIDEO") return;
-
-    if (!canvasRef.current) {
-      canvasRef.current = document.createElement("canvas");
-      canvasRef.current.width = 16;
-      canvasRef.current.height = 9;
-    }
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-
-    const id = setInterval(() => {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2) return;
-      try {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let r = 0, g = 0, b = 0;
-        const pixelCount = data.length / 4;
-        for (let i = 0; i < data.length; i += 4) {
-          r += data[i];
-          g += data[i + 1];
-          b += data[i + 2];
-        }
-        setAmbientColor(`rgb(${Math.round(r / pixelCount)}, ${Math.round(g / pixelCount)}, ${Math.round(b / pixelCount)})`);
-      } catch {
-        // fonte cross-origin sem CORS habilitado — canvas fica "tainted", ignora
-      }
-    }, 200);
-
-    return () => clearInterval(id);
-  }, [cinemaMode, youtubeId, type]);
 
   async function sendProgress(payload: { watchedSeconds?: number; completed?: boolean }) {
     await fetch("/api/progress", {
@@ -438,6 +402,7 @@ export function LessonPlayer({
                 ref={videoRef}
                 className="h-full w-full"
                 src={contentUrl ?? undefined}
+                crossOrigin="anonymous"
                 onLoadedMetadata={handleLoadedMetadata}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}
@@ -581,9 +546,21 @@ export function LessonPlayer({
                             }}
                             className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
                           >
-                            <Theater size={16} />
-                            Modo cinema
-                            {cinemaMode && <span className="ml-auto text-blue-400">✓</span>}
+                            <Sparkles size={16} />
+                            Modo ambiente
+                            <span
+                              role="switch"
+                              aria-checked={cinemaMode}
+                              className={`ml-auto flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+                                cinemaMode ? "bg-blue-500" : "bg-white/20"
+                              }`}
+                            >
+                              <span
+                                className={`h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                                  cinemaMode ? "translate-x-3.5" : "translate-x-0.5"
+                                }`}
+                              />
+                            </span>
                           </button>
                         )}
                       </div>

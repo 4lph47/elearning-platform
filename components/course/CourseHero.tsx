@@ -5,10 +5,17 @@ import Link from "next/link";
 import { Play, Pause, X } from "lucide-react";
 import { StarRating } from "@/components/ui/StarRating";
 import { getYouTubeId } from "@/lib/youtube";
-import { boxFromRect, textBoxFromElement, useCardTransition } from "@/components/course/CardTransitionContext";
+import {
+  boxFromRect,
+  elapsedVideoTime,
+  textBoxFromElement,
+  toDocumentBox,
+  useCardTransition,
+} from "@/components/course/CardTransitionContext";
+import { useTextFly } from "@/components/course/TextFlyContext";
 
-function ytCommand(iframe: HTMLIFrameElement | null, func: string) {
-  iframe?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*");
+function ytCommand(iframe: HTMLIFrameElement | null, func: string, args: unknown[] = []) {
+  iframe?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
 }
 
 // Têm de bater certo com CardTransitionOverlay.tsx: tempo desde arrived() até
@@ -61,8 +68,19 @@ export function CourseHero({
   const [paused, setPaused] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null;
-  const { state, arrive } = useCardTransition();
+  // Sem API do iframe do YouTube, o tempo de reprodução aproxima-se por
+  // quando este vídeo montou (autoplay começa quase de imediato).
+  const heroStartedAtRef = useRef(Date.now());
+  const { state, arrive, registerSource } = useCardTransition();
   const pending = state?.slug === slug && !state.arrived;
+  // Voo só do título (link "voltar" em LessonLayoutShell.tsx) — sistema à
+  // parte do vídeo/CardTransitionContext acima, mesma ideia do
+  // LessonTitleHeading.tsx: esconde o <h1> real até o clone aterrar.
+  const { state: textFlyState, arrive: arriveTitleFly } = useTextFly();
+  const titleFlyPending = textFlyState?.id === slug && !textFlyState.arrived;
+  const titleHidden = textFlyState?.id === slug && !textFlyState.revealed;
+  // Vídeo chega de um card/clone já a meio — continua dali em vez de recomeçar do zero.
+  const incomingVideoTime = state?.slug === slug ? elapsedVideoTime(state.videoTime, state.capturedAt) : null;
   // Se ao montar já existe uma transição de card a apontar para esta página,
   // o texto que não voa (breadcrumb, descrição, "alunos matriculados", etc.)
   // começa escondido — só aparece REMAINING_REVEAL_DELAY_MS depois do resto
@@ -81,14 +99,43 @@ export function CourseHero({
     const rect = mediaBoxRef.current?.getBoundingClientRect();
     if (!rect) return;
     arrive(slug, {
-      video: boxFromRect(rect),
-      title: titleRef.current ? textBoxFromElement(titleRef.current) : null,
-      category: categoryRef.current ? textBoxFromElement(categoryRef.current) : null,
-      instructor: instructorRef.current ? textBoxFromElement(instructorRef.current) : null,
-      rating: ratingBoxRef.current ? boxFromRect(ratingBoxRef.current.getBoundingClientRect()) : null,
+      video: toDocumentBox(boxFromRect(rect)),
+      title: titleRef.current ? toDocumentBox(textBoxFromElement(titleRef.current)) : null,
+      category: categoryRef.current ? toDocumentBox(textBoxFromElement(categoryRef.current)) : null,
+      instructor: instructorRef.current ? toDocumentBox(textBoxFromElement(instructorRef.current)) : null,
+      rating: ratingBoxRef.current ? toDocumentBox(boxFromRect(ratingBoxRef.current.getBoundingClientRect())) : null,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, slug]);
+
+  useEffect(() => {
+    heroStartedAtRef.current = Date.now();
+  }, [videoUrl]);
+
+  useEffect(() => {
+    if (!titleFlyPending || !titleRef.current) return;
+    arriveTitleFly(slug, textBoxFromElement(titleRef.current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [titleFlyPending, slug]);
+
+  // Torna esta página fonte de transição pra quem navega DAQUI pra uma aula
+  // (botão "Continuar curso", lista de aulas) — o vídeo do hero voa até ao
+  // player da aula em vez de simplesmente trocar de página.
+  useEffect(() => {
+    return registerSource(slug, {
+      getBox: () => {
+        const rect = mediaBoxRef.current?.getBoundingClientRect();
+        return rect ? toDocumentBox(boxFromRect(rect)) : { top: 0, left: 0, width: 0, height: 0 };
+      },
+      getVideoTime: () => {
+        if (youtubeId) return (Date.now() - heroStartedAtRef.current) / 1000;
+        return videoRef.current && !videoRef.current.paused ? videoRef.current.currentTime : 0;
+      },
+      videoUrl,
+      youtubeId,
+      thumbnailUrl,
+    });
+  }, [registerSource, slug, videoUrl, youtubeId, thumbnailUrl]);
 
   function scheduleHide() {
     if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -164,6 +211,9 @@ export function CourseHero({
             src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1`}
             title={title}
             allow="autoplay; encrypted-media"
+            onLoad={() => {
+              if (incomingVideoTime !== null) ytCommand(iframeRef.current, "seekTo", [incomingVideoTime, true]);
+            }}
             className={
               maximized
                 ? "pointer-events-none absolute inset-0 h-full w-full"
@@ -182,6 +232,9 @@ export function CourseHero({
             onPause={() => {
               setPaused(true);
               setVisible(true);
+            }}
+            onLoadedMetadata={(e) => {
+              if (incomingVideoTime !== null) e.currentTarget.currentTime = incomingVideoTime;
             }}
             className="h-full w-full object-cover"
           />
@@ -231,8 +284,11 @@ export function CourseHero({
         </div>
       )}
 
+      {/* Sem min-h fixo no mobile: com altura fixa, texto mais curto/comprido do
+      que os 520px previstos sobrava/faltava espaço, criando um corte visível
+      entre a zona escura do vídeo e o branco da página a seguir. */}
       {!maximized && (
-        <div className="pointer-events-none relative flex min-h-[520px] items-center px-3 py-14 pt-24 sm:min-h-[600px] sm:px-6 sm:py-20 sm:pt-28">
+        <div className="pointer-events-none relative flex items-center px-3 py-14 pt-24 sm:min-h-[600px] sm:px-6 sm:py-20 sm:pt-28">
           <div
             className={`pointer-events-auto mt-20 max-w-xl text-left transition-all duration-300 sm:mt-16 ${
               visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
@@ -269,7 +325,13 @@ export function CourseHero({
                 </span>
               )}
             </div>
-            <h1 ref={titleRef} className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">{title}</h1>
+            <h1
+              ref={titleRef}
+              style={{ visibility: titleHidden ? "hidden" : "visible" }}
+              className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl"
+            >
+              {title}
+            </h1>
             <p className="mt-3 text-slate-700 dark:text-slate-300" style={remainingStyle}>
               {description}
             </p>
@@ -297,7 +359,7 @@ export function CourseHero({
           </div>
         </div>
       )}
-      {maximized && <div className="min-h-[520px] sm:min-h-[600px]" aria-hidden />}
+      {maximized && <div className="sm:min-h-[600px]" aria-hidden />}
     </div>
   );
 }

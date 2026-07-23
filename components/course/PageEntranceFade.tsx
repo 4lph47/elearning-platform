@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useCardTransition } from "@/components/course/CardTransitionContext";
+import { useTextFly } from "@/components/course/TextFlyContext";
 
 const FADE_MS = 1400;
 
@@ -17,6 +18,7 @@ const FADE_MS = 1400;
 export function PageEntranceFade({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { state } = useCardTransition();
+  const { state: textFlyState } = useTextFly();
   const [prevPathname, setPrevPathname] = useState(pathname);
   const [visible, setVisible] = useState(true);
 
@@ -28,22 +30,29 @@ export function PageEntranceFade({ children }: { children: ReactNode }) {
   }
 
   // Numa transição de card, quem manda mostrar é o reveal() dela (sincronizado
-  // com o FadeOutScrim); fora disso, mostra-se sozinho pouco depois de montar.
+  // com o FadeOutScrim); numa transição de texto (currículo/progresso/voltar),
+  // é o revealed do TextFlyContext — a página só aparece 1ms depois do clone
+  // ter mesmo aterrado no texto real, nunca durante o voo. Fora disso,
+  // mostra-se sozinha pouco depois de montar.
   useEffect(() => {
-    if (visible || state) return;
+    if (visible || state || textFlyState) return;
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => setVisible(true));
     });
     return () => cancelAnimationFrame(raf1);
-  }, [visible, state]);
+  }, [visible, state, textFlyState]);
 
   useEffect(() => {
     if (state?.revealed) setVisible(true);
   }, [state?.revealed]);
 
-  // Durante a transição de card o wipe visível é o do scrim — aqui só precisa
-  // de aparecer por baixo dele sem fade próprio (evita um duplo-fade).
-  const instant = Boolean(state);
+  useEffect(() => {
+    if (textFlyState?.revealed) setVisible(true);
+  }, [textFlyState?.revealed]);
+
+  // Durante a transição de card/texto o wipe visível é o do scrim/clone —
+  // aqui só precisa de aparecer por baixo sem fade próprio (evita duplo-fade).
+  const instant = Boolean(state) || Boolean(textFlyState);
 
   return (
     <div style={{ opacity: visible ? 1 : 0, transition: instant ? "none" : `opacity ${FADE_MS}ms ease-out` }}>

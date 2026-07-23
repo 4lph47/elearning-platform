@@ -51,6 +51,14 @@ model User {
   twitterUrl    String?
   linkedinUrl   String?
   youtubeUrl    String?
+  instagramUrl  String?
+  facebookUrl   String?
+  tiktokUrl     String?
+  githubUrl     String?
+  discordUrl    String?
+  mediumUrl     String?
+  twitchUrl     String?
+  certifications Certification[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -68,6 +76,20 @@ model User {
   lessonComments       LessonComment[]
   commentLikes         CommentLike[]
   lessonReactions      LessonReaction[]
+  watchEvents          WatchEvent[]
+}
+
+model Certification {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Account {
@@ -185,7 +207,7 @@ model Module {
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   lessons Lesson[]
-  quiz    Quiz?
+  quizzes Quiz[]
 
   @@index([courseId])
 }
@@ -197,6 +219,7 @@ model Lesson {
   isFreePreview   Boolean    @default(false)
   type            LessonType @default(VIDEO)
   contentUrl      String?
+  thumbnailUrl    String?
   textContent     String?
   durationSeconds Int?
   description     String?
@@ -213,6 +236,7 @@ model Lesson {
   quiz      Quiz?
   viewCount Int      @default(0)
   createdAt DateTime @default(now())
+  watchEvents WatchEvent[]
 
   @@index([moduleId])
 }
@@ -308,23 +332,46 @@ model LessonProgress {
   @@index([lessonId])
 }
 
+// Um ping por cada 5s de reprodução (ver /api/progress) — usado só para
+// distribuição por hora do dia ("quando é que as pessoas veem aulas").
+// Tempo total por aula/curso continua a vir de LessonProgress.watchedSeconds.
+model WatchEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@index([createdAt])
+}
+
 model Quiz {
   id               String    @id @default(cuid())
   scope            QuizScope
   title            String
+  // Só usado em scope MODULE — posição entre as aulas do mesmo módulo (vários
+  // quizzes por módulo, cada um na sua posição, tal como uma aula).
+  order            Int       @default(0)
   maxAttempts      Int?
   timeLimitMinutes Int?
   createdAt        DateTime  @default(now())
 
   lessonId String? @unique
   lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  moduleId String? @unique
+  // Sem @unique: um módulo pode ter vários quizzes (ordenados por `order`,
+  // intercalados com as aulas), ao contrário do quiz de aula/curso (1:1).
+  moduleId String?
   module   Module? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   courseId String? @unique
   course   Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   questions QuizQuestion[]
   attempts  QuizAttempt[]
+
+  @@index([moduleId])
 }
 
 model QuizQuestion {

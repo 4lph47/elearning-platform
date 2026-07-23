@@ -30,7 +30,9 @@ const includeQuestions = {
   },
 };
 
-export async function upsertQuiz(scope: QuizScope, parentId: string, data: QuizInput) {
+// LESSON/COURSE continuam 1:1 (upsert por parentId) — só MODULE deixou de o
+// ser (ver createModuleQuiz/updateQuizById/deleteQuizById abaixo).
+export async function upsertQuiz(scope: "LESSON" | "COURSE", parentId: string, data: QuizInput) {
   const error = validateQuestions(data.questions);
   if (error) return { ok: false as const, error };
 
@@ -52,16 +54,6 @@ export async function upsertQuiz(scope: QuizScope, parentId: string, data: QuizI
     return { ok: true as const, quiz };
   }
 
-  if (scope === "MODULE") {
-    const quiz = await prisma.quiz.upsert({
-      where: { moduleId: parentId },
-      update: { ...shared, questions: { deleteMany: {}, create: questions } },
-      create: { scope, ...shared, moduleId: parentId, questions: { create: questions } },
-      include: includeQuestions,
-    });
-    return { ok: true as const, quiz };
-  }
-
   const quiz = await prisma.quiz.upsert({
     where: { courseId: parentId },
     update: { ...shared, questions: { deleteMany: {}, create: questions } },
@@ -71,12 +63,52 @@ export async function upsertQuiz(scope: QuizScope, parentId: string, data: QuizI
   return { ok: true as const, quiz };
 }
 
-export async function deleteQuiz(scope: QuizScope, parentId: string) {
+export async function deleteQuiz(scope: "LESSON" | "COURSE", parentId: string) {
   if (scope === "LESSON") {
     await prisma.quiz.deleteMany({ where: { lessonId: parentId } });
-  } else if (scope === "MODULE") {
-    await prisma.quiz.deleteMany({ where: { moduleId: parentId } });
   } else {
     await prisma.quiz.deleteMany({ where: { courseId: parentId } });
   }
+}
+
+// Quiz de módulo: vários por módulo, cada um na sua posição (`order`),
+// intercalado com as aulas — por isso create (nunca upsert-por-moduleId) e
+// update/delete por id próprio (não há "o" quiz do módulo, há vários).
+export async function createModuleQuiz(moduleId: string, order: number, data: QuizInput) {
+  const error = validateQuestions(data.questions);
+  if (error) return { ok: false as const, error };
+
+  const quiz = await prisma.quiz.create({
+    data: {
+      scope: "MODULE",
+      title: data.title,
+      maxAttempts: null,
+      timeLimitMinutes: data.timeLimitMinutes ?? null,
+      order,
+      moduleId,
+      questions: { create: questionsCreateData(data.questions) },
+    },
+    include: includeQuestions,
+  });
+  return { ok: true as const, quiz };
+}
+
+export async function updateQuizById(quizId: string, data: QuizInput) {
+  const error = validateQuestions(data.questions);
+  if (error) return { ok: false as const, error };
+
+  const quiz = await prisma.quiz.update({
+    where: { id: quizId },
+    data: {
+      title: data.title,
+      timeLimitMinutes: data.timeLimitMinutes ?? null,
+      questions: { deleteMany: {}, create: questionsCreateData(data.questions) },
+    },
+    include: includeQuestions,
+  });
+  return { ok: true as const, quiz };
+}
+
+export async function deleteQuizById(quizId: string) {
+  await prisma.quiz.delete({ where: { id: quizId } });
 }

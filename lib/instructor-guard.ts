@@ -45,3 +45,19 @@ export async function getOwnedLesson(lessonId: string, session: Session) {
   if (!isCourseAuthor(lesson.module.course, session)) return null;
   return lesson;
 }
+
+export async function getOwnedQuiz(quizId: string, session: Session) {
+  if (!canManage(session)) return null;
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: quizId },
+    include: {
+      module: { include: { course: { include: { collaborators: { select: { id: true } } } } } },
+      lesson: { include: { module: { include: { course: { include: { collaborators: { select: { id: true } } } } } } } },
+      course: { include: { collaborators: { select: { id: true } } } },
+    },
+  });
+  if (!quiz) return null;
+  const course = quiz.module?.course ?? quiz.lesson?.module.course ?? quiz.course;
+  if (!course || !isCourseAuthor(course, session)) return null;
+  return quiz;
+}

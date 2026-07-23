@@ -56,7 +56,7 @@ export default function RegisterPage() {
             E
           </span>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Cria a tua conta</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Começa a aprender ou a ensinar hoje mesmo</p>
+          <p className="mt-1 hidden text-sm text-slate-500 dark:text-slate-400 sm:block">Começa a aprender ou a ensinar hoje mesmo</p>
         </div>
         <Card className="p-6 shadow-md">
           <form onSubmit={handleSubmit} className="space-y-4">

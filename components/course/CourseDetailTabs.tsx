@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Lock, Printer, Award, Monitor, Type as TypeIcon, HelpCircle } from "lucide-react";
 import { StarRating } from "@/components/ui/StarRating";
+import { textBoxFromElement } from "@/components/course/CardTransitionContext";
 import { ReviewForm } from "@/components/course/ReviewForm";
+import { useTextFly } from "@/components/course/TextFlyContext";
 
 interface LessonItem {
   id: string;
@@ -12,14 +14,35 @@ interface LessonItem {
   isFreePreview: boolean;
   durationSeconds: number | null;
   type: "VIDEO" | "TEXT";
+  order: number;
   quiz: { id: string } | null;
+}
+
+interface ModuleQuizItem {
+  id: string;
+  title: string;
+  order: number;
 }
 
 interface ModuleItem {
   id: string;
   title: string;
   lessons: LessonItem[];
-  quiz: { id: string } | null;
+  quizzes: ModuleQuizItem[];
+}
+
+// Aula (+ o seu próprio quiz, sempre logo a seguir) ou quiz de módulo,
+// intercalados por `order` — mesma posição definida ao arrastar no editor do
+// instrutor (ver app/api/instructor/modules/[moduleId]/reorder/route.ts).
+type MergedEntry =
+  | { kind: "lesson"; order: number; lesson: LessonItem }
+  | { kind: "quiz"; order: number; quiz: ModuleQuizItem };
+
+function mergeModuleItems(module: ModuleItem): MergedEntry[] {
+  return [
+    ...module.lessons.map((lesson) => ({ kind: "lesson" as const, order: lesson.order, lesson })),
+    ...module.quizzes.map((quiz) => ({ kind: "quiz" as const, order: quiz.order, quiz })),
+  ].sort((a, b) => a.order - b.order);
 }
 
 interface ReviewItem {
@@ -76,6 +99,14 @@ export function CourseDetailTabs({
   const totalDuration = allLessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
   const quizAccessible = isEnrolled || isOwner;
   const reviewsAvg = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+  const { state: textFlyState, start: startTitleFly } = useTextFly();
+  const titleRefs = useRef(new Map<string, HTMLSpanElement>());
+
+  function handleLessonClick(lessonId: string, title: string) {
+    const el = titleRefs.current.get(lessonId);
+    if (!el) return;
+    startTitleFly(lessonId, title, textBoxFromElement(el));
+  }
 
   return (
     <div>
@@ -134,7 +165,49 @@ export function CourseDetailTabs({
                         </span>
                       </summary>
                       <ul className="divide-y divide-slate-100 dark:divide-white/5">
-                        {module.lessons.map((lesson) => {
+                        {mergeModuleItems(module).map((entry) => {
+                          if (entry.kind === "quiz") {
+                            const quiz = entry.quiz;
+                            return (
+                              <li key={quiz.id}>
+                                {quizAccessible ? (
+                                  <Link
+                                    href={`/courses/${courseSlug}/quiz/${quiz.id}`}
+                                    prefetch
+                                    onClick={() => handleLessonClick(quiz.id, `Quiz · ${quiz.title}`)}
+                                  >
+                                    <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                                      <span className="flex items-center gap-2">
+                                        <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
+                                        <span
+                                          ref={(el) => {
+                                            if (el) titleRefs.current.set(quiz.id, el);
+                                          }}
+                                          style={{
+                                            visibility:
+                                              textFlyState?.id === quiz.id && !textFlyState.revealed ? "hidden" : "visible",
+                                          }}
+                                          className="text-slate-700 dark:text-slate-200"
+                                        >
+                                          Quiz · {quiz.title}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  </Link>
+                                ) : (
+                                  <div className="flex items-center justify-between px-4 py-3 text-sm">
+                                    <span className="flex items-center gap-2">
+                                      <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
+                                      <span className="text-slate-400 dark:text-slate-500">Quiz · {quiz.title}</span>
+                                    </span>
+                                    <Lock size={14} className="text-slate-400 dark:text-slate-500" />
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          }
+
+                          const lesson = entry.lesson;
                           const accessible = isEnrolled || isOwner || lesson.isFreePreview;
                           const content = (
                             <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
@@ -144,7 +217,16 @@ export function CourseDetailTabs({
                                 ) : (
                                   <Monitor size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
                                 )}
-                                <span className={accessible ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"}>
+                                <span
+                                  ref={(el) => {
+                                    if (el) titleRefs.current.set(lesson.id, el);
+                                  }}
+                                  style={{
+                                    visibility:
+                                      textFlyState?.id === lesson.id && !textFlyState.revealed ? "hidden" : "visible",
+                                  }}
+                                  className={accessible ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"}
+                                >
                                   {lesson.title}
                                 </span>
                                 {lesson.isFreePreview && !isEnrolled && !isOwner && (
@@ -163,18 +245,41 @@ export function CourseDetailTabs({
                           return (
                             <li key={lesson.id}>
                               {accessible ? (
-                                <Link href={`/courses/${courseSlug}/lessons/${lesson.id}`}>{content}</Link>
+                                <Link
+                                  href={`/courses/${courseSlug}/lessons/${lesson.id}`}
+                                  prefetch
+                                  onClick={() => handleLessonClick(lesson.id, lesson.title)}
+                                >
+                                  {content}
+                                </Link>
                               ) : (
                                 content
                               )}
                               {lesson.quiz && (
                                 <div className="pl-6">
                                   {quizAccessible && accessible ? (
-                                    <Link href={`/courses/${courseSlug}/quiz/${lesson.quiz.id}`}>
+                                    <Link
+                                      href={`/courses/${courseSlug}/quiz/${lesson.quiz.id}`}
+                                      prefetch
+                                      onClick={() => handleLessonClick(lesson.quiz!.id, `Quiz · ${lesson.title}`)}
+                                    >
                                       <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
                                         <span className="flex items-center gap-2">
                                           <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
-                                          <span className="text-slate-700 dark:text-slate-200">Quiz · {lesson.title}</span>
+                                          <span
+                                            ref={(el) => {
+                                              if (el && lesson.quiz) titleRefs.current.set(lesson.quiz.id, el);
+                                            }}
+                                            style={{
+                                              visibility:
+                                                textFlyState?.id === lesson.quiz?.id && !textFlyState.revealed
+                                                  ? "hidden"
+                                                  : "visible",
+                                            }}
+                                            className="text-slate-700 dark:text-slate-200"
+                                          >
+                                            Quiz · {lesson.title}
+                                          </span>
                                         </span>
                                       </div>
                                     </Link>
@@ -192,29 +297,6 @@ export function CourseDetailTabs({
                             </li>
                           );
                         })}
-
-                        {module.quiz && (
-                          <li>
-                            {quizAccessible ? (
-                              <Link href={`/courses/${courseSlug}/quiz/${module.quiz.id}`}>
-                                <div className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                                  <span className="flex items-center gap-2">
-                                    <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
-                                    <span className="text-slate-700 dark:text-slate-200">Quiz · {module.title}</span>
-                                  </span>
-                                </div>
-                              </Link>
-                            ) : (
-                              <div className="flex items-center justify-between px-4 py-3 text-sm">
-                                <span className="flex items-center gap-2">
-                                  <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-600" />
-                                  <span className="text-slate-400 dark:text-slate-500">Quiz · {module.title}</span>
-                                </span>
-                                <Lock size={14} className="text-slate-400 dark:text-slate-500" />
-                              </div>
-                            )}
-                          </li>
-                        )}
                       </ul>
                     </details>
                   </div>

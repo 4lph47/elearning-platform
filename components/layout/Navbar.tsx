@@ -1,23 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, BookOpen } from "lucide-react";
+import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, BookOpen, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useSidebar } from "@/components/layout/SidebarContext";
+import { useFadeNav } from "@/components/course/FadeNavContext";
 
 const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$/;
 
 export function Navbar() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
+  const { toggle: toggleSidebar } = useSidebar();
+  const { curtainActive, fadeNavigate } = useFadeNav();
   const [mounted, setMounted] = useState(false);
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -26,6 +30,8 @@ export function Navbar() {
   const transparent = hasHero && !scrolled;
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => setMobileSearchOpen(false), [pathname]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -64,8 +70,9 @@ export function Navbar() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    router.push(q ? `/courses?q=${encodeURIComponent(q)}` : "/courses");
+    fadeNavigate(q ? `/courses?q=${encodeURIComponent(q)}` : "/courses");
     setMenuOpen(false);
+    setMobileSearchOpen(false);
   }
 
   const initials = session?.user.name
@@ -78,35 +85,62 @@ export function Navbar() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
-        transparent
+        curtainActive
+          ? "bg-white dark:bg-black"
+          : transparent
           ? "bg-gradient-to-b from-white/70 via-white/30 to-transparent dark:from-black/70 dark:via-black/30 dark:to-transparent"
           : "border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-black/90"
       }`}
     >
       <div className="grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-5">
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-2 text-lg font-bold text-slate-900 dark:text-white"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-            <GraduationCap className="h-4.5 w-4.5" size={18} />
-          </span>
-          E-Learn
-        </Link>
+        <div className="flex shrink-0 items-center gap-7">
+          <button
+            onClick={toggleSidebar}
+            aria-label="Alternar menu lateral"
+            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+              transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+            }`}
+          >
+            <Menu size={18} />
+          </button>
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+              <GraduationCap className="h-4.5 w-4.5" size={18} />
+            </span>
+            <span className={mobileSearchOpen ? "hidden sm:inline" : ""}>E-Learn</span>
+          </Link>
+        </div>
 
-        <form onSubmit={handleSearch} className="mx-auto hidden w-full max-w-md sm:block">
+        <form
+          onSubmit={handleSearch}
+          className={`mx-auto w-full max-w-md sm:block ${mobileSearchOpen ? "block" : "hidden"}`}
+        >
           <div className="relative">
             <input
+              autoFocus={mobileSearchOpen}
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Procurar cursos..."
-              className={`w-full rounded-full border py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 ${
+              className={`w-full rounded-full border py-2 pl-4 pr-16 text-sm focus:outline-none focus:ring-1 sm:pr-10 ${
                 transparent
                   ? "border-slate-900/20 bg-slate-900/10 text-slate-900 placeholder-slate-600 focus:border-slate-900/40 focus:ring-slate-900/30 dark:border-white/20 dark:bg-white/10 dark:text-white dark:placeholder-slate-300 dark:focus:border-white/40 dark:focus:ring-white/30"
                   : "border-slate-300 bg-slate-50 text-slate-900 focus:border-slate-500 focus:bg-white focus:ring-slate-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:focus:bg-white/10"
               }`}
             />
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(false)}
+              aria-label="Fechar pesquisa"
+              className={`absolute right-8 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full sm:hidden ${
+                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-white/10"
+              }`}
+            >
+              <X size={16} />
+            </button>
             <button
               type="submit"
               className={`absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full ${
@@ -136,7 +170,7 @@ export function Navbar() {
             <Link
               href="/cart"
               aria-label="Carrinho"
-              className={`relative flex h-8 w-8 items-center justify-center rounded-full ${
+              className={`relative hidden h-8 w-8 items-center justify-center rounded-full sm:flex ${
                 transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
@@ -149,7 +183,19 @@ export function Navbar() {
             </Link>
           )}
 
-          {mounted && (
+          {!mobileSearchOpen && (
+            <button
+              onClick={() => setMobileSearchOpen(true)}
+              aria-label="Procurar"
+              className={`flex h-8 w-8 items-center justify-center rounded-full sm:hidden ${
+                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+              }`}
+            >
+              <Search size={16} />
+            </button>
+          )}
+
+          {mounted && status !== "authenticated" && (
             <button
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               aria-label="Alternar tema claro/escuro"
@@ -208,6 +254,31 @@ export function Navbar() {
                   >
                     <LayoutDashboard size={14} /> A minha aprendizagem
                   </Link>
+
+                  <Link
+                    href="/cart"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white sm:hidden"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ShoppingCart size={14} /> Carrinho
+                    </span>
+                    {cartCount > 0 && (
+                      <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  {mounted && (
+                    <button
+                      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                      className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                    >
+                      {resolvedTheme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+                      {resolvedTheme === "dark" ? "Tema claro" : "Tema escuro"}
+                    </button>
+                  )}
 
                   <button
                     onClick={() => signOut({ callbackUrl: "/" })}

@@ -1721,31 +1721,35 @@ async function main() {
     },
   });
 
-  await prisma.quiz.upsert({
-    where: { moduleId: firstModule.id },
-    update: { maxAttempts: null },
-    create: {
-      scope: "MODULE",
-      title: "Quiz: Primeiros Passos",
-      moduleId: firstModule.id,
-      questions: {
-        create: [
-          {
-            text: "O que é necessário instalar antes de criar um projeto Next.js?",
-            order: 0,
-            options: {
-              create: [
-                { text: "Node.js", isCorrect: true, order: 0 },
-                { text: "PHP", isCorrect: false, order: 1 },
-                { text: "Ruby", isCorrect: false, order: 2 },
-                { text: "Java", isCorrect: false, order: 3 },
-              ],
+  // Quiz de módulo já não é 1:1 (pode haver vários por módulo, intercalados
+  // com as aulas por `order`) — cria só se ainda não houver nenhum, em vez
+  // de upsert por moduleId.
+  if (!(await prisma.quiz.findFirst({ where: { moduleId: firstModule.id } }))) {
+    await prisma.quiz.create({
+      data: {
+        scope: "MODULE",
+        title: "Quiz: Primeiros Passos",
+        moduleId: firstModule.id,
+        order: await prisma.lesson.count({ where: { moduleId: firstModule.id } }),
+        questions: {
+          create: [
+            {
+              text: "O que é necessário instalar antes de criar um projeto Next.js?",
+              order: 0,
+              options: {
+                create: [
+                  { text: "Node.js", isCorrect: true, order: 0 },
+                  { text: "PHP", isCorrect: false, order: 1 },
+                  { text: "Ruby", isCorrect: false, order: 2 },
+                  { text: "Java", isCorrect: false, order: 3 },
+                ],
+              },
             },
-          },
-        ],
+          ],
+        },
       },
-    },
-  });
+    });
+  }
 
   await prisma.quiz.upsert({
     where: { courseId: nextjsCourse.id },
@@ -1803,13 +1807,14 @@ async function main() {
     ]);
 
     // Quizzes de módulo nunca limitam tentativas — só o teste final do curso pode.
-    await prisma.quiz.upsert({
-      where: { moduleId: mod.id },
-      update: { maxAttempts: null },
-      create: {
+    // Não é mais 1:1 por moduleId — cria só se este módulo ainda não tiver nenhum.
+    if (await prisma.quiz.findFirst({ where: { moduleId: mod.id } })) continue;
+    await prisma.quiz.create({
+      data: {
         scope: "MODULE",
         title: `Quiz: ${mod.title}`,
         moduleId: mod.id,
+        order: mod.lessons.length,
         questions: {
           create: [
             {

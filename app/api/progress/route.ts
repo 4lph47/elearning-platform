@@ -55,6 +55,10 @@ export async function POST(request: Request) {
     },
   });
 
+  if (watchedSeconds !== undefined || completed !== undefined) {
+    await prisma.watchEvent.create({ data: { userId: session.user.id, lessonId } });
+  }
+
   if (completed) {
     await maybeCreateAutoReview(session.user.id, course.id);
   }

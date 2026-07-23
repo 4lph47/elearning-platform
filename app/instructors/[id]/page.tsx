@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { Star, Users, BookOpen, MessageSquare, Globe, Link2 } from "lucide-react";
+import { Star, Users, BookOpen, MessageSquare, Globe, Link2, Award } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CourseTile } from "@/components/course/CourseTile";
+import { SOCIAL_PLATFORMS } from "@/lib/socialPlatforms";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,14 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       twitterUrl: true,
       linkedinUrl: true,
       youtubeUrl: true,
+      instagramUrl: true,
+      facebookUrl: true,
+      tiktokUrl: true,
+      githubUrl: true,
+      discordUrl: true,
+      mediumUrl: true,
+      twitchUrl: true,
+      certifications: { orderBy: { order: "asc" }, select: { id: true, name: true, url: true } },
       coursesTaught: {
         where: { published: true },
         orderBy: { createdAt: "desc" },
@@ -90,12 +99,11 @@ export default async function InstructorProfilePage({ params }: { params: Promis
   const totalReviews = courses.reduce((sum, c) => sum + c.ratingCount, 0);
   const backdropUrl = courses.find((c) => c.thumbnailUrl)?.thumbnailUrl ?? null;
 
-  const socialLinks = [
-    { url: instructor.websiteUrl, label: "Website", icon: Globe },
-    { url: instructor.twitterUrl, label: "Twitter/X", icon: Link2 },
-    { url: instructor.linkedinUrl, label: "LinkedIn", icon: Link2 },
-    { url: instructor.youtubeUrl, label: "YouTube", icon: Link2 },
-  ].filter((s): s is { url: string; label: string; icon: typeof Globe } => Boolean(s.url));
+  const socialLinks = SOCIAL_PLATFORMS.map((p) => ({
+    url: instructor[p.key],
+    label: p.label,
+    icon: p.key === "websiteUrl" ? Globe : Link2,
+  })).filter((s): s is { url: string; label: string; icon: typeof Globe } => Boolean(s.url));
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
@@ -133,6 +141,22 @@ export default async function InstructorProfilePage({ params }: { params: Promis
                   className="flex items-center gap-1.5 rounded-full border border-slate-900/15 px-3 py-1 text-xs font-medium text-slate-600 hover:border-blue-500/60 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:text-white"
                 >
                   <Icon size={13} /> {label}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {instructor.certifications.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {instructor.certifications.map((cert) => (
+                <a
+                  key={cert.id}
+                  href={cert.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-600/5 px-3 py-1 text-xs font-medium text-blue-700 hover:border-blue-500/60 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-300"
+                >
+                  <Award size={13} /> {cert.name}
                 </a>
               ))}
             </div>
@@ -192,9 +216,9 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           </div>
         )}
 
-        <Link href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+        <FadeLink href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
           ← Ver catálogo completo
-        </Link>
+        </FadeLink>
       </div>
     </div>
   );

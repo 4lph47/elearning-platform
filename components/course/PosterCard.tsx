@@ -9,6 +9,8 @@ export function PosterCard({
   hidePrice,
   destinationKind,
   cardId,
+  rowZoom,
+  rank,
 }: {
   course: CourseCardData;
   href?: string;
@@ -16,6 +18,8 @@ export function PosterCard({
   hidePrice?: boolean;
   destinationKind?: TransitionKind;
   cardId?: string;
+  rowZoom?: boolean;
+  rank?: number;
 }) {
   return (
     <CourseTile
@@ -25,6 +29,8 @@ export function PosterCard({
       hidePrice={hidePrice}
       destinationKind={destinationKind}
       cardId={cardId}
+      rowZoom={rowZoom}
+      rank={rank}
       className="w-64 shrink-0 sm:w-72"
     />
   );

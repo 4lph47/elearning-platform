@@ -2,24 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, HelpCircle } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
+import { QuizQuestionsEditor, newQuestion, type QuestionData } from "@/components/instructor/QuizQuestionsEditor";
 import type { QuizScope } from "@/lib/quiz";
-
-interface OptionData {
-  id: string;
-  text: string;
-  isCorrect: boolean;
-  order: number;
-}
-
-interface QuestionData {
-  id: string;
-  text: string;
-  order: number;
-  options: OptionData[];
-}
 
 export interface QuizData {
   id: string;
@@ -29,23 +17,11 @@ export interface QuizData {
   questions: QuestionData[];
 }
 
-function newOption(order: number): OptionData {
-  return { id: crypto.randomUUID(), text: "", isCorrect: order === 0, order };
-}
-
-function newQuestion(order: number): QuestionData {
-  return {
-    id: crypto.randomUUID(),
-    text: "",
-    order,
-    options: [newOption(0), newOption(1)],
-  };
-}
-
-function endpointFor(scope: QuizScope, parentId: string) {
-  if (scope === "LESSON") return `/api/instructor/lessons/${parentId}/quiz`;
-  if (scope === "MODULE") return `/api/instructor/modules/${parentId}/quiz`;
-  return `/api/instructor/courses/${parentId}/quiz`;
+// Só LESSON/COURSE — quiz de módulo tem tela própria (ModuleQuizForm.tsx),
+// não este painel a abrir/fechar (module pode ter vários, não faz sentido
+// como "o" quiz do módulo).
+function endpointFor(scope: "LESSON" | "COURSE", parentId: string) {
+  return scope === "LESSON" ? `/api/instructor/lessons/${parentId}/quiz` : `/api/instructor/courses/${parentId}/quiz`;
 }
 
 export function QuizEditor({
@@ -54,7 +30,7 @@ export function QuizEditor({
   label,
   existingQuiz,
 }: {
-  scope: QuizScope;
+  scope: Extract<QuizScope, "LESSON" | "COURSE">;
   parentId: string;
   label: string;
   existingQuiz?: QuizData | null;
@@ -71,46 +47,6 @@ export function QuizEditor({
   const [questions, setQuestions] = useState<QuestionData[]>(existingQuiz?.questions ?? [newQuestion(0)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function updateQuestionText(qid: string, text: string) {
-    setQuestions((prev) => prev.map((q) => (q.id === qid ? { ...q, text } : q)));
-  }
-
-  function updateOptionText(qid: string, oid: string, text: string) {
-    setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === qid ? { ...q, options: q.options.map((o) => (o.id === oid ? { ...o, text } : o)) } : q
-      )
-    );
-  }
-
-  function setCorrectOption(qid: string, oid: string) {
-    setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === qid ? { ...q, options: q.options.map((o) => ({ ...o, isCorrect: o.id === oid })) } : q
-      )
-    );
-  }
-
-  function addOption(qid: string) {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === qid ? { ...q, options: [...q.options, newOption(q.options.length)] } : q))
-    );
-  }
-
-  function removeOption(qid: string, oid: string) {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === qid ? { ...q, options: q.options.filter((o) => o.id !== oid) } : q))
-    );
-  }
-
-  function addQuestion() {
-    setQuestions((prev) => [...prev, newQuestion(prev.length)]);
-  }
-
-  function removeQuestion(qid: string) {
-    setQuestions((prev) => prev.filter((q) => q.id !== qid));
-  }
 
   async function handleSave() {
     setError(null);
@@ -153,16 +89,31 @@ export function QuizEditor({
     }
   }
 
+  // Mesmo visual da row de quiz de módulo (QuizRow.tsx) — só sem o handle de
+  // arrastar, já que este quiz (aula/curso) não vive numa lista reordenável.
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"
-      >
-        <HelpCircle size={14} />
-        {existingQuiz ? `${label} (${existingQuiz.questions.length} perguntas)` : `+ ${label}`}
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-y-1.5 rounded-md border border-slate-100 bg-slate-50/60 px-3 py-2 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+          <HelpCircle size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
+          <span className="truncate">{existingQuiz ? existingQuiz.title : label}</span>
+          {existingQuiz && (
+            <Badge>
+              {existingQuiz.questions.length} pergunta{existingQuiz.questions.length !== 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-3 text-sm">
+          <button type="button" onClick={() => setOpen(true)} className="text-slate-700 hover:underline dark:text-slate-300">
+            {existingQuiz ? "Editar" : "Adicionar"}
+          </button>
+          {existingQuiz && (
+            <button type="button" onClick={handleDelete} className="text-red-600 hover:underline dark:text-red-400">
+              Eliminar
+            </button>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -173,7 +124,7 @@ export function QuizEditor({
         <Input id={`quiz-title-${parentId}`} value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
 
-      <div className={scope === "COURSE" ? "grid grid-cols-2 gap-3" : ""}>
+      <div className={scope === "COURSE" ? "grid gap-3 sm:grid-cols-2" : ""}>
         {scope === "COURSE" && (
           <div>
             <Label htmlFor={`quiz-attempts-${parentId}`}>Limite de tentativas (vazio = ilimitado)</Label>
@@ -201,71 +152,7 @@ export function QuizEditor({
         </div>
       </div>
 
-      <div className="space-y-3">
-        {questions.map((q, qi) => (
-          <div key={q.id} className="rounded-md border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500">#{qi + 1}</span>
-              <Input
-                value={q.text}
-                onChange={(e) => updateQuestionText(q.id, e.target.value)}
-                placeholder="Texto da pergunta"
-                className="flex-1"
-              />
-              <button
-                type="button"
-                onClick={() => removeQuestion(q.id)}
-                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                aria-label="Remover pergunta"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-            <div className="space-y-1.5 pl-4">
-              {q.options.map((o) => (
-                <div key={o.id} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={`correct-${q.id}`}
-                    checked={o.isCorrect}
-                    onChange={() => setCorrectOption(q.id, o.id)}
-                    className="text-slate-900 focus:ring-slate-500"
-                  />
-                  <Input
-                    value={o.text}
-                    onChange={(e) => updateOptionText(q.id, o.id, e.target.value)}
-                    placeholder="Opção"
-                    className="flex-1"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeOption(q.id, o.id)}
-                    className="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
-                    aria-label="Remover opção"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addOption(q.id)}
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
-              >
-                <Plus size={12} /> Opção
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={addQuestion}
-        className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-      >
-        <Plus size={14} /> Pergunta
-      </button>
+      <QuizQuestionsEditor questions={questions} onChange={setQuestions} />
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 

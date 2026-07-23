@@ -1,13 +1,12 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug } from "@/lib/courseCache";
 import { buildCourseSequence, hrefFor } from "@/lib/courseSequence";
 import { LessonBody } from "@/components/course/LessonBody";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
+import { LessonTitleHeading } from "@/components/course/LessonTitleHeading";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
 import { LessonEngagementBar } from "@/components/course/LessonEngagementBar";
 import { LessonComments, type CommentData } from "@/components/course/LessonComments";
@@ -45,7 +44,7 @@ export default async function LessonPage({
   const isOwner =
     course.instructorId === session.user.id || course.collaborators.some((c) => c.id === session.user.id);
 
-  const moduleQuizIds = course.modules.map((m) => m.quiz?.id).filter((id): id is string => Boolean(id));
+  const moduleQuizIds = course.modules.flatMap((m) => m.quizzes.map((q) => q.id));
   const lessonQuizIds = allLessons.map((l) => l.quiz?.id).filter((id): id is string => Boolean(id));
   const allQuizIds = [...moduleQuizIds, ...lessonQuizIds, ...(course.quiz ? [course.quiz.id] : [])];
 
@@ -102,11 +101,12 @@ export default async function LessonPage({
   const sequence = buildCourseSequence(
     course.modules.map((m) => ({
       title: m.title,
-      quizId: m.quiz?.id ?? null,
+      quizzes: m.quizzes.map((q) => ({ id: q.id, title: q.title, order: q.order })),
       lessons: m.lessons.map((l) => ({
         id: l.id,
         title: l.title,
         isFreePreview: l.isFreePreview,
+        order: l.order,
         quizId: l.quiz?.id ?? null,
       })),
     })),
@@ -152,18 +152,19 @@ export default async function LessonPage({
       modules={course.modules.map((m) => ({
         id: m.id,
         title: m.title,
-        quizId: m.quiz?.id ?? null,
+        quizzes: m.quizzes.map((q) => ({ id: q.id, title: q.title, order: q.order })),
         lessons: m.lessons.map((l) => ({
           id: l.id,
           title: l.title,
           isFreePreview: l.isFreePreview,
           durationSeconds: l.durationSeconds,
           type: l.type,
+          order: l.order,
           quizId: l.quiz?.id ?? null,
         })),
       }))}
       progressByLessonId={progressByLessonId}
-      doneQuizIds={doneQuizIds}
+      doneQuizIds={Array.from(doneQuizIds)}
       finalQuizId={course.quiz?.id ?? null}
       isOwner={isOwner}
       isEnrolled={isEnrolled}
@@ -184,37 +185,11 @@ export default async function LessonPage({
       >
         <LessonBody
           courseSlug={slug}
-          nav={
-            <div className="flex items-center justify-between">
-              {previousHref && previousItem && (
-                <Link
-                  href={previousHref}
-                  prefetch
-                  className="inline-flex min-w-0 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                >
-                  <ArrowLeft size={14} className="shrink-0" />
-                  <span className="truncate">
-                    Aula anterior<span className="hidden sm:inline">: {previousItem.title}</span>
-                  </span>
-                </Link>
-              )}
-              {nextHref && nextItem && (
-                <Link
-                  href={nextHref}
-                  prefetch
-                  className="ml-auto inline-flex min-w-0 items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
-                >
-                  <span className="truncate">
-                    Próxima aula<span className="hidden sm:inline">: {nextItem.title}</span>
-                  </span>
-                  <ArrowRight size={14} className="shrink-0" />
-                </Link>
-              )}
-            </div>
-          }
+          previousTitle={previousItem?.title ?? null}
+          nextTitle={nextItem?.title ?? null}
           title={
             <>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{lesson.title}</h1>
+              <LessonTitleHeading lessonId={lessonId} title={lesson.title} />
               {lesson.contributors.length > 0 && (
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Envolvidos nesta aula: {lesson.contributors.map((c) => c.name).join(", ")}

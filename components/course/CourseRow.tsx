@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { LazyMount } from "@/components/course/LazyMount";
 import { PosterCard } from "@/components/course/PosterCard";
 import type { CourseCardData } from "@/components/course/CourseCard";
 import { useCardTransition, type TransitionKind } from "@/components/course/CardTransitionContext";
@@ -19,6 +20,7 @@ export function CourseRow({
   progressBySlug,
   hidePriceBySlug,
   destinationKindBySlug,
+  rankBySlug,
 }: {
   title: string;
   courses: CourseCardData[];
@@ -26,6 +28,7 @@ export function CourseRow({
   progressBySlug?: Record<string, number>;
   hidePriceBySlug?: Record<string, boolean>;
   destinationKindBySlug?: Record<string, TransitionKind>;
+  rankBySlug?: Record<string, number>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -35,6 +38,10 @@ export function CourseRow({
   // O mesmo curso pode aparecer em várias rows (Populares, Recentes, categoria...)
   // — comparar por slug faria todas essas instâncias expandirem juntas. Cada
   // card tem aqui um cardId próprio (rowId+índice), único mesmo repetido.
+  // Trava o zoom no card clicado (tap no mobile não passa por hoveredIndex,
+  // que só existe com mouse) — CourseTile.tsx força este mesmo scale (sem
+  // transição) só para medir a posição final antes de chamar start(), por
+  // isso não há corrida entre o card real e o clone.
   const transitioningIndex = state && !state.arrived ? courses.findIndex((_, i) => state.cardId === `${rowId}-${i}`) : -1;
   const activeIndex = transitioningIndex !== -1 ? transitioningIndex : hoveredIndex;
 
@@ -58,53 +65,61 @@ export function CourseRow({
 
       <div
         ref={scrollRef}
-        className="scrollbar-hide flex gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-4 py-8 sm:gap-4 sm:px-8"
+        // items-start: sem isto, o default (stretch) esticava cada wrapper até
+        // à altura do card mais alto da linha (ex: cursos com rating vs sem
+        // rating têm alturas diferentes) — o centro vertical do
+        // transform-origin real ficava mais abaixo do que a altura do próprio
+        // <Link>, desalinhando a matemática do zoom (CourseTile.tsx) que usa
+        // a rect do Link como proxy do wrapper.
+        className="scrollbar-hide flex items-start gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-4 py-8 sm:gap-4 sm:px-8"
         onMouseLeave={() => setHoveredIndex(null)}
       >
         {courses.map((course, i) => {
           const cardId = `${rowId}-${i}`;
-          // Esta wrapper (item de flex) cria o seu próprio stacking context por causa
-          // do zIndex inline — se não subir o dela também, o z-index elevado do
-          // CourseTile fica preso cá dentro e não escapa ao FadeOutScrim lá fora.
-          const isTransitioning = state?.cardId === cardId && !state.arrived;
           const scaled = activeIndex === i;
-          // Cards nas pontas crescem só para um lado (origem left/right, não
-          // center) — toda a expansão cai em cima do vizinho desse lado, por
-          // isso só ele (o imediato) precisa do dobro do afastamento, não a
-          // linha toda.
+          // Card numa ponta cresce só para um lado (origem left/right, não
+          // center) — toda a expansão (não metade) cai em cima desse lado.
+          // É uma cadeia rígida de larguras/gaps fixos: o vizinho imediato
+          // absorve o deslocamento inteiro, e todos os cards mais além dele
+          // têm de herdar o MESMO deslocamento (não diminui com a distância)
+          // para os gaps entre eles continuarem constantes — só o lado
+          // oposto à ponta é que nunca cresce, esse fica sem empurrão.
           const activeIsLeftEdge = activeIndex === 0;
           const activeIsRightEdge = activeIndex === courses.length - 1;
-          const isDoubleLeftPush = activeIsRightEdge && i === (activeIndex as number) - 1;
-          const isDoubleRightPush = activeIsLeftEdge && i === (activeIndex as number) + 1;
           const pushClass = scaled
             ? "scale-[1.15]"
             : activeIndex !== null && i < activeIndex
-              ? isDoubleLeftPush
+              ? activeIsRightEdge
                 ? "-translate-x-[38px] sm:-translate-x-[44px]"
                 : "-translate-x-[19px] sm:-translate-x-[22px]"
               : activeIndex !== null && i > activeIndex
-                ? isDoubleRightPush
+                ? activeIsLeftEdge
                   ? "translate-x-[38px] sm:translate-x-[44px]"
                   : "translate-x-[19px] sm:translate-x-[22px]"
                 : "";
+          const zoomOrigin = i === 0 ? "left" : i === courses.length - 1 ? "right" : "center";
           return (
             <div
               key={course.slug}
               onMouseEnter={() => setHoveredIndex(i)}
               className={`shrink-0 transition-transform duration-300 ease-out ${pushClass}`}
               style={{
-                transformOrigin: i === 0 ? "left center" : i === courses.length - 1 ? "right center" : "center center",
-                zIndex: isTransitioning ? 950 : scaled ? 20 : 1,
+                transformOrigin: `${zoomOrigin} center`,
+                zIndex: scaled ? 20 : 1,
               }}
             >
-              <PosterCard
-                course={course}
-                href={hrefBySlug?.[course.slug]}
-                progressPercent={progressBySlug?.[course.slug]}
-                hidePrice={hidePriceBySlug?.[course.slug]}
-                destinationKind={destinationKindBySlug?.[course.slug]}
-                cardId={cardId}
-              />
+              <LazyMount className="w-64 shrink-0 sm:w-72" minHeight={230}>
+                <PosterCard
+                  course={course}
+                  href={hrefBySlug?.[course.slug]}
+                  progressPercent={progressBySlug?.[course.slug]}
+                  hidePrice={hidePriceBySlug?.[course.slug]}
+                  destinationKind={destinationKindBySlug?.[course.slug]}
+                  cardId={cardId}
+                  rowZoom
+                  rank={rankBySlug?.[course.slug]}
+                />
+              </LazyMount>
             </div>
           );
         })}

@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Video, Type as TypeIcon } from "lucide-react";
 import { Badge } from "@/components/ui/Card";
-import { LessonForm } from "@/components/instructor/LessonForm";
+import { FadeLink } from "@/components/course/FadeLink";
 import type { QuizData } from "@/components/instructor/QuizEditor";
 
 export interface LessonResourceData {
   id: string;
   name: string;
   url: string;
+  type: "PDF" | "IMAGE" | "VIDEO" | "OTHER" | "SLIDES";
 }
 
 export interface LessonData {
@@ -21,6 +20,7 @@ export interface LessonData {
   isFreePreview: boolean;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  thumbnailUrl?: string | null;
   textContent?: string | null;
   durationSeconds: number | null;
   description?: string | null;
@@ -29,17 +29,21 @@ export interface LessonData {
   quiz?: QuizData | null;
 }
 
+// Edição já não é inline (form a expandir por baixo) — "Editar" leva à tela
+// dedicada (components/instructor/LessonEditScreen.tsx), com o conteúdo
+// dividido em cards separados, mais fácil de navegar que um formulário único.
 export function LessonRow({
   lesson,
+  courseId,
+  moduleId,
   courseSlug,
-  courseAuthors,
 }: {
   lesson: LessonData;
+  courseId: string;
+  moduleId: string;
   courseSlug: string;
-  courseAuthors: { id: string; name: string }[];
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
 
   async function handleDelete() {
     if (!confirm(`Eliminar a aula "${lesson.title}"?`)) return;
@@ -47,44 +51,32 @@ export function LessonRow({
     if (res.ok) router.refresh();
   }
 
-  if (editing) {
-    return (
-      <LessonForm
-        moduleId={null}
-        lesson={lesson}
-        nextOrder={lesson.order}
-        courseAuthors={courseAuthors}
-        onDone={() => {
-          setEditing(false);
-          router.refresh();
-        }}
-        onCancel={() => setEditing(false)}
-      />
-    );
-  }
-
   return (
-    <div className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2 dark:border-white/10">
-      <div className="flex items-center gap-2 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-y-1.5 rounded-md border border-slate-100 px-3 py-2 dark:border-white/10">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
         {lesson.type === "TEXT" ? (
-          <TypeIcon size={16} className="text-slate-400 dark:text-slate-500" />
+          <TypeIcon size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
         ) : (
-          <Video size={16} className="text-slate-400 dark:text-slate-500" />
+          <Video size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
         )}
-        <span>{lesson.title}</span>
+        <span className="truncate">{lesson.title}</span>
         {lesson.isFreePreview && <Badge tone="success">Preview grátis</Badge>}
         {lesson.resources.length > 0 && <Badge>{lesson.resources.length} anexo(s)</Badge>}
+        {lesson.quiz && <Badge tone="info">Quiz da aula</Badge>}
       </div>
-      <div className="flex items-center gap-3 text-sm">
-        <Link
+      <div className="flex shrink-0 items-center gap-3 text-sm">
+        <FadeLink
           href={`/courses/${courseSlug}/lessons/${lesson.id}`}
           className="text-slate-400 hover:text-slate-900 dark:text-slate-500 dark:hover:text-white"
         >
           Ver
-        </Link>
-        <button onClick={() => setEditing(true)} className="text-slate-700 hover:underline dark:text-slate-300">
+        </FadeLink>
+        <FadeLink
+          href={`/instructor/courses/${courseId}/modules/${moduleId}/lessons/${lesson.id}`}
+          className="text-slate-700 hover:underline dark:text-slate-300"
+        >
           Editar
-        </button>
+        </FadeLink>
         <button onClick={handleDelete} className="text-red-600 hover:underline dark:text-red-400">
           Eliminar
         </button>

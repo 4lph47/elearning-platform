@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { moduleSchema } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
+import { syncCourseThumbnail } from "@/lib/courseThumbnail";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -34,6 +35,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!courseModule) return NextResponse.json({ error: "Módulo não encontrado" }, { status: 404 });
 
   await prisma.module.delete({ where: { id: moduleId } });
+  await syncCourseThumbnail(courseModule.course.id);
   revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

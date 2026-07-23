@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug, getCachedRelatedCourses } from "@/lib/courseCache";
 import { EnrollButton } from "@/components/course/EnrollButton";
 import { AddToCartButton } from "@/components/course/AddToCartButton";
+import { ContinueCourseLink } from "@/components/course/ContinueCourseLink";
+import { CourseBelowFoldReveal } from "@/components/course/CourseBelowFoldReveal";
 import { CourseDetailTabs } from "@/components/course/CourseDetailTabs";
 import { CourseHero } from "@/components/course/CourseHero";
 import { CourseRow } from "@/components/course/CourseRow";
@@ -39,7 +41,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   const firstLesson = allLessons[0];
   const totalDuration = allLessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
   const totalResources = allLessons.reduce((sum, l) => sum + l._count.resources, 0);
-  const moduleQuizIds = course.modules.map((m) => m.quiz?.id).filter((id): id is string => Boolean(id));
+  const moduleQuizIds = course.modules.flatMap((m) => m.quizzes.map((q) => q.id));
   const lessonQuizIds = allLessons.map((l) => l.quiz?.id).filter((id): id is string => Boolean(id));
   const allQuizIds = [...moduleQuizIds, ...lessonQuizIds, ...(course.quiz ? [course.quiz.id] : [])];
 
@@ -206,6 +208,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         thumbnailUrl={course.thumbnailUrl}
       />
 
+      <CourseBelowFoldReveal slug={course.slug}>
       <div className="mx-auto max-w-7xl px-3 py-10 sm:px-6">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
@@ -311,11 +314,22 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                     </p>
                   </Link>
                 ) : isEnrolled ? (
-                  <Link href={firstLesson ? `/courses/${course.slug}/lessons/${firstLesson.id}` : "#"} prefetch>
-                    <p className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500">
+                  firstLesson ? (
+                    <ContinueCourseLink
+                      courseSlug={course.slug}
+                      href={`/courses/${course.slug}/lessons/${firstLesson.id}`}
+                      destinationKind={firstLesson.type === "VIDEO" ? "lesson-video" : "lesson-text"}
+                      className="block"
+                    >
+                      <p className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500">
+                        Continuar curso
+                      </p>
+                    </ContinueCourseLink>
+                  ) : (
+                    <p className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white opacity-60">
                       Continuar curso
                     </p>
-                  </Link>
+                  )
                 ) : (
                   <>
                     <EnrollButton
@@ -494,6 +508,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           <CourseRow title="Os alunos também compraram" courses={alsoBought} hidePriceBySlug={hidePriceBySlug} />
         )}
       </div>
+      </CourseBelowFoldReveal>
     </div>
   );
 }

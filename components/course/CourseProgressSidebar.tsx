@@ -1,5 +1,10 @@
+"use client";
+
+import { Fragment, useRef } from "react";
 import Link from "next/link";
 import { ChevronDown, Check, Monitor, Type as TypeIcon, HelpCircle, ClipboardCheck, Lock } from "lucide-react";
+import { textBoxFromElement } from "@/components/course/CardTransitionContext";
+import { useTextFly } from "@/components/course/TextFlyContext";
 
 interface LessonItem {
   id: string;
@@ -7,14 +12,21 @@ interface LessonItem {
   isFreePreview: boolean;
   durationSeconds: number | null;
   type: "VIDEO" | "TEXT";
+  order: number;
   quizId: string | null;
+}
+
+interface ModuleQuizItem {
+  id: string;
+  title: string;
+  order: number;
 }
 
 interface ModuleItem {
   id: string;
   title: string;
   lessons: LessonItem[];
-  quizId: string | null;
+  quizzes: ModuleQuizItem[];
 }
 
 function LessonTypeIcon({ type }: { type: "VIDEO" | "TEXT" }) {
@@ -31,6 +43,20 @@ function DoneBadge() {
       <Check size={10} strokeWidth={3} className="text-white" />
     </span>
   );
+}
+
+// Aula+quiz próprio (item.kind "lesson") ou quiz de módulo (item.kind "quiz")
+// intercalados por `order` — mesma posição que o instrutor definiu ao
+// arrastar (ver app/api/instructor/modules/[moduleId]/reorder/route.ts).
+type MergedEntry =
+  | { kind: "lesson"; order: number; lesson: LessonItem }
+  | { kind: "quiz"; order: number; quiz: ModuleQuizItem };
+
+function mergeModuleItems(module: ModuleItem): MergedEntry[] {
+  return [
+    ...module.lessons.map((lesson) => ({ kind: "lesson" as const, order: lesson.order, lesson })),
+    ...module.quizzes.map((quiz) => ({ kind: "quiz" as const, order: quiz.order, quiz })),
+  ].sort((a, b) => a.order - b.order);
 }
 
 export function CourseProgressSidebar({
@@ -50,7 +76,7 @@ export function CourseProgressSidebar({
   slug: string;
   modules: ModuleItem[];
   progressByLessonId: Record<string, boolean>;
-  doneQuizIds: Set<string>;
+  doneQuizIds: string[];
   finalQuizId?: string | null;
   isOwner: boolean;
   isEnrolled: boolean;
@@ -61,6 +87,15 @@ export function CourseProgressSidebar({
   totalLessons: number;
 }) {
   const quizAccessible = isOwner || isEnrolled;
+  const doneQuizIdSet = new Set(doneQuizIds);
+  const { state: textFlyState, start: startTitleFly } = useTextFly();
+  const titleRefs = useRef(new Map<string, HTMLSpanElement>());
+
+  function handleLessonClick(lessonId: string, title: string) {
+    const el = titleRefs.current.get(lessonId);
+    if (!el) return;
+    startTitleFly(lessonId, title, textBoxFromElement(el));
+  }
 
   return (
     <div className="sticky top-20 rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900">
@@ -93,79 +128,124 @@ export function CourseProgressSidebar({
                 <ChevronDown size={14} className="shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
               </summary>
               <ul>
-                {module.lessons.map((l) => {
-                  const accessible = isOwner || isEnrolled || l.isFreePreview;
-                  const isCurrent = l.id === currentLessonId;
-                  const isDone = progressByLessonId[l.id];
-                  return (
-                    <li key={l.id}>
-                      {accessible ? (
-                        <Link
-                          href={`/courses/${slug}/lessons/${l.id}`}
-                          className={`flex items-center gap-2 border-l-4 px-4 py-2 text-sm ${
-                            isCurrent
-                              ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
-                              : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
-                          }`}
-                        >
-                          {isDone ? <DoneBadge /> : <LessonTypeIcon type={l.type} />}
-                          <span className="flex-1">{l.title}</span>
-                          {l.durationSeconds && (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">{Math.round(l.durationSeconds / 60)}min</span>
-                          )}
-                        </Link>
-                      ) : (
-                        <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-400 dark:text-slate-500">
-                          <Lock size={16} className="shrink-0" />
-                          <span className="flex-1">{l.title}</span>
-                        </span>
-                      )}
-                      {l.quizId && (
-                        accessible ? (
+                {mergeModuleItems(module).map((entry) => {
+                  if (entry.kind === "quiz") {
+                    const quiz = entry.quiz;
+                    return (
+                      <li key={quiz.id}>
+                        {quizAccessible ? (
                           <Link
-                            href={`/courses/${slug}/quiz/${l.quizId}`}
-                            className={`flex items-center gap-2 border-l-4 px-4 py-2 pl-8 text-sm ${
-                              l.quizId === currentQuizId
+                            href={`/courses/${slug}/quiz/${quiz.id}`}
+                            prefetch
+                            onClick={() => handleLessonClick(quiz.id, `Quiz · ${quiz.title}`)}
+                            className={`flex items-center gap-2 border-l-4 px-4 py-2 text-sm ${
+                              quiz.id === currentQuizId
                                 ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
                                 : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
                             }`}
                           >
-                            {doneQuizIds.has(l.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
-                            <span className="flex-1">Quiz · {l.title}</span>
+                            {doneQuizIdSet.has(quiz.id) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
+                            <span
+                              ref={(el) => {
+                                if (el) titleRefs.current.set(quiz.id, el);
+                              }}
+                              style={{
+                                visibility: textFlyState?.id === quiz.id && !textFlyState.revealed ? "hidden" : "visible",
+                              }}
+                              className="flex-1"
+                            >
+                              Quiz · {quiz.title}
+                            </span>
                           </Link>
                         ) : (
-                          <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 pl-8 text-sm text-slate-400 dark:text-slate-500">
+                          <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-400 dark:text-slate-500">
                             <Lock size={16} className="shrink-0" />
-                            <span className="flex-1">Quiz · {l.title}</span>
+                            <span className="flex-1">Quiz · {quiz.title}</span>
                           </span>
-                        )
+                        )}
+                      </li>
+                    );
+                  }
+
+                  const l = entry.lesson;
+                  const accessible = isOwner || isEnrolled || l.isFreePreview;
+                  const isCurrent = l.id === currentLessonId;
+                  const isDone = progressByLessonId[l.id];
+                  return (
+                    <Fragment key={l.id}>
+                      <li>
+                        {accessible ? (
+                          <Link
+                            href={`/courses/${slug}/lessons/${l.id}`}
+                            prefetch
+                            onClick={() => handleLessonClick(l.id, l.title)}
+                            className={`flex items-center gap-2 border-l-4 px-4 py-2 text-sm ${
+                              isCurrent
+                                ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
+                                : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                            }`}
+                          >
+                            {isDone ? <DoneBadge /> : <LessonTypeIcon type={l.type} />}
+                            <span
+                              ref={(el) => {
+                                if (el) titleRefs.current.set(l.id, el);
+                              }}
+                              style={{
+                                visibility: textFlyState?.id === l.id && !textFlyState.revealed ? "hidden" : "visible",
+                              }}
+                              className="flex-1"
+                            >
+                              {l.title}
+                            </span>
+                            {l.durationSeconds && (
+                              <span className="text-xs text-slate-400 dark:text-slate-500">{Math.round(l.durationSeconds / 60)}min</span>
+                            )}
+                          </Link>
+                        ) : (
+                          <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-400 dark:text-slate-500">
+                            <Lock size={16} className="shrink-0" />
+                            <span className="flex-1">{l.title}</span>
+                          </span>
+                        )}
+                      </li>
+                      {l.quizId && (
+                        <li>
+                          {accessible ? (
+                            <Link
+                              href={`/courses/${slug}/quiz/${l.quizId}`}
+                              prefetch
+                              onClick={() => handleLessonClick(l.quizId!, `Quiz · ${l.title}`)}
+                              className={`flex items-center gap-2 border-l-4 px-4 py-2 pl-8 text-sm ${
+                                l.quizId === currentQuizId
+                                  ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
+                                  : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                              }`}
+                            >
+                              {doneQuizIdSet.has(l.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
+                              <span
+                                ref={(el) => {
+                                  if (el && l.quizId) titleRefs.current.set(l.quizId, el);
+                                }}
+                                style={{
+                                  visibility:
+                                    textFlyState?.id === l.quizId && !textFlyState.revealed ? "hidden" : "visible",
+                                }}
+                                className="flex-1"
+                              >
+                                Quiz · {l.title}
+                              </span>
+                            </Link>
+                          ) : (
+                            <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 pl-8 text-sm text-slate-400 dark:text-slate-500">
+                              <Lock size={16} className="shrink-0" />
+                              <span className="flex-1">Quiz · {l.title}</span>
+                            </span>
+                          )}
+                        </li>
                       )}
-                    </li>
+                    </Fragment>
                   );
                 })}
-
-                {module.quizId && (
-                  <li>
-                    {quizAccessible ? (
-                      <Link
-                        href={`/courses/${slug}/quiz/${module.quizId}`}
-                        className={`flex items-center gap-2 border-l-4 px-4 py-2 text-sm ${
-                          module.quizId === currentQuizId
-                            ? "border-blue-500 bg-blue-600/10 text-slate-900 dark:text-white"
-                            : "border-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
-                        }`}
-                      >
-                        {doneQuizIds.has(module.quizId) ? <DoneBadge /> : <HelpCircle size={16} className="shrink-0 text-slate-600" />}
-                        <span className="flex-1">Quiz · {module.title}</span>
-                      </Link>
-                    ) : (
-                      <span className="flex items-center gap-2 border-l-4 border-transparent px-4 py-2 text-sm text-slate-400 dark:text-slate-500">
-                        <Lock size={16} className="shrink-0" />
-                        <span className="flex-1">Quiz · {module.title}</span>
-                      </span>
-                    )}
-                  </li>
-                )}
               </ul>
             </details>
           </div>
@@ -176,14 +256,26 @@ export function CourseProgressSidebar({
             {quizAccessible ? (
               <Link
                 href={`/courses/${slug}/quiz/${finalQuizId}`}
+                prefetch
+                onClick={() => handleLessonClick(finalQuizId, "Exame final do curso")}
                 className={`flex items-center gap-2 px-4 py-3 text-sm ${
                   finalQuizId === currentQuizId
                     ? "text-slate-900 dark:text-white"
                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
                 }`}
               >
-                {doneQuizIds.has(finalQuizId) ? <DoneBadge /> : <ClipboardCheck size={16} className="shrink-0 text-slate-600" />}
-                <span className="flex-1 font-medium">Exame final do curso</span>
+                {doneQuizIdSet.has(finalQuizId) ? <DoneBadge /> : <ClipboardCheck size={16} className="shrink-0 text-slate-600" />}
+                <span
+                  ref={(el) => {
+                    if (el) titleRefs.current.set(finalQuizId, el);
+                  }}
+                  style={{
+                    visibility: textFlyState?.id === finalQuizId && !textFlyState.revealed ? "hidden" : "visible",
+                  }}
+                  className="flex-1 font-medium"
+                >
+                  Exame final do curso
+                </span>
               </Link>
             ) : (
               <span className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400 dark:text-slate-500">

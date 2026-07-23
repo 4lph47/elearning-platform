@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { textBoxFromElement } from "@/components/course/CardTransitionContext";
+import { useTextFly } from "@/components/course/TextFlyContext";
 
 interface QuizOption {
   id: string;
@@ -48,6 +50,19 @@ export function QuizPlayer({
   );
   const answersRef = useRef(answers);
   answersRef.current = answers;
+
+  // Recebe o título a voar de um link de quiz clicado (currículo/progresso) —
+  // mesmo padrão de LessonTitleHeading.tsx.
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const { state: textFlyState, arrive: arriveTitleFly } = useTextFly();
+  const titleFlyPending = textFlyState?.id === quizId && !textFlyState.arrived;
+  const titleHidden = textFlyState?.id === quizId && !textFlyState.revealed;
+
+  useEffect(() => {
+    if (!titleFlyPending || !titleRef.current) return;
+    arriveTitleFly(quizId, textBoxFromElement(titleRef.current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [titleFlyPending, quizId]);
 
   const outOfAttempts = maxAttempts != null && attemptsSoFar >= maxAttempts;
   const allAnswered = questions.every((q) => answers[q.id]);
@@ -98,7 +113,13 @@ export function QuizPlayer({
   if (outOfAttempts && !result) {
     return (
       <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+        <h2
+          ref={titleRef}
+          style={{ visibility: titleHidden ? "hidden" : "visible" }}
+          className="text-lg font-semibold text-slate-900 dark:text-white"
+        >
+          {title}
+        </h2>
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
           Já usaste todas as tentativas disponíveis para este quiz ({maxAttempts}).
         </p>
@@ -111,7 +132,13 @@ export function QuizPlayer({
   return (
     <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="min-w-0 flex-1 break-words text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+        <h2
+          ref={titleRef}
+          style={{ visibility: titleHidden ? "hidden" : "visible" }}
+          className="min-w-0 flex-1 break-words text-lg font-semibold text-slate-900 dark:text-white"
+        >
+          {title}
+        </h2>
         {secondsLeft !== null && !result && (
           <span
             className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${

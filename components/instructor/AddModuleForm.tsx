@@ -36,13 +36,17 @@ export function AddModuleForm({ courseId, nextOrder }: { courseId: string; nextO
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900"
+    >
       <Input
         placeholder="Título do módulo"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
         autoFocus
+        className="min-w-0 flex-1 basis-40"
       />
       <Button type="submit" disabled={loading}>
         Adicionar

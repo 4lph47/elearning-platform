@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedLesson } from "@/lib/instructor-guard";
 import { deleteQuiz } from "@/lib/quiz";
+import { syncCourseThumbnail } from "@/lib/courseThumbnail";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -48,6 +49,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
     });
   }
 
+  if ("thumbnailUrl" in parsed.data) {
+    await syncCourseThumbnail(lesson.module.course.id);
+  }
+
   revalidateTag("courses");
   return NextResponse.json(updated);
 }
@@ -61,6 +66,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!lesson) return NextResponse.json({ error: "Aula não encontrada" }, { status: 404 });
 
   await prisma.lesson.delete({ where: { id: lessonId } });
+  await syncCourseThumbnail(lesson.module.course.id);
   revalidateTag("courses");
   return NextResponse.json({ ok: true });
 }

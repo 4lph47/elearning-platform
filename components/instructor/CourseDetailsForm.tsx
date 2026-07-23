@@ -6,7 +6,7 @@ import { Star, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card, Badge } from "@/components/ui/Card";
-import { QuizEditor, type QuizData } from "@/components/instructor/QuizEditor";
+import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 
 interface CourseData {
@@ -81,6 +81,11 @@ function EditableListField({
   );
 }
 
+// Antes era um único <Card> gigante com tudo lá dentro — agora dividido em
+// cards por assunto (Detalhes e preço / Marketing / Colaboração / Quiz
+// final), mesma ideia da própria página da aula (conteúdo em cards
+// separados, não um formulário só). Continua um único <form>/pedido ao
+// guardar — as cards são só organização visual.
 export function CourseDetailsForm({ course, otherCourses }: { course: CourseData; otherCourses: { id: string; title: string }[] }) {
   const router = useRouter();
   const [title, setTitle] = useState(course.title);
@@ -159,10 +164,18 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   }
 
   return (
-    <Card className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold">Editar curso</h1>
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          Editar curso
+        </p>
+        <h1 className="mt-2 truncate text-2xl font-bold text-slate-900 dark:text-white">
+          {title || "Sem título"}
+        </h1>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge tone={course.published ? "success" : "warning"}>
             {course.published ? "Publicado" : "Rascunho"}
           </Badge>
@@ -174,11 +187,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           )}
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => save({ published: !course.published })}
-            disabled={saving}
-          >
+          <Button variant="outline" onClick={() => save({ published: !course.published })} disabled={saving}>
             {course.published ? "Despublicar" : "Publicar"}
           </Button>
           <Button variant="danger" onClick={handleDelete}>
@@ -194,152 +203,158 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         }}
         className="space-y-4"
       >
-        <div>
-          <Label htmlFor="title">Título</Label>
-          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="description">Descrição</Label>
-          <Textarea id="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <Card className="space-y-4 p-6">
+          <h2 className="font-medium">Detalhes e preço</h2>
           <div>
-            <Label htmlFor="category">Categoria</Label>
-            <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
+            <Label htmlFor="title">Título</Label>
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="level">Nível</Label>
-            <select
-              id="level"
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
-            >
-              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="beginner">Iniciante</option>
-              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="intermediate">Intermédio</option>
-              <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="advanced">Avançado</option>
-            </select>
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea id="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <div>
-            <Label htmlFor="price">Preço (€, 0 = grátis)</Label>
-            <Input
-              id="price"
-              type="number"
-              min={0}
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="originalPrice">Preço original (€, opcional)</Label>
-            <Input
-              id="originalPrice"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="Ex.: 59.99"
-              value={originalPrice}
-              onChange={(e) => setOriginalPrice(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label>Trailer do curso</Label>
-          <FileUploadInput kind="VIDEO" onUploaded={(r) => setTrailerUrl(r.url)} />
-          <p className="my-1.5 text-center text-xs text-slate-400 dark:text-slate-500">ou</p>
-          <Input
-            placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
-            defaultValue={trailerUrl?.includes("youtu") ? trailerUrl : ""}
-            onBlur={(e) => e.target.value && setTrailerUrl(e.target.value)}
-          />
-          {trailerUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Trailer atual: {trailerUrl}</p>}
-        </div>
-
-        <EditableListField label="O que os alunos vão aprender" placeholder="Ex.: Fundamentos práticos" list={outcomes} />
-        <EditableListField label="Requisitos" placeholder="Ex.: Conhecimentos básicos de JavaScript" list={requirements} />
-        <EditableListField label="Para quem é este curso" placeholder="Ex.: Iniciantes que querem mudar de carreira" list={audience} />
-        <EditableListField label="Tópicos relacionados" placeholder="Ex.: React, TypeScript, APIs" list={topics} />
-
-        <div>
-          <Label>Bundle (comprados frequentemente em conjunto)</Label>
-          <Input
-            placeholder="Nome do bundle, ex.: Pacote Data Science Completo"
-            value={bundleName}
-            onChange={(e) => setBundleName(e.target.value)}
-          />
-          {bundleName.trim() && (
-            <div className="mt-2 space-y-1.5 rounded-md border border-slate-200 p-3 dark:border-white/10">
-              {otherCourses.length === 0 ? (
-                <p className="text-xs text-slate-500">Não tens outros cursos publicados para incluir no bundle.</p>
-              ) : (
-                otherCourses.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={bundleCourseIds.includes(c.id)}
-                      onChange={() => toggleBundleCourse(c.id)}
-                      className="rounded border-slate-300"
-                    />
-                    {c.title}
-                  </label>
-                ))
-              )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div>
+              <Label htmlFor="category">Categoria</Label>
+              <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
             </div>
-          )}
-        </div>
-
-        <div>
-          <Label>Colaboradores (co-autores deste curso)</Label>
-          <p className="mb-2 text-xs text-slate-500">
-            Colaboradores ganham acesso total de edição a este curso, tal como tu.
-          </p>
-          <div className="space-y-1.5">
-            {collaborators.map((c) => (
-              <div
-                key={c.email}
-                className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-1.5 text-sm dark:border-white/10"
+            <div>
+              <Label htmlFor="level">Nível</Label>
+              <select
+                id="level"
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
               >
-                <span>{c.name !== c.email ? `${c.name} (${c.email})` : c.email}</span>
-                <button
-                  type="button"
-                  onClick={() => removeCollaborator(c.email)}
-                  className="text-xs text-red-600 hover:underline dark:text-red-400"
-                >
-                  remover
-                </button>
-              </div>
-            ))}
+                <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="beginner">Iniciante</option>
+                <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="intermediate">Intermédio</option>
+                <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="advanced">Avançado</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="price">Preço (€, 0 = grátis)</Label>
+              <Input
+                id="price"
+                type="number"
+                min={0}
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="originalPrice">Preço original (€, opcional)</Label>
+              <Input
+                id="originalPrice"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Ex.: 59.99"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="mt-2 flex gap-2">
+        </Card>
+
+        <Card className="space-y-4 p-6">
+          <h2 className="font-medium">Marketing</h2>
+          <div>
+            <Label>Trailer do curso</Label>
+            <FileUploadInput kind="VIDEO" onUploaded={(r) => setTrailerUrl(r.url)} />
+            <p className="my-1.5 text-center text-xs text-slate-400 dark:text-slate-500">ou</p>
             <Input
-              type="email"
-              placeholder="email@exemplo.com"
-              value={newCollaboratorEmail}
-              onChange={(e) => setNewCollaboratorEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addCollaborator();
-                }
-              }}
+              placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
+              defaultValue={trailerUrl?.includes("youtu") ? trailerUrl : ""}
+              onBlur={(e) => e.target.value && setTrailerUrl(e.target.value)}
             />
-            <Button type="button" variant="outline" onClick={addCollaborator}>
-              Adicionar
-            </Button>
+            {trailerUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Trailer atual: {trailerUrl}</p>}
           </div>
-        </div>
+
+          <EditableListField label="O que os alunos vão aprender" placeholder="Ex.: Fundamentos práticos" list={outcomes} />
+          <EditableListField label="Requisitos" placeholder="Ex.: Conhecimentos básicos de JavaScript" list={requirements} />
+          <EditableListField label="Para quem é este curso" placeholder="Ex.: Iniciantes que querem mudar de carreira" list={audience} />
+          <EditableListField label="Tópicos relacionados" placeholder="Ex.: React, TypeScript, APIs" list={topics} />
+        </Card>
+
+        <Card className="space-y-4 p-6">
+          <h2 className="font-medium">Colaboração</h2>
+          <div>
+            <Label>Bundle (comprados frequentemente em conjunto)</Label>
+            <Input
+              placeholder="Nome do bundle, ex.: Pacote Data Science Completo"
+              value={bundleName}
+              onChange={(e) => setBundleName(e.target.value)}
+            />
+            {bundleName.trim() && (
+              <div className="mt-2 space-y-1.5 rounded-md border border-slate-200 p-3 dark:border-white/10">
+                {otherCourses.length === 0 ? (
+                  <p className="text-xs text-slate-500">Não tens outros cursos publicados para incluir no bundle.</p>
+                ) : (
+                  otherCourses.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={bundleCourseIds.includes(c.id)}
+                        onChange={() => toggleBundleCourse(c.id)}
+                        className="rounded border-slate-300"
+                      />
+                      {c.title}
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Label>Colaboradores (co-autores deste curso)</Label>
+            <p className="mb-2 text-xs text-slate-500">
+              Colaboradores ganham acesso total de edição a este curso, tal como tu.
+            </p>
+            <div className="space-y-1.5">
+              {collaborators.map((c) => (
+                <div
+                  key={c.email}
+                  className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm dark:border-white/10"
+                >
+                  <span className="min-w-0 truncate">{c.name !== c.email ? `${c.name} (${c.email})` : c.email}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCollaborator(c.email)}
+                    className="shrink-0 text-xs text-red-600 hover:underline dark:text-red-400"
+                  >
+                    remover
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Input
+                type="email"
+                placeholder="email@exemplo.com"
+                value={newCollaboratorEmail}
+                onChange={(e) => setNewCollaboratorEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCollaborator();
+                  }
+                }}
+                className="min-w-0 flex-1 basis-40"
+              />
+              <Button type="button" variant="outline" onClick={addCollaborator}>
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <Button type="submit" disabled={saving}>
           {saving ? "A guardar..." : "Guardar alterações"}
         </Button>
       </form>
-
-      <div className="mt-6 border-t border-slate-200 pt-4 dark:border-white/10">
-        <QuizEditor scope="COURSE" parentId={course.id} label="Quiz final do curso" existingQuiz={course.quiz} />
-      </div>
-    </Card>
+    </div>
   );
 }

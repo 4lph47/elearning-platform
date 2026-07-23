@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useFadeNav } from "@/components/course/FadeNavContext";
 
 export function EnrollButton({
   courseId,
@@ -18,6 +19,7 @@ export function EnrollButton({
   firstLessonHref: string;
 }) {
   const router = useRouter();
+  const { fadeNavigate } = useFadeNav();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export function EnrollButton({
       return;
     }
 
-    router.push(firstLessonHref);
+    fadeNavigate(firstLessonHref);
     router.refresh();
   }
 

@@ -85,7 +85,7 @@ function LoginForm() {
             E-Learn
           </Link>
           <h1 className="mt-5 text-2xl font-bold text-slate-900 dark:text-white">Bem-vindo de volta</h1>
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Entra na tua conta para continuar a aprender</p>
+          <p className="mt-1.5 hidden text-sm text-slate-500 dark:text-slate-400 sm:block">Entra na tua conta para continuar a aprender</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">

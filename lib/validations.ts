@@ -43,6 +43,7 @@ export const lessonSchema = z.object({
   isFreePreview: z.boolean().optional().default(false),
   type: z.enum(["VIDEO", "TEXT"]).optional().default("VIDEO"),
   contentUrl: z.string().optional().nullable(),
+  thumbnailUrl: z.string().optional().nullable(),
   textContent: z.string().optional().nullable(),
   durationSeconds: z.number().int().min(0).optional().nullable(),
   description: z.string().optional().nullable(),

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CourseChatbot } from "@/components/course/CourseChatbot";
 import { ChatOpenProvider, SidebarCollapsedProvider } from "@/components/course/ChatOpenContext";
+import { textBoxFromElement } from "@/components/course/CardTransitionContext";
+import { useTextFly } from "@/components/course/TextFlyContext";
 
 export function LessonLayoutShell({
   courseSlug,
@@ -22,6 +24,9 @@ export function LessonLayoutShell({
   const [collapsed, setCollapsed] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const effectiveChatOpen = chat ? chatOpen : false;
+  const { state: textFlyState, start: startTitleFly } = useTextFly();
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const titleHidden = textFlyState?.id === courseSlug && !textFlyState.revealed;
 
   return (
     <div
@@ -30,9 +35,16 @@ export function LessonLayoutShell({
       <div className="mx-auto max-w-[1600px] px-4 pt-6">
         <Link
           href={`/courses/${courseSlug}`}
+          prefetch
+          onClick={() => {
+            if (titleRef.current) startTitleFly(courseSlug, courseTitle, textBoxFromElement(titleRef.current));
+          }}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400"
         >
-          <ArrowLeft size={15} /> {courseTitle}
+          <ArrowLeft size={15} />
+          <span ref={titleRef} style={{ visibility: titleHidden ? "hidden" : "visible" }}>
+            {courseTitle}
+          </span>
         </Link>
       </div>
 

@@ -6,7 +6,6 @@ import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/Button";
 import { CourseRow } from "@/components/course/CourseRow";
 import { HeroCarousel } from "@/components/course/HeroCarousel";
-import { ZIndexEscapeLayer } from "@/components/course/ZIndexEscapeLayer";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -201,7 +200,7 @@ export default async function Home() {
     <div className="-mt-16 bg-white pb-16 dark:bg-black">
       <HeroCarousel items={featuredCandidates} />
 
-      <ZIndexEscapeLayer className="relative z-10 -mt-10 sm:-mt-20">
+      <div className="relative z-10 -mt-10 sm:-mt-20">
         {firstName && (
           <p className="px-4 pt-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">Bem-vindo de volta, {firstName}.</p>
         )}
@@ -235,7 +234,7 @@ export default async function Home() {
             <CourseRow key={category} title={category} courses={list} hidePriceBySlug={hidePriceBySlug} />
           ))}
         </div>
-      </ZIndexEscapeLayer>
+      </div>
 
       <div className="mx-auto mt-6 max-w-6xl border-t border-slate-200 px-4 pt-10 text-center dark:border-white/10 sm:px-8">
         <div className="mx-auto grid max-w-lg grid-cols-3 gap-4">

@@ -23,7 +23,7 @@ export const getCachedCourseBySlug = unstable_cache(
         modules: {
           orderBy: { order: "asc" },
           include: {
-            quiz: { select: { id: true } },
+            quizzes: { select: { id: true, title: true, order: true }, orderBy: { order: "asc" } },
             lessons: {
               orderBy: { order: "asc" },
               include: {

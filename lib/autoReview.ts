@@ -13,7 +13,7 @@ export async function maybeCreateAutoReview(userId: string, courseId: string) {
       quiz: { select: { id: true } },
       modules: {
         include: {
-          quiz: { select: { id: true } },
+          quizzes: { select: { id: true } },
           lessons: { select: { id: true, quiz: { select: { id: true } } } },
         },
       },
@@ -25,7 +25,7 @@ export async function maybeCreateAutoReview(userId: string, courseId: string) {
   if (lessonIds.length === 0) return;
 
   const quizIds = [
-    ...course.modules.map((m) => m.quiz?.id).filter((id): id is string => Boolean(id)),
+    ...course.modules.flatMap((m) => m.quizzes.map((q) => q.id)),
     ...course.modules.flatMap((m) => m.lessons.map((l) => l.quiz?.id)).filter((id): id is string => Boolean(id)),
     ...(course.quiz ? [course.quiz.id] : []),
   ];

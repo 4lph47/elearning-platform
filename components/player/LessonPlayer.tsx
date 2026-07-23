@@ -745,12 +745,12 @@ export function LessonPlayer({
                 </div>
 
                 <div className="mt-2 flex items-center gap-3 text-white">
-                  <button onClick={togglePlay} aria-label={playing ? "Pausar" : "Reproduzir"} className="hover:text-blue-400">
+                  <button type="button" onClick={togglePlay} aria-label={playing ? "Pausar" : "Reproduzir"} className="hover:text-blue-400">
                     {playing ? <Pause size={22} /> : <Play size={22} />}
                   </button>
 
                   <div className="group/volume flex items-center">
-                    <button onClick={toggleMute} aria-label={muted ? "Ativar som" : "Silenciar"} className="flex items-center hover:text-blue-400">
+                    <button type="button" onClick={toggleMute} aria-label={muted ? "Ativar som" : "Silenciar"} className="flex items-center hover:text-blue-400">
                       {muted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
                     </button>
                     <input
@@ -776,7 +776,7 @@ export function LessonPlayer({
 
                   <div className="flex-1" />
 
-                  <button
+                  <button type="button"
                     onClick={toggleFullscreen}
                     aria-label={isFullscreen ? "Sair de ecrã inteiro" : "Ecrã inteiro"}
                     className="hover:text-blue-400"
@@ -785,7 +785,7 @@ export function LessonPlayer({
                   </button>
 
                   <div ref={menuRef} className="relative flex items-center">
-                    <button
+                    <button type="button"
                       onClick={() => setMenuOpen((v) => !v)}
                       aria-label="Definições"
                       title="Definições"
@@ -796,7 +796,7 @@ export function LessonPlayer({
 
                     {menuOpen && (
                       <div className="absolute bottom-full right-0 mb-2 w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md">
-                        <button
+                        <button type="button"
                           onClick={handleDownload}
                           className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
                         >
@@ -804,7 +804,7 @@ export function LessonPlayer({
                           Download
                         </button>
 
-                        <button
+                        <button type="button"
                           onClick={() => setSpeedOpen((v) => !v)}
                           className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
                         >
@@ -836,7 +836,7 @@ export function LessonPlayer({
 
                         {(usingHls ? hlsLevels.length > 1 : hasLegacyQualityOptions) && (
                           <>
-                            <button
+                            <button type="button"
                               onClick={() => setQualityOpen((v) => !v)}
                               className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
                             >
@@ -854,7 +854,7 @@ export function LessonPlayer({
                               <div className="pb-1">
                                 {usingHls ? (
                                   <>
-                                    <button
+                                    <button type="button"
                                       onClick={() => setHlsQuality(-1)}
                                       className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
                                         hlsCurrentLevel === -1 ? "text-blue-400" : "text-slate-300 hover:bg-white/10"
@@ -866,7 +866,7 @@ export function LessonPlayer({
                                     {[...hlsLevels]
                                       .sort((a, b) => b.height - a.height)
                                       .map((l) => (
-                                        <button
+                                        <button type="button"
                                           key={l.index}
                                           onClick={() => setHlsQuality(l.index)}
                                           className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
@@ -880,7 +880,7 @@ export function LessonPlayer({
                                   </>
                                 ) : (
                                   sortedRenditions.map((r) => (
-                                    <button
+                                    <button type="button"
                                       key={r.quality}
                                       onClick={() => setQuality(r.quality)}
                                       className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
@@ -897,7 +897,7 @@ export function LessonPlayer({
                           </>
                         )}
 
-                        <button
+                        <button type="button"
                           onClick={togglePiP}
                           className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
                         >
@@ -907,7 +907,7 @@ export function LessonPlayer({
                         </button>
 
                         {onToggleCinemaMode && (
-                          <button
+                          <button type="button"
                             onClick={() => {
                               onToggleCinemaMode();
                               setMenuOpen(false);
@@ -943,7 +943,7 @@ export function LessonPlayer({
                   style={{ position: "absolute", left: contextMenuPos.x, top: contextMenuPos.y }}
                   className="z-50 w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md"
                 >
-                  <button
+                  <button type="button"
                     onClick={toggleLoop}
                     className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
                   >
@@ -951,7 +951,7 @@ export function LessonPlayer({
                     Repetir
                     {loop && <Check size={16} className="ml-auto text-blue-400" />}
                   </button>
-                  <button
+                  <button type="button"
                     onClick={copyVideoUrl}
                     className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
                   >

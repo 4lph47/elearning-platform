@@ -79,13 +79,24 @@ async function uploadDirect(kind: Kind, file: File): Promise<UploadResult> {
   return { url: signData.publicUrl, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
+// retryable=true: falha de rede/servidor, vale a pena tentar de novo do
+// zero. retryable=false: erro de validação (ficheiro inválido, tipo não
+// permitido, etc.) — repetir não muda nada, mostra logo o erro.
+class UploadError extends Error {
+  retryable: boolean;
+  constructor(message: string, retryable: boolean) {
+    super(message);
+    this.retryable = retryable;
+  }
+}
+
 // Envia o vídeo bruto diretamente pro worker (Railway) via um token de
 // upload de curta duração (ver /api/upload/authorize-direct). A resposta só
 // volta quando a escada HLS toda estiver pronta — onPhaseChange avisa a UI
 // para trocar a barra de progresso (percentagem, enquanto os bytes ainda
 // estão a sair) por um indicador indeterminado (enquanto o worker comprime,
 // sem progresso conhecido).
-function uploadToWorker(
+function uploadToWorkerOnce(
   file: File,
   onProgress: (percent: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void
@@ -97,8 +108,10 @@ function uploadToWorker(
       body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size }),
     })
       .then(async (authRes) => {
-        const auth = await authRes.json();
-        if (!authRes.ok) throw new Error(auth.error ?? "Erro ao preparar envio");
+        const auth = await authRes.json().catch(() => ({}));
+        if (!authRes.ok) {
+          throw new UploadError(auth.error ?? "Erro ao preparar envio", authRes.status >= 500);
+        }
 
         console.log("[upload] a enviar pro worker:", auth.uploadUrl);
         const xhr = new XMLHttpRequest();
@@ -115,7 +128,7 @@ function uploadToWorker(
               const data = JSON.parse(xhr.responseText) as { hlsMasterUrl: string };
               resolve({ url: data.hlsMasterUrl, sizeBytes: file.size, name: file.name, mimeType: file.type });
             } catch {
-              reject(new Error("Resposta inválida do worker"));
+              reject(new UploadError("Resposta inválida do worker", true));
             }
           } else {
             let message = "Erro ao comprimir vídeo";
@@ -124,17 +137,50 @@ function uploadToWorker(
             } catch {
               // resposta não-JSON (ex.: proxy/erro de rede a meio) — mensagem genérica já chega
             }
-            reject(new Error(message));
+            // 5xx (worker/proxy com problema momentâneo) e 401 (token
+            // expirado — cada tentativa pede um token novo) valem retry;
+            // 4xx de validação não, repetir não muda o resultado.
+            reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401));
           }
         };
         xhr.onerror = () => {
           console.error(`[upload] falha de rede — readyState=${xhr.readyState} status=${xhr.status}`);
-          reject(new Error("Falha de rede ao enviar para compressão"));
+          reject(new UploadError("Falha de rede ao enviar para compressão", true));
         };
         xhr.send(file);
       })
-      .catch(reject);
+      .catch((err) => reject(err instanceof UploadError ? err : new UploadError("Falha de rede", true)));
   });
+}
+
+const UPLOAD_RETRY_ATTEMPTS = 3;
+
+// Retenta o envio TODO do zero (não há resumo por bytes — só reenvia o
+// ficheiro inteiro outra vez) quando a falha é de rede/servidor. Ficheiros
+// grandes deviam evitar isto (é caro repetir do zero), mas continua a ser
+// muito melhor que obrigar a pessoa a repetir à mão — e a maior parte das
+// quebras de rede são momentâneas, resolvem-se numa 2ª tentativa.
+async function uploadToWorker(
+  file: File,
+  onProgress: (percent: number) => void,
+  onPhaseChange: (phase: "uploading" | "compressing") => void,
+  onRetry: (attempt: number, maxAttempts: number) => void
+): Promise<UploadResult> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= UPLOAD_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await uploadToWorkerOnce(file, onProgress, onPhaseChange);
+    } catch (err) {
+      lastErr = err;
+      const retryable = err instanceof UploadError ? err.retryable : true;
+      if (!retryable || attempt === UPLOAD_RETRY_ATTEMPTS) throw err;
+      console.warn(`[upload] tentativa ${attempt} falhou, a repetir:`, err);
+      onRetry(attempt + 1, UPLOAD_RETRY_ATTEMPTS);
+      onProgress(0);
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw lastErr;
 }
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -162,6 +208,7 @@ export function FileUploadInput({
   const [progress, setProgress] = useState(0);
   const [indeterminate, setIndeterminate] = useState(false);
   const [compressing, setCompressing] = useState(false);
+  const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
 
@@ -179,13 +226,23 @@ export function FileUploadInput({
     setUploading(true);
     setProgress(0);
     setCompressing(false);
+    setRetryInfo(null);
     setError(null);
 
     try {
       if (DIRECT_TO_WORKER_KINDS.includes(kind)) {
-        const data = await uploadToWorker(file, setProgress, (phase) => setCompressing(phase === "compressing"));
+        const data = await uploadToWorker(
+          file,
+          setProgress,
+          (phase) => setCompressing(phase === "compressing"),
+          (attempt, max) => {
+            setCompressing(false);
+            setRetryInfo({ attempt, max });
+          }
+        );
         setUploading(false);
         setCompressing(false);
+        setRetryInfo(null);
         setUploadedName(data.name);
         onUploaded(data);
         return;
@@ -221,6 +278,7 @@ export function FileUploadInput({
       setUploading(false);
       setIndeterminate(false);
       setCompressing(false);
+      setRetryInfo(null);
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
   }
@@ -247,7 +305,13 @@ export function FileUploadInput({
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {compressing ? "A comprimir vídeo..." : indeterminate ? "A enviar..." : `A enviar (${progress}%)`}
+            {retryInfo
+              ? `Falhou, a tentar de novo (${retryInfo.attempt}/${retryInfo.max})...`
+              : compressing
+                ? "A comprimir vídeo..."
+                : indeterminate
+                  ? "A enviar..."
+                  : `A enviar (${progress}%)`}
           </p>
         </div>
       )}

@@ -50,6 +50,26 @@ function requireEnv(name) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
 
+// Retry genérico com backoff — usado nos 3 pontos onde uma falha
+// transitória (rede, Supabase, I/O momentâneo) não devia deitar fora um
+// upload/compressão já em curso: chamadas à app (apiFetch), upload de
+// renditions/master playlist pro Storage, e o próprio ffmpeg.
+async function withRetries(fn, attempts, label) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) {
+        console.warn(`${label} falhou (tentativa ${i + 1}/${attempts}), a repetir:`, err && err.message ? err.message : err);
+        await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 // Do menor pro maior — processado por essa ordem (ver transcodeToHls) para
 // ficar reproduzível o mais cedo possível (rung pequeno = rápido de
 // codificar). Só se gera uma rendition se o vídeo de origem for pelo menos
@@ -67,16 +87,18 @@ const QUALITY_LADDER = [
 ];
 
 async function apiFetch(pathname, init) {
-  const res = await fetch(`${APP_URL}${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${WORKER_API_SECRET}`,
-      "Content-Type": "application/json",
-      ...(init && init.headers),
-    },
-  });
-  if (!res.ok) throw new Error(`${pathname} -> HTTP ${res.status}: ${await res.text().catch(() => "")}`);
-  return res.json();
+  return withRetries(async () => {
+    const res = await fetch(`${APP_URL}${pathname}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${WORKER_API_SECRET}`,
+        "Content-Type": "application/json",
+        ...(init && init.headers),
+      },
+    });
+    if (!res.ok) throw new Error(`${pathname} -> HTTP ${res.status}: ${await res.text().catch(() => "")}`);
+    return res.json();
+  }, 3, `apiFetch ${pathname}`);
 }
 
 async function claimNextJob() {
@@ -101,9 +123,11 @@ async function failJob(jobId, error) {
 // Só usado pelo caminho de fila assíncrona (fallback) — um URL de vídeo já
 // existente, colado à mão (não veio do upload direto).
 async function downloadSource(sourceUrl, destPath) {
-  const res = await fetch(sourceUrl);
-  if (!res.ok || !res.body) throw new Error(`Download da fonte falhou: HTTP ${res.status}`);
-  await fs.writeFile(destPath, Buffer.from(await res.arrayBuffer()));
+  await withRetries(async () => {
+    const res = await fetch(sourceUrl);
+    if (!res.ok || !res.body) throw new Error(`Download da fonte falhou: HTTP ${res.status}`);
+    await fs.writeFile(destPath, Buffer.from(await res.arrayBuffer()));
+  }, 3, "download da fonte");
 }
 
 async function probeDimensions(filePath) {
@@ -179,28 +203,36 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
   ];
 
   try {
-    await execFileAsync(
-      "ffmpeg",
-      [
-        "-y",
-        "-loglevel",
-        "error",
-        "-i",
-        sourcePath,
-        ...codecArgs,
-        "-hls_time",
-        String(HLS_SEGMENT_SECONDS),
-        "-hls_playlist_type",
-        "vod",
-        "-hls_segment_filename",
-        segmentPattern,
-        playlistPath,
-      ],
-      // Node's execFile default maxBuffer é só 1MB — ffmpeg é verboso a
-      // sério no stderr (progresso, frame a frame), qualquer vídeo com mais
-      // que uns segundos estoura isso e o processo é morto a meio (ficheiro
-      // de saída fica truncado/inválido). 100MB dá margem generosa.
-      { maxBuffer: 100 * 1024 * 1024 }
+    // Só 2 tentativas (não 3, como o resto) — um OOM-kill vai continuar OOM
+    // a repetir do mesmo jeito, retry só ajuda em falhas de I/O/recursos
+    // genuinamente momentâneas, não vale gastar tempo a repetir muito.
+    await withRetries(
+      () =>
+        execFileAsync(
+          "ffmpeg",
+          [
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            sourcePath,
+            ...codecArgs,
+            "-hls_time",
+            String(HLS_SEGMENT_SECONDS),
+            "-hls_playlist_type",
+            "vod",
+            "-hls_segment_filename",
+            segmentPattern,
+            playlistPath,
+          ],
+          // Node's execFile default maxBuffer é só 1MB — ffmpeg é verboso a
+          // sério no stderr (progresso, frame a frame), qualquer vídeo com mais
+          // que uns segundos estoura isso e o processo é morto a meio (ficheiro
+          // de saída fica truncado/inválido). 100MB dá margem generosa.
+          { maxBuffer: 100 * 1024 * 1024 }
+        ),
+      2,
+      `ffmpeg ${path.basename(outDir)}`
     );
   } catch (err) {
     // err.message do execFile não inclui o sinal que matou o processo —
@@ -233,11 +265,13 @@ async function uploadRenditionDir(key, label, dirPath) {
     const buffer = await fs.readFile(filePath);
     totalBytes += buffer.byteLength;
     const objectPath = `video-renditions/${key}/${label}/${file}`;
-    const { error } = await supabase.storage.from(BUCKET).upload(objectPath, buffer, {
-      contentType: contentTypeFor(file),
-      upsert: true,
-    });
-    if (error) throw error;
+    await withRetries(async () => {
+      const { error } = await supabase.storage.from(BUCKET).upload(objectPath, buffer, {
+        contentType: contentTypeFor(file),
+        upsert: true,
+      });
+      if (error) throw error;
+    }, 3, `upload Storage ${objectPath}`);
   }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(`video-renditions/${key}/${label}/index.m3u8`);
   return { indexUrl: data.publicUrl, totalBytes };
@@ -254,11 +288,13 @@ async function uploadMasterPlaylist(key, variants) {
   }
   const content = lines.join("\n") + "\n";
   const objectPath = `video-renditions/${key}/master.m3u8`;
-  const { error } = await supabase.storage.from(BUCKET).upload(objectPath, Buffer.from(content), {
-    contentType: "application/vnd.apple.mpegurl",
-    upsert: true,
-  });
-  if (error) throw error;
+  await withRetries(async () => {
+    const { error } = await supabase.storage.from(BUCKET).upload(objectPath, Buffer.from(content), {
+      contentType: "application/vnd.apple.mpegurl",
+      upsert: true,
+    });
+    if (error) throw error;
+  }, 3, `upload Storage ${objectPath}`);
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(objectPath);
   return data.publicUrl;
 }

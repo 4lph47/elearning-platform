@@ -242,6 +242,37 @@ async function uploadMasterPlaylist(lessonId, variants) {
   return data.publicUrl;
 }
 
+// Depois de transcodificar com sucesso, o vídeo bruto (partes enviadas pelo
+// browser, ver FileUploadInput.tsx) já não serve pra nada — só as renditions
+// HLS ficam. Apaga o manifest.json e cada parte do Storage; fontes diretas
+// (não em partes, aulas antigas ou vídeos pequenos que nem passaram por
+// upload em partes) ficam intactas, continuam a ser a fonte de download/
+// cópia de URL do vídeo (ver isManifestSource em LessonPlayer.tsx).
+async function deleteChunkedSource(sourceUrl) {
+  if (!sourceUrl.endsWith("/manifest.json")) return;
+  try {
+    const res = await fetch(sourceUrl);
+    if (!res.ok) return;
+    const manifest = await res.json();
+    const marker = `/storage/v1/object/public/${BUCKET}/`;
+    const objectPaths = [...(Array.isArray(manifest.parts) ? manifest.parts : []), sourceUrl]
+      .map((url) => {
+        const idx = url.indexOf(marker);
+        return idx === -1 ? null : url.slice(idx + marker.length);
+      })
+      .filter((p) => p !== null);
+    if (objectPaths.length > 0) {
+      const { error } = await supabase.storage.from(BUCKET).remove(objectPaths);
+      if (error) throw error;
+      console.log(`  -> ${objectPaths.length} parte(s) brutas do vídeo apagadas`);
+    }
+  } catch (err) {
+    // Falha a limpar não deve marcar o job todo como falhado — as
+    // renditions já estão prontas e servidas, isto é só arrumação.
+    console.error("Falhou a limpar partes brutas do vídeo:", err);
+  }
+}
+
 async function processJob(job) {
   console.log(`A processar job ${job.id} (aula ${job.lessonId})`);
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "transcode-"));
@@ -286,6 +317,7 @@ async function processJob(job) {
       console.log(`  -> ${rung.label} pronto (${(totalBytes / 1024 / 1024).toFixed(1)}MB)`);
     }
 
+    await deleteChunkedSource(job.sourceUrl);
     console.log(`Job ${job.id} concluído (${variantsSoFar.length} rendition(s)).`);
   } catch (err) {
     console.error(`Job ${job.id} falhou:`, err);

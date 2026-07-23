@@ -21,9 +21,17 @@ export async function POST(request: Request) {
   }
 
   const workerSecret = process.env.WORKER_API_SECRET;
-  const workerUrl = process.env.WORKER_PUBLIC_URL;
+  let workerUrl = process.env.WORKER_PUBLIC_URL;
   if (!workerSecret || !workerUrl) {
     return NextResponse.json({ error: "Worker de compressão não está configurado" }, { status: 503 });
+  }
+  // Erro fácil de cometer ao colar o domínio do Railway (a UI deles não
+  // mostra o "https://" por defeito) — sem protocolo, `${workerUrl}/upload`
+  // vira um URL relativo no browser em vez de apontar pro worker, e falha
+  // silenciosamente como 404 dentro da própria app. Normaliza sempre.
+  workerUrl = workerUrl.replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(workerUrl)) {
+    workerUrl = `https://${workerUrl}`;
   }
 
   const body = await request.json();

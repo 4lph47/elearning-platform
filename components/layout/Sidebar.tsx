@@ -55,6 +55,12 @@ export function Sidebar() {
     if (pathname === href) return;
     e.preventDefault();
     fadeNavigate(href);
+    // Mobile: a barra é um overlay a tapar o ecrã todo ("full") — sem isto
+    // ficava aberta por cima da página nova até se tocar no fundo escuro ou
+    // no hamburger outra vez. Desktop também usa "full" (expandida,
+    // persistente) — aí não deve fechar sozinha, por isso só abaixo do
+    // breakpoint mobile (mesmo valor do SidebarContext.tsx).
+    if (window.innerWidth < 768) close();
   }
 
   const isInstructor = status === "authenticated" && session.user.role !== "STUDENT";

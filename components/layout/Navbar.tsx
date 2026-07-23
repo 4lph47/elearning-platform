@@ -185,14 +185,14 @@ export function Navbar() {
           : "border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-black/90"
       }`}
     >
-      <div className="grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-4 px-5">
+      <div className="grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-5 sm:gap-4">
         <div className="flex shrink-0 items-center">
           <button
             type="button"
             onClick={closeMobileSearch}
             aria-label="Voltar"
             className={`flex h-8 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-[900ms] ease-in-out sm:hidden ${
-              mobileSearchOpen ? "mr-3 w-8 opacity-100" : "mr-0 w-0 opacity-0"
+              mobileSearchOpen ? "mr-1 w-8 opacity-100" : "mr-0 w-0 opacity-0"
             } ${
               transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
             }`}
@@ -228,7 +228,7 @@ export function Navbar() {
 
         <div
           ref={searchRef}
-          className={`relative mr-auto w-full overflow-visible transition-all duration-[900ms] ease-in-out sm:max-w-lg sm:opacity-100 ${
+          className={`relative mx-auto w-full overflow-visible transition-all duration-[900ms] ease-in-out sm:max-w-lg sm:opacity-100 ${
             mobileSearchOpen ? "max-w-full opacity-100" : "max-w-0 opacity-0"
           }`}
         >

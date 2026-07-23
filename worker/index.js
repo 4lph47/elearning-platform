@@ -607,4 +607,19 @@ server.listen(UPLOAD_PORT, () => {
   console.log(`Servidor de upload direto a ouvir na porta ${UPLOAD_PORT}`);
 });
 
+// Sem isto, uma exceção não apanhada em qualquer lado (incluindo no loop()
+// de fundo, nada a ver com uploads) derruba o processo INTEIRO sem deixar
+// rasto — Railway reinicia o container sozinho, mas o pedido de upload em
+// curso morre a meio sem explicação nenhuma (só um 502 do lado do
+// cliente). Loga o motivo real antes de sair, pra a próxima vez que isto
+// acontecer dar pra ver porquê nos logs em vez de adivinhar.
+process.on("uncaughtException", (err) => {
+  console.error("[fatal] uncaughtException — processo vai reiniciar:", err);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal] unhandledRejection — processo vai reiniciar:", reason);
+  process.exit(1);
+});
+
 loop();

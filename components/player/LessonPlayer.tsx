@@ -623,7 +623,7 @@ export function LessonPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [youtubeId]);
 
-  const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1200px]" : "lg:w-[900px]"}`;
+  const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1350px]" : "lg:w-[1020px]"}`;
   const playerClassName = `aspect-video w-full rounded-lg bg-black ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);
@@ -641,7 +641,7 @@ export function LessonPlayer({
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
-              className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
+              className="pointer-events-none absolute -inset-x-6 -bottom-6 -top-12 -z-10 rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-x-16 lg:-bottom-16 lg:-top-28"
               style={{ backgroundColor: ambientColor, opacity: 0.6 }}
             />
           )}

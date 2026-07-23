@@ -195,6 +195,7 @@ export function Navbar() {
     .join("") ?? "?";
 
   return (
+    <>
     <header
       className={`fixed inset-x-0 top-0 z-40 select-none transition-colors duration-300 ${
         curtainActive
@@ -480,5 +481,14 @@ export function Navbar() {
         </nav>
       </div>
     </header>
+    {/* Mesma linguagem visual do fade da sidebar (esmorece de um lado sólido
+        até transparente) — aqui de cima para baixo, em vez do border-b/bg
+        sólido abrupto que o header tinha antes. Fora do <header> (que já tem
+        transition-colors própria) e sempre presente, em qualquer página. */}
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-x-0 top-16 z-40 h-6 bg-gradient-to-b from-white/90 to-transparent dark:from-black/90"
+    />
+    </>
   );
 }

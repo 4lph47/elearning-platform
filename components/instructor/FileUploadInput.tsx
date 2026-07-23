@@ -166,6 +166,13 @@ export function FileUploadInput({
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    // Sempre limpa já — o browser não dispara onChange outra vez se
+    // voltares a escolher o MESMO ficheiro (o valor do input não muda),
+    // então depois de um erro (rede, ficheiro corrompido, o que for) ficava
+    // preso sem reagir a nada até dar refresh à página inteira. Limpar
+    // aqui, antes de qualquer erro possível, garante que a próxima escolha
+    // — mesmo ficheiro ou outro — dispara sempre onChange de novo.
+    e.target.value = "";
     if (!file) return;
 
     setUploading(true);

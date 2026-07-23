@@ -588,6 +588,21 @@ async function loop() {
   }
 }
 
+// Node's http.Server tem um requestTimeout DEFAULT de 5 minutos (desde o
+// Node 18) — mata sozinho qualquer pedido que ainda esteja aberto passado
+// esse tempo, nada a ver com o limite da própria Railway (15min de teto na
+// plataforma). O pedido de /upload fica aberto durante o upload TODO mais
+// a compressão TODA — vídeos que juntam as duas partes e passam de 5min
+// batiam neste teto do Node e a ligação morria a meio, aparecendo como
+// "falha de rede" no browser mesmo sem nada de errado ter acontecido.
+// Sobe isto pro mesmo teto da Railway.
+server.requestTimeout = 15 * 60 * 1000;
+server.headersTimeout = 60 * 1000;
+// server.timeout (mecanismo mais antigo, timeout de inatividade do socket)
+// — 0 desativa, deixa só o requestTimeout de cima e o teto da própria
+// Railway a decidir.
+server.timeout = 0;
+
 server.listen(UPLOAD_PORT, () => {
   console.log(`Servidor de upload direto a ouvir na porta ${UPLOAD_PORT}`);
 });

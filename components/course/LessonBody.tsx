@@ -65,7 +65,7 @@ export function LessonBody({
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
-  const belowVideoWidth = `lg:max-w-none ${collapsed ? "lg:w-[1350px]" : "lg:w-[1020px]"}`;
+  const belowVideoWidth = `lg:max-w-none ${collapsed ? "lg:w-[1200px]" : "lg:w-[900px]"}`;
 
   const playerBoxRef = useRef<HTMLDivElement>(null);
   const engagementLikeRef = useRef<(() => void) | null>(null);

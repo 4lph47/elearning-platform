@@ -245,7 +245,7 @@ export function LessonEditScreen({
       </div>
 
       <form id="lesson-form" onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
           <CollapsibleCard title="Detalhes">
             <div>
               <Label htmlFor="lesson-title">Título da aula</Label>
@@ -395,7 +395,7 @@ export function LessonEditScreen({
       </form>
 
       {isEditing && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
           <LessonResourcesCard lessonId={lesson!.id} initialResources={lesson!.resources} />
           {type === "VIDEO" && (
             <CollapsibleCard title="Quiz da aula">

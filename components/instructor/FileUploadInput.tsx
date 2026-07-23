@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type Kind = "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE";
@@ -36,14 +36,34 @@ interface UploadResult {
   mimeType: string;
 }
 
+// Disparado quando um upload em curso é cancelado por causa de uma nova
+// escolha de ficheiro (não é falha nenhuma — não deve aparecer erro nem
+// contar pro mecanismo de retry).
+class UploadAbortedError extends Error {}
+
+// retryable=true: falha de rede/servidor, vale a pena tentar de novo.
+// retryable=false: erro de validação (ficheiro inválido, tipo não
+// permitido, etc.) — repetir não muda nada, mostra logo o erro.
+class UploadError extends Error {
+  retryable: boolean;
+  constructor(message: string, retryable: boolean) {
+    super(message);
+    this.retryable = retryable;
+  }
+}
+
+type XhrRef = React.MutableRefObject<XMLHttpRequest | null>;
+
 // fetch() não expõe progresso de upload (só de download) — XHR continua a
 // ser o único jeito nativo de saber quantos bytes já saíram.
 function uploadWithProgress(
   formData: FormData,
+  xhrRef: XhrRef,
   onProgress: (percent: number) => void
 ): Promise<{ ok: boolean; data: UploadResult & { error?: string } }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
     xhr.open("POST", "/api/upload");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
@@ -58,10 +78,17 @@ function uploadWithProgress(
       resolve({ ok: xhr.status >= 200 && xhr.status < 300, data });
     };
     xhr.onerror = () => reject(new Error("Falha de rede"));
+    xhr.onabort = () => reject(new UploadAbortedError());
     xhr.send(formData);
   });
 }
 
+// Documento/trailer vão pelo SDK oficial do Supabase (uploadToSignedUrl),
+// que não expõe um jeito de abortar um envio a meio — só documentos/
+// trailers (bem mais pequenos que vídeo) passam por aqui, por isso não
+// vale o esforço de reescrever isto à mão só pra ganhar abort de verdade;
+// o generationRef em handleChange já garante que o resultado de um envio
+// substituído é ignorado, mesmo que continue em curso.
 async function uploadDirect(kind: Kind, file: File): Promise<UploadResult> {
   const signRes = await fetch("/api/upload/sign", {
     method: "POST",
@@ -77,17 +104,6 @@ async function uploadDirect(kind: Kind, file: File): Promise<UploadResult> {
   if (error) throw error;
 
   return { url: signData.publicUrl, sizeBytes: file.size, name: file.name, mimeType: file.type };
-}
-
-// retryable=true: falha de rede/servidor, vale a pena tentar de novo.
-// retryable=false: erro de validação (ficheiro inválido, tipo não
-// permitido, etc.) — repetir não muda nada, mostra logo o erro.
-class UploadError extends Error {
-  retryable: boolean;
-  constructor(message: string, retryable: boolean) {
-    super(message);
-    this.retryable = retryable;
-  }
 }
 
 interface WorkerAuth {
@@ -131,12 +147,14 @@ function postToWorker(
   auth: WorkerAuth,
   blob: Blob,
   resumeOffset: number,
+  xhrRef: XhrRef,
   onProgress: (bytesSentInBlock: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     console.log(`[upload] a enviar pro worker (offset=${resumeOffset}, bloco=${blob.size} bytes):`, auth.uploadUrl);
     const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
     xhr.open("POST", auth.uploadUrl);
     xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
     if (resumeOffset > 0) xhr.setRequestHeader("X-Upload-Offset", String(resumeOffset));
@@ -170,6 +188,10 @@ function postToWorker(
       console.error(`[upload] falha de rede — readyState=${xhr.readyState} status=${xhr.status}`);
       reject(new UploadError("Falha de rede ao enviar para compressão", true));
     };
+    // Disparado por xhrRef.current?.abort() lá em baixo, quando se escolhe
+    // um ficheiro novo enquanto este ainda estava a enviar — corta a
+    // ligação na hora, não é um erro de rede, não deve tentar outra vez.
+    xhr.onabort = () => reject(new UploadAbortedError());
     xhr.send(blob);
   });
 }
@@ -180,9 +202,11 @@ const UPLOAD_RETRY_ATTEMPTS = 3;
 // tentativas — é o que liga um retry ao ficheiro parcial já recebido da
 // tentativa anterior) e, a cada retry, pergunta ao worker onde ficou e só
 // reenvia o que falta. Falha de validação (ficheiro inválido) não tenta
-// outra vez — só rede/servidor.
+// outra vez — só rede/servidor. Cancelamento (ficheiro novo escolhido a
+// meio) também não tenta outra vez, óbvio.
 async function uploadToWorker(
   file: File,
+  xhrRef: XhrRef,
   onProgress: (percent: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void,
   onRetry: (attempt: number, maxAttempts: number) => void
@@ -201,11 +225,13 @@ async function uploadToWorker(
         auth,
         blob,
         resumeOffset,
+        xhrRef,
         (bytesSentInBlock) => onProgress(Math.round(((resumeOffset + bytesSentInBlock) / file.size) * 100)),
         onPhaseChange
       );
       return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
     } catch (err) {
+      if (err instanceof UploadAbortedError) throw err;
       lastErr = err;
       const retryable = err instanceof UploadError ? err.retryable : true;
       if (!retryable || attempt === UPLOAD_RETRY_ATTEMPTS) throw err;
@@ -245,6 +271,13 @@ export function FileUploadInput({
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  // Cada handleChange ganha o próximo número — um resultado (sucesso, erro,
+  // progresso) só mexe no estado se ainda for da tentativa mais recente.
+  // Sem isto, escolher um ficheiro novo a meio doutro envio podia deixar a
+  // UI a mostrar o resultado do envio ANTIGO a chegar depois do novo já ter
+  // começado.
+  const generationRef = useRef(0);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -257,23 +290,34 @@ export function FileUploadInput({
     e.target.value = "";
     if (!file) return;
 
+    // Havia um envio em curso? Corta-o JÁ, assim que se escolhe o próximo
+    // ficheiro — não espera nenhum clique extra nem resposta do servidor.
+    xhrRef.current?.abort();
+    xhrRef.current = null;
+    const myGeneration = ++generationRef.current;
+    const isCurrent = () => generationRef.current === myGeneration;
+
     setUploading(true);
     setProgress(0);
     setCompressing(false);
     setRetryInfo(null);
     setError(null);
+    setUploadedName(null);
 
     try {
       if (DIRECT_TO_WORKER_KINDS.includes(kind)) {
         const data = await uploadToWorker(
           file,
-          setProgress,
-          (phase) => setCompressing(phase === "compressing"),
+          xhrRef,
+          (percent) => isCurrent() && setProgress(percent),
+          (phase) => isCurrent() && setCompressing(phase === "compressing"),
           (attempt, max) => {
+            if (!isCurrent()) return;
             setCompressing(false);
             setRetryInfo({ attempt, max });
           }
         );
+        if (!isCurrent()) return;
         setUploading(false);
         setCompressing(false);
         setRetryInfo(null);
@@ -288,6 +332,7 @@ export function FileUploadInput({
         // por isso barra indeterminada em vez de percentagem aqui.
         setIndeterminate(true);
         const data = await uploadDirect(kind, file);
+        if (!isCurrent()) return;
         setUploading(false);
         setIndeterminate(false);
         setUploadedName(data.name);
@@ -298,7 +343,8 @@ export function FileUploadInput({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("kind", kind);
-      const { ok, data } = await uploadWithProgress(formData, setProgress);
+      const { ok, data } = await uploadWithProgress(formData, xhrRef, (percent) => isCurrent() && setProgress(percent));
+      if (!isCurrent()) return;
       setUploading(false);
 
       if (!ok) {
@@ -309,6 +355,7 @@ export function FileUploadInput({
       setUploadedName(data.name);
       onUploaded(data);
     } catch (err) {
+      if (!isCurrent() || err instanceof UploadAbortedError) return;
       setUploading(false);
       setIndeterminate(false);
       setCompressing(false);
@@ -323,7 +370,6 @@ export function FileUploadInput({
         type="file"
         accept={ACCEPT[kind]}
         onChange={handleChange}
-        disabled={uploading}
         className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15"
       />
       {uploading && (

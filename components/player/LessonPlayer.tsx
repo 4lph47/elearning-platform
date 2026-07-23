@@ -717,7 +717,7 @@ export function LessonPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [youtubeId]);
 
-  const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1350px]" : "lg:w-[1020px]"}`;
+  const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1200px]" : "lg:w-[900px]"}`;
   const playerClassName = `aspect-video w-full rounded-lg bg-black ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);

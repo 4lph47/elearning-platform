@@ -145,16 +145,19 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
 
   // H.264 continua a ser o único codec com suporte universal (Chrome/Firefox
   // não decodificam HEVC de forma fiável, Safari só suporta AV1 parcialmente
-  // — testado antes de decidir, não é suposição). Preset "slow" em vez de
-  // "veryfast": mesmo CRF, ~10-15% menos bytes pela mesma qualidade visual —
-  // custa mais tempo de CPU, mas isto corre em fundo, sem ninguém à espera.
+  // — testado antes de decidir, não é suposição). Preset "medium" (não
+  // "slow") — "slow" com TODOS os rungs a recodificar (incluindo o de
+  // topo, ver transcodeToHls) estava a matar o processo sem erro nenhum no
+  // stderr, padrão clássico de OOM-kill num container com pouca memória;
+  // "medium" usa bastante menos RAM/CPU, ainda claramente melhor que
+  // "veryfast" na relação tamanho/qualidade.
   const codecArgs = [
     "-vf",
     `scale=-2:${targetHeight}`,
     "-c:v",
     "libx264",
     "-preset",
-    "slow",
+    "medium",
     "-profile:v",
     "high",
     "-crf",
@@ -165,29 +168,41 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
     "128k",
   ];
 
-  await execFileAsync(
-    "ffmpeg",
-    [
-      "-y",
-      "-loglevel",
-      "error",
-      "-i",
-      sourcePath,
-      ...codecArgs,
-      "-hls_time",
-      String(HLS_SEGMENT_SECONDS),
-      "-hls_playlist_type",
-      "vod",
-      "-hls_segment_filename",
-      segmentPattern,
-      playlistPath,
-    ],
-    // Node's execFile default maxBuffer é só 1MB — ffmpeg é verboso a
-    // sério no stderr (progresso, frame a frame), qualquer vídeo com mais
-    // que uns segundos estoura isso e o processo é morto a meio (ficheiro
-    // de saída fica truncado/inválido). 100MB dá margem generosa.
-    { maxBuffer: 100 * 1024 * 1024 }
-  );
+  try {
+    await execFileAsync(
+      "ffmpeg",
+      [
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        sourcePath,
+        ...codecArgs,
+        "-hls_time",
+        String(HLS_SEGMENT_SECONDS),
+        "-hls_playlist_type",
+        "vod",
+        "-hls_segment_filename",
+        segmentPattern,
+        playlistPath,
+      ],
+      // Node's execFile default maxBuffer é só 1MB — ffmpeg é verboso a
+      // sério no stderr (progresso, frame a frame), qualquer vídeo com mais
+      // que uns segundos estoura isso e o processo é morto a meio (ficheiro
+      // de saída fica truncado/inválido). 100MB dá margem generosa.
+      { maxBuffer: 100 * 1024 * 1024 }
+    );
+  } catch (err) {
+    // err.message do execFile não inclui o sinal que matou o processo —
+    // "SIGKILL" sem mais nada no stderr é a assinatura clássica de OOM-kill
+    // (o kernel mata o processo sem lhe dar hipótese de reportar erro
+    // nenhum). Reconstrói a mensagem com isso incluído, pra não precisar de
+    // ir aos logs do Railway pra saber isto da próxima vez.
+    const signal = err && err.signal ? ` (sinal: ${err.signal}, provável falta de memória no container)` : "";
+    const err2 = new Error(`${(err && err.message) || "ffmpeg falhou"}${signal}`);
+    err2.cause = err;
+    throw err2;
+  }
 }
 
 function contentTypeFor(fileName) {

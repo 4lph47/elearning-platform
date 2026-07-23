@@ -39,6 +39,22 @@ mostra o seletor de qualidade quando há mais que uma.
    qualquer string aleatória longa) — mete o mesmo valor no Vercel
    (`WORKER_API_SECRET`) e no Railway.
 
+## Deploy no Render
+
+Por defeito o Render tenta correr como app Node normal (`npm run build` +
+`npm start`) — este worker não tem `build`, por isso falha com
+`Missing script: "build"` a não ser que se force o runtime Docker.
+
+1. **New → Background Worker** (não "Web Service" — isto não expõe porta
+   nenhuma) → liga ao repositório.
+2. **Root Directory**: `worker`
+3. **Runtime**: muda de "Node" para **Docker** — só assim usa o
+   `worker/Dockerfile` em vez do buildpack automático.
+4. **Environment** → adiciona as mesmas variáveis da secção do Railway
+   acima (`APP_URL`, `WORKER_API_SECRET`, `SUPABASE_URL`,
+   `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET`).
+5. Deploy. Nos **Logs** deve aparecer `Worker de transcoding a arrancar`.
+
 ## Testar localmente
 
 ```bash

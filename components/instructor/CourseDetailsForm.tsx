@@ -12,6 +12,7 @@ import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
+import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
 
 interface CourseData {
   id: string;
@@ -90,25 +91,51 @@ function EditableListField({
 // final), mesma ideia da própria página da aula (conteúdo em cards
 // separados, não um formulário só). Continua um único <form>/pedido ao
 // guardar — as cards são só organização visual.
+interface CourseDraft {
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  price: string;
+  originalPrice: string;
+  trailerUrl: string | null;
+  learningOutcomes: string[];
+  requirements: string[];
+  targetAudience: string[];
+  topics: string[];
+  bundleName: string;
+  bundleCourseIds: string[];
+  collaborators: { id: string; name: string; email: string }[];
+}
+
 export function CourseDetailsForm({ course, otherCourses }: { course: CourseData; otherCourses: { id: string; title: string }[] }) {
   const router = useRouter();
   const { fadeNavigate, setNavigationGuard } = useFadeNav();
-  const [title, setTitle] = useState(course.title);
-  const [description, setDescription] = useState(course.description);
-  const [category, setCategory] = useState(course.category);
-  const [level, setLevel] = useState(course.level);
-  const [price, setPrice] = useState(String(course.price));
-  const [originalPrice, setOriginalPrice] = useState(course.originalPrice != null ? String(course.originalPrice) : "");
-  const [trailerUrl, setTrailerUrl] = useState(course.trailerUrl);
-  const outcomes = useEditableList(course.learningOutcomes);
-  const requirements = useEditableList(course.requirements);
-  const audience = useEditableList(course.targetAudience);
-  const topics = useEditableList(course.topics);
-  const [bundleName, setBundleName] = useState(course.bundle?.name ?? "");
-  const [bundleCourseIds, setBundleCourseIds] = useState<string[]>(
-    course.bundle?.courses.map((c) => c.id).filter((id) => id !== course.id) ?? []
+  const draftKey = `course-draft:${course.id}`;
+  // Lido uma única vez (lazy init do useState, não recalcula em re-renders)
+  // — sirva pra restaurar TODOS os campos abaixo, e pro banner "restaurámos
+  // um rascunho".
+  const [draft] = useState(() => loadDraft<CourseDraft>(draftKey));
+  const [draftBannerVisible, setDraftBannerVisible] = useState(() => Boolean(draft));
+
+  const [title, setTitle] = useState(draft?.value.title ?? course.title);
+  const [description, setDescription] = useState(draft?.value.description ?? course.description);
+  const [category, setCategory] = useState(draft?.value.category ?? course.category);
+  const [level, setLevel] = useState(draft?.value.level ?? course.level);
+  const [price, setPrice] = useState(draft?.value.price ?? String(course.price));
+  const [originalPrice, setOriginalPrice] = useState(
+    draft?.value.originalPrice ?? (course.originalPrice != null ? String(course.originalPrice) : "")
   );
-  const [collaborators, setCollaborators] = useState(course.collaborators);
+  const [trailerUrl, setTrailerUrl] = useState(draft?.value.trailerUrl ?? course.trailerUrl);
+  const outcomes = useEditableList(draft?.value.learningOutcomes ?? course.learningOutcomes);
+  const requirements = useEditableList(draft?.value.requirements ?? course.requirements);
+  const audience = useEditableList(draft?.value.targetAudience ?? course.targetAudience);
+  const topics = useEditableList(draft?.value.topics ?? course.topics);
+  const [bundleName, setBundleName] = useState(draft?.value.bundleName ?? course.bundle?.name ?? "");
+  const [bundleCourseIds, setBundleCourseIds] = useState<string[]>(
+    draft?.value.bundleCourseIds ?? course.bundle?.courses.map((c) => c.id).filter((id) => id !== course.id) ?? []
+  );
+  const [collaborators, setCollaborators] = useState(draft?.value.collaborators ?? course.collaborators);
   const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +150,22 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
       return;
     }
     setDirty(true);
+    saveDraft<CourseDraft>(draftKey, {
+      title,
+      description,
+      category,
+      level,
+      price,
+      originalPrice,
+      trailerUrl,
+      learningOutcomes: outcomes.items,
+      requirements: requirements.items,
+      targetAudience: audience.items,
+      topics: topics.items,
+      bundleName,
+      bundleCourseIds,
+      collaborators,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     title,
@@ -141,6 +184,11 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     collaborators,
   ]);
   useUnsavedChangesGuard(dirty);
+
+  function discardDraft() {
+    clearDraft(draftKey);
+    window.location.reload();
+  }
 
   function toggleBundleCourse(id: string) {
     setBundleCourseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -189,6 +237,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
       return;
     }
     setDirty(false);
+    clearDraft(draftKey);
     if (redirectAfter) {
       // setDirty(false) só limpa o guard no próximo render (useEffect em
       // useUnsavedChangesGuard) — fadeNavigate a seguir, na mesma função
@@ -216,6 +265,30 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           {title || "Sem título"}
         </h1>
       </div>
+
+      {draftBannerVisible && draft && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-600/5 px-4 py-2.5 text-sm dark:border-blue-400/30 dark:bg-blue-400/10">
+          <p className="text-blue-800 dark:text-blue-300">
+            Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
+          </p>
+          <div className="flex shrink-0 gap-3">
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
+            >
+              Descartar
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraftBannerVisible(false)}
+              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
+            >
+              Continuar com este rascunho
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
         <div className="flex flex-wrap items-center gap-2">

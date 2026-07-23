@@ -11,7 +11,19 @@ import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { getYouTubeId } from "@/lib/youtube";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
+import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
 import type { LessonData } from "@/components/instructor/LessonRow";
+
+interface LessonDraft {
+  title: string;
+  description: string;
+  isFreePreview: boolean;
+  type: "VIDEO" | "TEXT";
+  contentUrl: string | null;
+  thumbnailUrl: string | null;
+  textContent: string;
+  contributorIds: string[];
+}
 
 // Tela dedicada (não painel a expandir por baixo da aula na lista) — conteúdo
 // dividido em cards separados (Detalhes / Conteúdo / Recursos / Quiz da
@@ -35,15 +47,22 @@ export function LessonEditScreen({
   const { fadeNavigate, setNavigationGuard } = useFadeNav();
   const isEditing = Boolean(lesson);
   const backHref = `/instructor/courses/${courseId}`;
+  const draftKey = `lesson-draft:${lesson?.id ?? `new-${moduleId}`}`;
+  const [draft] = useState(() => loadDraft<LessonDraft>(draftKey));
+  const [draftBannerVisible, setDraftBannerVisible] = useState(() => Boolean(draft));
 
-  const [title, setTitle] = useState(lesson?.title ?? "");
-  const [description, setDescription] = useState(lesson?.description ?? "");
-  const [isFreePreview, setIsFreePreview] = useState(lesson?.isFreePreview ?? false);
-  const [type, setType] = useState<"VIDEO" | "TEXT">(lesson?.type ?? initialType ?? "VIDEO");
-  const [contentUrl, setContentUrl] = useState<string | null>(lesson?.contentUrl ?? null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(lesson?.thumbnailUrl ?? null);
-  const [textContent, setTextContent] = useState(lesson?.textContent ?? "");
-  const [contributorIds, setContributorIds] = useState<string[]>(lesson?.contributors?.map((c) => c.id) ?? []);
+  const [title, setTitle] = useState(draft?.value.title ?? lesson?.title ?? "");
+  const [description, setDescription] = useState(draft?.value.description ?? lesson?.description ?? "");
+  const [isFreePreview, setIsFreePreview] = useState(draft?.value.isFreePreview ?? lesson?.isFreePreview ?? false);
+  const [type, setType] = useState<"VIDEO" | "TEXT">(draft?.value.type ?? lesson?.type ?? initialType ?? "VIDEO");
+  const [contentUrl, setContentUrl] = useState<string | null>(draft?.value.contentUrl ?? lesson?.contentUrl ?? null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
+    draft?.value.thumbnailUrl ?? lesson?.thumbnailUrl ?? null
+  );
+  const [textContent, setTextContent] = useState(draft?.value.textContent ?? lesson?.textContent ?? "");
+  const [contributorIds, setContributorIds] = useState<string[]>(
+    draft?.value.contributorIds ?? lesson?.contributors?.map((c) => c.id) ?? []
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,8 +74,24 @@ export function LessonEditScreen({
       return;
     }
     setDirty(true);
+    saveDraft<LessonDraft>(draftKey, {
+      title,
+      description,
+      isFreePreview,
+      type,
+      contentUrl,
+      thumbnailUrl,
+      textContent,
+      contributorIds,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, isFreePreview, type, contentUrl, thumbnailUrl, textContent, contributorIds]);
   useUnsavedChangesGuard(dirty);
+
+  function discardDraft() {
+    clearDraft(draftKey);
+    window.location.reload();
+  }
 
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
 
@@ -113,6 +148,7 @@ export function LessonEditScreen({
     // seguir, ainda síncrono, apanhava-o desatualizado — daí limpar direto
     // também.
     setDirty(false);
+    clearDraft(draftKey);
     setNavigationGuard(null);
 
     if (isEditing) {
@@ -132,6 +168,31 @@ export function LessonEditScreen({
       <Button variant="ghost" onClick={() => fadeNavigate(backHref)}>
         ← Voltar ao curso
       </Button>
+
+      {draftBannerVisible && draft && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-600/5 px-4 py-2.5 text-sm dark:border-blue-400/30 dark:bg-blue-400/10">
+          <p className="text-blue-800 dark:text-blue-300">
+            Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
+          </p>
+          <div className="flex shrink-0 gap-3">
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
+            >
+              Descartar
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraftBannerVisible(false)}
+              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
+            >
+              Continuar com este rascunho
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

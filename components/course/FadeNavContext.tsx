@@ -44,18 +44,18 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
   const [covered, setCovered] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
   const guardRef = useRef<(() => boolean) | null>(null);
+  // href à espera de confirmação — window.confirm() é uma caixa nativa do
+  // browser, sem nada a ver com o resto da UI da app (fácil de nem
+  // reconhecer como "a app a perguntar algo"); isto troca por um card
+  // próprio, com o resto da transição só a arrancar depois de confirmar.
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const setNavigationGuard = useCallback((guard: (() => boolean) | null) => {
     guardRef.current = guard;
   }, []);
 
-  const fadeNavigate = useCallback(
+  const runNavigation = useCallback(
     (href: string) => {
-      if (guardRef.current?.()) {
-        const proceed = window.confirm("Tens alterações por guardar. Queres sair sem guardar?");
-        if (!proceed) return;
-        guardRef.current = null;
-      }
       pauseAllVideos();
       setCurtainActive(true);
       setCovered(false);
@@ -71,6 +71,28 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
     },
     [router]
   );
+
+  const fadeNavigate = useCallback(
+    (href: string) => {
+      if (guardRef.current?.()) {
+        setPendingHref(href);
+        return;
+      }
+      runNavigation(href);
+    },
+    [runNavigation]
+  );
+
+  function confirmLeave() {
+    guardRef.current = null;
+    const href = pendingHref;
+    setPendingHref(null);
+    if (href) runNavigation(href);
+  }
+
+  function cancelLeave() {
+    setPendingHref(null);
+  }
 
   useEffect(() => {
     if (!covered || !isPending) {
@@ -108,6 +130,37 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
           {showSpinner && (
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-white/15 dark:border-t-white/70" />
           )}
+        </div>
+      )}
+      {pendingHref && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4" onClick={cancelLeave}>
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-neutral-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Alterações por guardar</h2>
+            <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300">
+              Tens alterações que ainda não guardaste. Se saíres agora, vais perdê-las.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelLeave}
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmLeave}
+                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
+              >
+                Sair sem guardar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </FadeNavContext.Provider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 type SidebarState = "closed" | "full" | "mini";
 
@@ -19,7 +19,13 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SidebarState>("mini");
   const isMobileRef = useRef(false);
 
-  useEffect(() => {
+  // useLayoutEffect (não useEffect) — corre antes do browser pintar. Estado
+  // inicial é sempre "mini" (não há como saber o tamanho do ecrã no
+  // servidor); em mobile isto corrigia-se DEPOIS da 1ª pintura com
+  // useEffect normal, dando um frame visível da barra "mini" antes de
+  // esconder. Os fades (Sidebar.tsx) vêm todos do mesmo `state`, por isso
+  // corrigem-se sozinhos também.
+  useLayoutEffect(() => {
     const mql = window.matchMedia(MOBILE_QUERY);
     function sync(isMobile: boolean) {
       isMobileRef.current = isMobile;

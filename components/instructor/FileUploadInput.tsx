@@ -79,8 +79,8 @@ async function uploadDirect(kind: Kind, file: File): Promise<UploadResult> {
   return { url: signData.publicUrl, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
-// retryable=true: falha de rede/servidor, vale a pena tentar de novo do
-// zero. retryable=false: erro de validação (ficheiro inválido, tipo não
+// retryable=true: falha de rede/servidor, vale a pena tentar de novo.
+// retryable=false: erro de validação (ficheiro inválido, tipo não
 // permitido, etc.) — repetir não muda nada, mostra logo o erro.
 class UploadError extends Error {
   retryable: boolean;
@@ -90,93 +90,127 @@ class UploadError extends Error {
   }
 }
 
-// Envia o vídeo bruto diretamente pro worker (Railway) via um token de
-// upload de curta duração (ver /api/upload/authorize-direct). A resposta só
-// volta quando a escada HLS toda estiver pronta — onPhaseChange avisa a UI
-// para trocar a barra de progresso (percentagem, enquanto os bytes ainda
-// estão a sair) por um indicador indeterminado (enquanto o worker comprime,
-// sem progresso conhecido).
-function uploadToWorkerOnce(
-  file: File,
-  onProgress: (percent: number) => void,
-  onPhaseChange: (phase: "uploading" | "compressing") => void
-): Promise<UploadResult> {
-  return new Promise((resolve, reject) => {
-    fetch("/api/upload/authorize-direct", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size }),
-    })
-      .then(async (authRes) => {
-        const auth = await authRes.json().catch(() => ({}));
-        if (!authRes.ok) {
-          throw new UploadError(auth.error ?? "Erro ao preparar envio", authRes.status >= 500);
-        }
+interface WorkerAuth {
+  uploadUrl: string;
+  token: string;
+}
 
-        console.log("[upload] a enviar pro worker:", auth.uploadUrl);
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", auth.uploadUrl);
-        xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.upload.onload = () => onPhaseChange("compressing");
-        xhr.onload = () => {
-          console.log(`[upload] resposta do worker: status=${xhr.status} body=`, xhr.responseText.slice(0, 500));
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText) as { hlsMasterUrl: string };
-              resolve({ url: data.hlsMasterUrl, sizeBytes: file.size, name: file.name, mimeType: file.type });
-            } catch {
-              reject(new UploadError("Resposta inválida do worker", true));
-            }
-          } else {
-            let message = "Erro ao comprimir vídeo";
-            try {
-              message = JSON.parse(xhr.responseText).error ?? message;
-            } catch {
-              // resposta não-JSON (ex.: proxy/erro de rede a meio) — mensagem genérica já chega
-            }
-            // 5xx (worker/proxy com problema momentâneo) e 401 (token
-            // expirado — cada tentativa pede um token novo) valem retry;
-            // 4xx de validação não, repetir não muda o resultado.
-            reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401));
-          }
-        };
-        xhr.onerror = () => {
-          console.error(`[upload] falha de rede — readyState=${xhr.readyState} status=${xhr.status}`);
-          reject(new UploadError("Falha de rede ao enviar para compressão", true));
-        };
-        xhr.send(file);
-      })
-      .catch((err) => reject(err instanceof UploadError ? err : new UploadError("Falha de rede", true)));
+async function authorizeWorkerUpload(file: File): Promise<WorkerAuth> {
+  const authRes = await fetch("/api/upload/authorize-direct", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size }),
+  });
+  const auth = await authRes.json().catch(() => ({}));
+  if (!authRes.ok) throw new UploadError(auth.error ?? "Erro ao preparar envio", authRes.status >= 500);
+  return auth;
+}
+
+// Pergunta ao worker quantos bytes já tem deste upload — chamado antes de
+// cada retry, pra saber exatamente de onde continuar em vez de reenviar o
+// ficheiro todo outra vez do zero (o que dói bastante num vídeo grande a
+// meio duma ligação instável).
+async function getReceivedBytes(auth: WorkerAuth): Promise<number> {
+  try {
+    const statusUrl = auth.uploadUrl.replace(/\/upload$/, "/upload-status");
+    const res = await fetch(statusUrl, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return typeof data.receivedBytes === "number" ? data.receivedBytes : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Envia um bloco (ficheiro inteiro na 1ª tentativa, só o resto a partir de
+// resumeOffset nas seguintes) diretamente pro worker (Railway). A resposta
+// só volta quando a escada HLS toda estiver pronta — onPhaseChange avisa a
+// UI para trocar a barra de progresso (percentagem) por um indicador
+// indeterminado enquanto o worker comprime, sem progresso conhecido nessa parte.
+function postToWorker(
+  auth: WorkerAuth,
+  blob: Blob,
+  resumeOffset: number,
+  onProgress: (bytesSentInBlock: number) => void,
+  onPhaseChange: (phase: "uploading" | "compressing") => void
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    console.log(`[upload] a enviar pro worker (offset=${resumeOffset}, bloco=${blob.size} bytes):`, auth.uploadUrl);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", auth.uploadUrl);
+    xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
+    if (resumeOffset > 0) xhr.setRequestHeader("X-Upload-Offset", String(resumeOffset));
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded);
+    };
+    xhr.upload.onload = () => onPhaseChange("compressing");
+    xhr.onload = () => {
+      console.log(`[upload] resposta do worker: status=${xhr.status} body=`, xhr.responseText.slice(0, 500));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText) as { hlsMasterUrl: string };
+          resolve(data.hlsMasterUrl);
+        } catch {
+          reject(new UploadError("Resposta inválida do worker", true));
+        }
+      } else {
+        let message = "Erro ao comprimir vídeo";
+        try {
+          message = JSON.parse(xhr.responseText).error ?? message;
+        } catch {
+          // resposta não-JSON (ex.: proxy/erro de rede a meio) — mensagem genérica já chega
+        }
+        // 5xx (worker/proxy com problema momentâneo), 401 (token expirado)
+        // e 409 (offset desatualizado — sincroniza-se sozinho na próxima
+        // tentativa) valem retry; 4xx de validação não, repetir não muda o resultado.
+        reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401 || xhr.status === 409));
+      }
+    };
+    xhr.onerror = () => {
+      console.error(`[upload] falha de rede — readyState=${xhr.readyState} status=${xhr.status}`);
+      reject(new UploadError("Falha de rede ao enviar para compressão", true));
+    };
+    xhr.send(blob);
   });
 }
 
 const UPLOAD_RETRY_ATTEMPTS = 3;
 
-// Retenta o envio TODO do zero (não há resumo por bytes — só reenvia o
-// ficheiro inteiro outra vez) quando a falha é de rede/servidor. Ficheiros
-// grandes deviam evitar isto (é caro repetir do zero), mas continua a ser
-// muito melhor que obrigar a pessoa a repetir à mão — e a maior parte das
-// quebras de rede são momentâneas, resolvem-se numa 2ª tentativa.
+// Autoriza uma vez só (mesmo token/assetId reaproveitado em todas as
+// tentativas — é o que liga um retry ao ficheiro parcial já recebido da
+// tentativa anterior) e, a cada retry, pergunta ao worker onde ficou e só
+// reenvia o que falta. Falha de validação (ficheiro inválido) não tenta
+// outra vez — só rede/servidor.
 async function uploadToWorker(
   file: File,
   onProgress: (percent: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void,
   onRetry: (attempt: number, maxAttempts: number) => void
 ): Promise<UploadResult> {
+  let auth: WorkerAuth | null = null;
   let lastErr: unknown;
+
   for (let attempt = 1; attempt <= UPLOAD_RETRY_ATTEMPTS; attempt++) {
     try {
-      return await uploadToWorkerOnce(file, onProgress, onPhaseChange);
+      if (!auth) auth = await authorizeWorkerUpload(file);
+      const resumeOffset = attempt === 1 ? 0 : await getReceivedBytes(auth);
+      const blob = resumeOffset > 0 ? file.slice(resumeOffset) : file;
+      if (resumeOffset > 0) console.log(`[upload] a retomar a partir de ${resumeOffset}/${file.size} bytes`);
+
+      const url = await postToWorker(
+        auth,
+        blob,
+        resumeOffset,
+        (bytesSentInBlock) => onProgress(Math.round(((resumeOffset + bytesSentInBlock) / file.size) * 100)),
+        onPhaseChange
+      );
+      return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
     } catch (err) {
       lastErr = err;
       const retryable = err instanceof UploadError ? err.retryable : true;
       if (!retryable || attempt === UPLOAD_RETRY_ATTEMPTS) throw err;
-      console.warn(`[upload] tentativa ${attempt} falhou, a repetir:`, err);
+      console.warn(`[upload] tentativa ${attempt} falhou, a repetir a partir de onde ficou:`, err);
       onRetry(attempt + 1, UPLOAD_RETRY_ATTEMPTS);
-      onProgress(0);
       await new Promise((r) => setTimeout(r, 1500 * attempt));
     }
   }

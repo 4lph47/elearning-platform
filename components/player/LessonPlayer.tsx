@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import {
   Check,
@@ -138,6 +139,7 @@ export function LessonPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuPortalRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const collapsed = useSidebarCollapsed();
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
@@ -229,6 +231,7 @@ export function LessonPlayer({
   const [isPiP, setIsPiP] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ bottom: number; right: number } | null>(null);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [loop, setLoop] = useState(false);
@@ -254,7 +257,16 @@ export function LessonPlayer({
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      // O menu em si vive num portal (fora do vídeo, ver render mais
+      // abaixo) — clicar lá dentro não conta como "fora", precisa de
+      // verificar os dois sítios (botão + conteúdo portalado).
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        menuPortalRef.current &&
+        !menuPortalRef.current.contains(target)
+      ) {
         setMenuOpen(false);
         setSpeedOpen(false);
         setQualityOpen(false);
@@ -263,6 +275,25 @@ export function LessonPlayer({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  // Botão está dentro do vídeo (overflow-hidden, e agora também pode ter um
+  // transform ativo durante o gesto de arrastar) — o menu, se ficasse lá
+  // dentro, era cortado sempre que não coubesse no espaço visível. Calcula
+  // a posição a partir do botão e o conteúdo do menu é portalado pra
+  // document.body (ver render), fora de qualquer limitação do vídeo.
+  function toggleSettingsMenu() {
+    setMenuOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        const btn = menuRef.current;
+        if (btn) {
+          const rect = btn.getBoundingClientRect();
+          setMenuPosition({ bottom: window.innerHeight - rect.top + 8, right: window.innerWidth - rect.right });
+        }
+      }
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (!contextMenuPos) return;
@@ -586,12 +617,17 @@ export function LessonPlayer({
       start.dy = dy;
       const isFs = Boolean(document.fullscreenElement);
       let scale = 1;
+      let translateY = 0;
       if (!isFs && dy < 0) {
         scale = 1 + (Math.min(-dy, DRAG_MAX_PX) / DRAG_MAX_PX) * 0.6;
       } else if (isFs && dy > 0) {
+        // minimizar: encolhe E desloca-se com o dedo (não fica parado a
+        // encolher no sítio) — sensação de arrastar o vídeo pra baixo a
+        // sério, tipo mini-player.
         scale = 1 - (Math.min(dy, DRAG_MAX_PX) / DRAG_MAX_PX) * 0.4;
+        translateY = Math.min(dy, DRAG_MAX_PX);
       }
-      container!.style.transform = scale !== 1 ? `scale(${scale})` : "";
+      container!.style.transform = scale !== 1 || translateY !== 0 ? `translateY(${translateY}px) scale(${scale})` : "";
     }
 
     container.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -721,7 +757,15 @@ export function LessonPlayer({
           ) : (
             <div
               ref={containerRef}
-              className={`group relative touch-manipulation overflow-hidden ${isDraggingVideo ? "z-50" : ""} ${playerClassName}`}
+              // touch-pan-x (não touch-manipulation) — "manipulation" inclui
+              // pan-y, ou seja diz ao browser que pode fazer scroll vertical
+              // nativo neste elemento, e ele começa a scrollar ao nível do
+              // compositor ANTES do preventDefault() do JS sequer correr
+              // (por isso o scroll da página não travava, e o arrasto vinha
+              // com jank — os dois a competir pelo mesmo gesto). pan-x só
+              // permite gesto horizontal nativo (troca de aula), o vertical
+              // fica 100% por conta do JS do drag.
+              className={`group relative touch-pan-x overflow-hidden ${isDraggingVideo ? "z-50" : ""} ${playerClassName}`}
               onContextMenu={handleContextMenu}
               onTouchStart={handleFullscreenTouchStart}
               onTouchEnd={handleFullscreenTouchEnd}
@@ -844,7 +888,7 @@ export function LessonPlayer({
 
                   <div ref={menuRef} className="relative flex items-center">
                     <button type="button"
-                      onClick={() => setMenuOpen((v) => !v)}
+                      onClick={toggleSettingsMenu}
                       aria-label="Definições"
                       title="Definições"
                       className="flex items-center hover:text-blue-400"
@@ -852,8 +896,13 @@ export function LessonPlayer({
                       <Settings size={20} />
                     </button>
 
-                    {menuOpen && (
-                      <div className="absolute bottom-full right-0 mb-2 w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md">
+                    {menuOpen &&
+                      menuPosition &&
+                      createPortal(
+                        <div
+                          ref={menuPortalRef}
+                          style={{ position: "fixed", bottom: menuPosition.bottom, right: menuPosition.right }}
+                          className="z-[100] w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md">
                         <button type="button"
                           onClick={handleDownload}
                           className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
@@ -989,8 +1038,9 @@ export function LessonPlayer({
                             </span>
                           </button>
                         )}
-                      </div>
-                    )}
+                        </div>,
+                        document.body
+                      )}
                   </div>
                 </div>
               </div>

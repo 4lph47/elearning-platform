@@ -403,9 +403,27 @@ function verifyUploadToken(token) {
   return assetId;
 }
 
-function pipeRequestToFile(req, destPath) {
+// Path determinístico por assetId (não mkdtemp aleatório) — é o que
+// permite a um retry encontrar e continuar o mesmo ficheiro parcial de uma
+// tentativa anterior, em vez de começar sempre do zero.
+function uploadWorkDir(assetId) {
+  return path.join(os.tmpdir(), `direct-upload-${assetId}`);
+}
+
+async function getReceivedBytes(assetId) {
+  try {
+    const stat = await fs.stat(path.join(uploadWorkDir(assetId), "source"));
+    return stat.size;
+  } catch {
+    return 0;
+  }
+}
+
+// append=true (retoma): abre em modo "a", só acrescenta ao que já lá está.
+// append=false (1ª tentativa): "w", começa do zero.
+function pipeRequestToFile(req, destPath, append) {
   return new Promise((resolve, reject) => {
-    const writeStream = fsSync.createWriteStream(destPath);
+    const writeStream = fsSync.createWriteStream(destPath, { flags: append ? "a" : "w" });
     req.on("error", reject);
     writeStream.on("error", reject);
     writeStream.on("finish", resolve);
@@ -415,41 +433,82 @@ function pipeRequestToFile(req, destPath) {
 
 function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Origin", APP_URL);
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Upload-Offset");
+}
+
+function authenticateRequest(req) {
+  const authHeader = req.headers["authorization"] || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  return verifyUploadToken(token);
+}
+
+// GET /upload-status — o browser pergunta isto antes de cada retry, pra
+// saber exatamente quantos bytes já chegaram e só reenviar o resto (ver
+// FileUploadInput.tsx) em vez de reenviar o ficheiro todo outra vez.
+async function handleUploadStatusRequest(req, res) {
+  const assetId = authenticateRequest(req);
+  if (!assetId) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Token de upload inválido ou expirado" }));
+    return;
+  }
+  const receivedBytes = await getReceivedBytes(assetId);
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ receivedBytes }));
 }
 
 async function handleUploadRequest(req, res) {
   console.log(`[upload] pedido recebido — content-length=${req.headers["content-length"] || "?"} content-type=${req.headers["content-type"] || "?"}`);
-  const authHeader = req.headers["authorization"] || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const assetId = verifyUploadToken(token);
+  const assetId = authenticateRequest(req);
   if (!assetId) {
     res.writeHead(401, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Token de upload inválido ou expirado" }));
     return;
   }
 
-  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "direct-upload-"));
+  const workDir = uploadWorkDir(assetId);
   const sourcePath = path.join(workDir, "source");
+  const offsetHeader = req.headers["x-upload-offset"];
+  const isResume = typeof offsetHeader === "string";
 
   try {
-    console.log(`A receber upload direto ${assetId}`);
-    await pipeRequestToFile(req, sourcePath);
+    await fs.mkdir(workDir, { recursive: true });
+
+    if (isResume) {
+      const expectedOffset = Number(offsetHeader);
+      const actualBytes = await getReceivedBytes(assetId);
+      if (!Number.isFinite(expectedOffset) || expectedOffset !== actualBytes) {
+        // corrida rara (2 retries em paralelo, ou o worker reiniciou entre
+        // tentativas) — devolve o valor real pro cliente sincronizar e
+        // tentar outra vez, em vez de corromper o ficheiro a meio.
+        res.writeHead(409, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Offset desatualizado", receivedBytes: actualBytes }));
+        return;
+      }
+      console.log(`[upload] a retomar ${assetId} a partir de ${actualBytes} bytes`);
+    } else {
+      console.log(`A receber upload direto ${assetId}`);
+    }
+
+    await pipeRequestToFile(req, sourcePath, isResume);
     console.log(`  -> recebido, a comprimir ${assetId}`);
     const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null);
     if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
     console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ hlsMasterUrl: masterPlaylistUrl, renditions }));
+    // só limpa em caso de sucesso — numa falha o ficheiro parcial fica pra
+    // um retry poder continuar dali, em vez de reenviar tudo outra vez.
+    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    return;
   } catch (err) {
     console.error(`Upload direto ${assetId} falhou:`, err);
     if (!res.headersSent) {
+      const receivedBytes = await getReceivedBytes(assetId).catch(() => 0);
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err && err.message ? err.message : "Falha ao comprimir vídeo" }));
+      res.end(JSON.stringify({ error: err && err.message ? err.message : "Falha ao comprimir vídeo", receivedBytes }));
     }
-  } finally {
-    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
@@ -465,6 +524,17 @@ const server = http.createServer((req, res) => {
     setCorsHeaders(res);
     handleUploadRequest(req, res).catch((err) => {
       console.error("Erro não tratado no upload:", err);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Erro interno" }));
+      }
+    });
+    return;
+  }
+  if (req.method === "GET" && req.url === "/upload-status") {
+    setCorsHeaders(res);
+    handleUploadStatusRequest(req, res).catch((err) => {
+      console.error("Erro não tratado no /upload-status:", err);
       if (!res.headersSent) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Erro interno" }));

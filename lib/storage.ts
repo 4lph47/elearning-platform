@@ -12,9 +12,18 @@ export interface Storage {
 
 const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "course-media";
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
-  auth: { persistSession: false },
-});
+let client: ReturnType<typeof createClient> | null = null;
+function getClient() {
+  if (!client) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+      throw new Error("SUPABASE_URL / SUPABASE_SECRET_KEY não configuradas");
+    }
+    client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
+      auth: { persistSession: false },
+    });
+  }
+  return client;
+}
 
 class SupabaseStorage implements Storage {
   async save(file: File, folder: string): Promise<SavedFile> {
@@ -23,12 +32,12 @@ class SupabaseStorage implements Storage {
     const objectPath = `${safeFolder}/${crypto.randomUUID()}${ext}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { error } = await supabase.storage
-      .from(bucket)
+    const { error } = await getClient()
+      .storage.from(bucket)
       .upload(objectPath, buffer, { contentType: file.type || undefined, upsert: false });
     if (error) throw error;
 
-    const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+    const { data } = getClient().storage.from(bucket).getPublicUrl(objectPath);
     return { url: data.publicUrl, sizeBytes: buffer.byteLength };
   }
 
@@ -37,7 +46,7 @@ class SupabaseStorage implements Storage {
     const idx = url.indexOf(marker);
     if (idx === -1) return;
     const objectPath = url.slice(idx + marker.length);
-    await supabase.storage.from(bucket).remove([objectPath]);
+    await getClient().storage.from(bucket).remove([objectPath]);
   }
 }
 

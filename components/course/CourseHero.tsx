@@ -9,7 +9,6 @@ import {
   boxFromRect,
   elapsedVideoTime,
   textBoxFromElement,
-  toDocumentBox,
   useCardTransition,
 } from "@/components/course/CardTransitionContext";
 import { useTextFly } from "@/components/course/TextFlyContext";
@@ -99,11 +98,11 @@ export function CourseHero({
     const rect = mediaBoxRef.current?.getBoundingClientRect();
     if (!rect) return;
     arrive(slug, {
-      video: toDocumentBox(boxFromRect(rect)),
-      title: titleRef.current ? toDocumentBox(textBoxFromElement(titleRef.current)) : null,
-      category: categoryRef.current ? toDocumentBox(textBoxFromElement(categoryRef.current)) : null,
-      instructor: instructorRef.current ? toDocumentBox(textBoxFromElement(instructorRef.current)) : null,
-      rating: ratingBoxRef.current ? toDocumentBox(boxFromRect(ratingBoxRef.current.getBoundingClientRect())) : null,
+      video: boxFromRect(rect),
+      title: titleRef.current ? textBoxFromElement(titleRef.current) : null,
+      category: categoryRef.current ? textBoxFromElement(categoryRef.current) : null,
+      instructor: instructorRef.current ? textBoxFromElement(instructorRef.current) : null,
+      rating: ratingBoxRef.current ? boxFromRect(ratingBoxRef.current.getBoundingClientRect()) : null,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, slug]);
@@ -125,7 +124,7 @@ export function CourseHero({
     return registerSource(slug, {
       getBox: () => {
         const rect = mediaBoxRef.current?.getBoundingClientRect();
-        return rect ? toDocumentBox(boxFromRect(rect)) : { top: 0, left: 0, width: 0, height: 0 };
+        return rect ? boxFromRect(rect) : { top: 0, left: 0, width: 0, height: 0 };
       },
       getVideoTime: () => {
         if (youtubeId) return (Date.now() - heroStartedAtRef.current) / 1000;

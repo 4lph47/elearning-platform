@@ -7,7 +7,7 @@ import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { ResourcePreviewContent as PreviewContent } from "@/components/course/ResourcePreviewContent";
-import { boxFromRect, toDocumentBox, useCardTransition } from "@/components/course/CardTransitionContext";
+import { boxFromRect, useCardTransition } from "@/components/course/CardTransitionContext";
 
 export function LessonBody({
   title,
@@ -73,7 +73,7 @@ export function LessonBody({
     if (!pending) return;
     const rect = playerBoxRef.current?.getBoundingClientRect();
     if (!rect) return;
-    arrive(courseSlug, { video: toDocumentBox(boxFromRect(rect)), title: null, category: null, instructor: null, rating: null });
+    arrive(courseSlug, { video: boxFromRect(rect), title: null, category: null, instructor: null, rating: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, courseSlug]);
 

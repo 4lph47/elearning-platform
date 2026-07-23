@@ -65,9 +65,9 @@ export function CardTransitionOverlay() {
   // também, senão nunca se vê enquanto o trailer nativo reproduz a zoomar.
   const ambientColor = useAmbientColor(videoElRef, Boolean(state?.videoUrl) && !state?.youtubeId);
 
-  // Scroll da row de origem (CourseRow.tsx, overflow-x-auto) não é scroll da
-  // janela — toDocumentBox (CardTransitionContext.tsx) só cobre esse. Segue o
-  // delta ao vivo enquanto a origem existir, pra o clone ser "arrastado" com
+  // Scroll da row de origem (CourseRow.tsx, overflow-x-auto) não move o clone
+  // sozinho (overlay é fixed, fora da row) — segue o delta ao vivo enquanto a
+  // origem existir, pra o clone ser "arrastado" com
   // os outros cards da row (não selecionados) em vez de ficar preso no sítio
   // do clique. Aplicado por REF (transform, direto no DOM) em vez de estado
   // React — passar pelo top/left normais (que têm `transition: all`) fazia o
@@ -191,7 +191,7 @@ export function CardTransitionOverlay() {
       : null;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[999]">
+    <div className="pointer-events-none fixed inset-0 z-[999]">
       {state.videoUrl && !state.youtubeId && (
         <div
           ref={glowRef}

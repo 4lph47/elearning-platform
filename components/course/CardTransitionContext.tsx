@@ -60,11 +60,10 @@ interface StartPayload {
   videoTime: number;
   capturedAt: number;
   // Ancestral scrollável do card (ex.: a row horizontal em CourseRow.tsx) —
-  // window.scrollX/Y (toDocumentBox) só cobre o scroll da PÁGINA; o scroll
-  // interno desta row (scrollLeft) é invisível a esse truque, porque o clone
-  // vive fora dela (overlay no layout raiz). Guarda-se a referência + a
-  // posição de scroll no instante do clique, pra o overlay poder seguir o
-  // delta ao vivo (ver CardTransitionOverlay.tsx).
+  // o clone vive fora dela (overlay fixed no layout raiz), por isso o scroll
+  // interno desta row (scrollLeft) não a acompanha sozinho. Guarda-se a
+  // referência + a posição de scroll no instante do clique, pra o overlay
+  // poder seguir o delta ao vivo (ver CardTransitionOverlay.tsx).
   scrollOriginEl: HTMLElement | null;
   scrollOriginLeft: number;
   scrollOriginTop: number;
@@ -226,19 +225,10 @@ export function boxFromRect(rect: DOMRect): TransitionBox {
   return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
 }
 
-// getBoundingClientRect() é sempre relativo ao viewport — um clone posicionado
-// direto com esses valores (dentro de um wrapper position:fixed) fica preso à
-// posição no ecrã onde foi clicado, ignorando scroll. Converte pra coordenadas
-// do documento (soma o scroll atual) ANTES de guardar no estado, pra o overlay
-// poder usar position:absolute (acompanha o scroll como um elemento normal).
-export function toDocumentBox<T extends TransitionBox>(box: T): T {
-  return { ...box, top: box.top + window.scrollY, left: box.left + window.scrollX };
-}
-
 // Sobe a árvore a partir do elemento clicado à procura de um ancestral com
 // scroll próprio (ex.: a row horizontal de CourseRow.tsx, overflow-x-auto) —
-// esse scroll é invisível ao truque do toDocumentBox (só cobre window). null
-// se não houver nenhum (card fora de qualquer row com scroll).
+// esse scroll não é acompanhado pelo overlay (position:fixed, fora da row).
+// null se não houver nenhum (card fora de qualquer row com scroll).
 export function findScrollAncestor(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null;
   while (node && node !== document.body) {

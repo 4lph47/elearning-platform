@@ -13,7 +13,6 @@ import {
   findScrollAncestor,
   ROW_ZOOM_SCALE,
   textBoxFromElement,
-  toDocumentBox,
   useCardTransition,
   type TransitionKind,
 } from "@/components/course/CardTransitionContext";
@@ -134,11 +133,11 @@ export function CourseTile({
     // CardTransitionOverlay.tsx: sem alvo, esmorece em vez de voar).
     // Tamanho normal (1x), antes de qualquer zoom — clone nasce aqui e cresce
     // gradualmente até ao tamanho escalado (CardTransitionOverlay.tsx).
-    const videoRawBox = toDocumentBox(boxFromRect(videoBoxRef.current.getBoundingClientRect()));
-    const titleRawBox = titleRef.current ? toDocumentBox(textBoxFromElement(titleRef.current)) : null;
-    const categoryRawBox = categoryRef.current ? toDocumentBox(textBoxFromElement(categoryRef.current)) : null;
-    const instructorRawBox = instructorRef.current ? toDocumentBox(textBoxFromElement(instructorRef.current)) : null;
-    const ratingRawBox = ratingBoxRef.current ? toDocumentBox(boxFromRect(ratingBoxRef.current.getBoundingClientRect())) : null;
+    const videoRawBox = boxFromRect(videoBoxRef.current.getBoundingClientRect());
+    const titleRawBox = titleRef.current ? textBoxFromElement(titleRef.current) : null;
+    const categoryRawBox = categoryRef.current ? textBoxFromElement(categoryRef.current) : null;
+    const instructorRawBox = instructorRef.current ? textBoxFromElement(instructorRef.current) : null;
+    const ratingRawBox = ratingBoxRef.current ? boxFromRect(ratingBoxRef.current.getBoundingClientRect()) : null;
 
     // Card numa row com zoom-hover (CourseRow) só atinge o scale-1.15 300ms
     // depois do clique, por transição CSS — medir agora dava sempre a caixa
@@ -167,11 +166,11 @@ export function CourseTile({
       };
     }
 
-    const videoBox = toDocumentBox(boxFromRect(videoBoxRef.current.getBoundingClientRect()));
-    const titleBox = titleRef.current ? toDocumentBox(textBoxFromElement(titleRef.current)) : null;
-    const categoryBox = categoryRef.current ? toDocumentBox(textBoxFromElement(categoryRef.current)) : null;
-    const instructorBox = instructorRef.current ? toDocumentBox(textBoxFromElement(instructorRef.current)) : null;
-    const ratingBox = ratingBoxRef.current ? toDocumentBox(boxFromRect(ratingBoxRef.current.getBoundingClientRect())) : null;
+    const videoBox = boxFromRect(videoBoxRef.current.getBoundingClientRect());
+    const titleBox = titleRef.current ? textBoxFromElement(titleRef.current) : null;
+    const categoryBox = categoryRef.current ? textBoxFromElement(categoryRef.current) : null;
+    const instructorBox = instructorRef.current ? textBoxFromElement(instructorRef.current) : null;
+    const ratingBox = ratingBoxRef.current ? boxFromRect(ratingBoxRef.current.getBoundingClientRect()) : null;
 
     unsnap?.();
 

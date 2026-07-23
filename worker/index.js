@@ -165,19 +165,29 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, copyOnly)
         "128k",
       ];
 
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-i",
-    sourcePath,
-    ...codecArgs,
-    "-hls_time",
-    String(HLS_SEGMENT_SECONDS),
-    "-hls_playlist_type",
-    "vod",
-    "-hls_segment_filename",
-    segmentPattern,
-    playlistPath,
-  ]);
+  await execFileAsync(
+    "ffmpeg",
+    [
+      "-y",
+      "-loglevel",
+      "error",
+      "-i",
+      sourcePath,
+      ...codecArgs,
+      "-hls_time",
+      String(HLS_SEGMENT_SECONDS),
+      "-hls_playlist_type",
+      "vod",
+      "-hls_segment_filename",
+      segmentPattern,
+      playlistPath,
+    ],
+    // Node's execFile default maxBuffer é só 1MB — ffmpeg é verboso a
+    // sério no stderr (progresso, frame a frame), qualquer vídeo com mais
+    // que uns segundos estoura isso e o processo é morto a meio (ficheiro
+    // de saída fica truncado/inválido). 100MB dá margem generosa.
+    { maxBuffer: 100 * 1024 * 1024 }
+  );
 }
 
 function contentTypeFor(fileName) {
@@ -233,8 +243,19 @@ async function uploadMasterPlaylist(key, variants) {
 // (e reportando, via onRendition) cada rung assim que fica pronto — não só
 // no fim. onRendition pode ser null (upload direto não precisa de reportar
 // rung a rung, só devolve tudo no fim da resposta HTTP).
+// ffmpeg "-vf scale=-2:H" arredonda a largura pro múltiplo de 2 mais
+// próximo (exigido por libx264) — reproduz esse arredondamento aqui, pra
+// não depender de sondar um segmento .ts com ffprobe pelas dimensões
+// (frágil: o 1º segmento pode não ter um keyframe logo à entrada,
+// sobretudo em remux "-c copy", e ffprobe falha a ler as suas dimensões
+// mesmo com o ficheiro perfeitamente válido).
+function scaledEvenWidth(sourceWidth, sourceHeight, targetHeight) {
+  const width = Math.round((sourceWidth * targetHeight) / sourceHeight);
+  return width % 2 === 0 ? width : width - 1;
+}
+
 async function transcodeToHls(key, sourcePath, workDir, onRendition) {
-  const { height: sourceHeight } = await probeDimensions(sourcePath);
+  const { width: sourceWidth, height: sourceHeight } = await probeDimensions(sourcePath);
   const durationSeconds = await probeDuration(sourcePath);
 
   let rungs = QUALITY_LADDER.filter((r) => sourceHeight >= r.height * 0.9);
@@ -254,8 +275,8 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition) {
 
     await transcodeRenditionHls(sourcePath, outDir, rung.height, isNearSource);
 
-    const segFiles = (await fs.readdir(outDir)).filter((f) => f.endsWith(".ts"));
-    const { width, height } = await probeDimensions(path.join(outDir, segFiles[0]));
+    const width = isNearSource ? sourceWidth : scaledEvenWidth(sourceWidth, sourceHeight, rung.height);
+    const height = isNearSource ? sourceHeight : rung.height;
     const { indexUrl, totalBytes } = await uploadRenditionDir(key, rung.label, outDir);
     const bandwidth = durationSeconds > 0 ? Math.round((totalBytes * 8) / durationSeconds) : 1_000_000;
 

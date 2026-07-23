@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type Kind = "VIDEO" | "DOCUMENT" | "IMAGE";
 
@@ -10,6 +11,14 @@ const ACCEPT: Record<Kind, string> = {
   IMAGE: "image/png,image/jpeg,image/webp",
 };
 
+// Vídeo/documento vão direto pro Supabase Storage (ver /api/upload/sign) —
+// nunca passam pelo corpo de um pedido ao Vercel, que tem um limite de
+// 4.5MB nas serverless functions e rejeitava qualquer vídeo real antes
+// sequer de chegar ao nosso código (dava "Resposta inválida do servidor",
+// porque a resposta de erro do Vercel nem é JSON). Imagens continuam a ir
+// por app/api/upload — precisam de passar por lá para o sharp comprimir.
+const DIRECT_UPLOAD_KINDS: Kind[] = ["VIDEO", "DOCUMENT"];
+
 interface UploadResult {
   url: string;
   sizeBytes: number;
@@ -18,9 +27,7 @@ interface UploadResult {
 }
 
 // fetch() não expõe progresso de upload (só de download) — XHR continua a
-// ser o único jeito nativo de saber quantos bytes já saíram, sem trazer
-// nenhuma lib só para isto. Vídeos grandes (até 500MB) podiam ficar
-// minutos num "A enviar..." sem número nenhum a mexer.
+// ser o único jeito nativo de saber quantos bytes já saíram.
 function uploadWithProgress(
   formData: FormData,
   onProgress: (percent: number) => void
@@ -45,6 +52,23 @@ function uploadWithProgress(
   });
 }
 
+async function uploadDirect(kind: Kind, file: File): Promise<UploadResult> {
+  const signRes = await fetch("/api/upload/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, fileName: file.name, mimeType: file.type, sizeBytes: file.size }),
+  });
+  const signData = await signRes.json();
+  if (!signRes.ok) throw new Error(signData.error ?? "Erro ao preparar envio");
+
+  const { error } = await getSupabaseBrowserClient()
+    .storage.from(signData.bucket)
+    .uploadToSignedUrl(signData.path, signData.token, file, { contentType: file.type || undefined });
+  if (error) throw error;
+
+  return { url: signData.publicUrl, sizeBytes: file.size, name: file.name, mimeType: file.type };
+}
+
 export function FileUploadInput({
   kind,
   onUploaded,
@@ -54,6 +78,7 @@ export function FileUploadInput({
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [indeterminate, setIndeterminate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
 
@@ -65,11 +90,23 @@ export function FileUploadInput({
     setProgress(0);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("kind", kind);
-
     try {
+      if (DIRECT_UPLOAD_KINDS.includes(kind)) {
+        // uploadToSignedUrl (SDK oficial, sem adivinhar o protocolo do
+        // Supabase à mão) usa fetch por baixo — sem evento de progresso,
+        // por isso barra indeterminada em vez de percentagem aqui.
+        setIndeterminate(true);
+        const data = await uploadDirect(kind, file);
+        setUploading(false);
+        setIndeterminate(false);
+        setUploadedName(data.name);
+        onUploaded(data);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("kind", kind);
       const { ok, data } = await uploadWithProgress(formData, setProgress);
       setUploading(false);
 
@@ -80,9 +117,10 @@ export function FileUploadInput({
 
       setUploadedName(data.name);
       onUploaded(data);
-    } catch {
+    } catch (err) {
       setUploading(false);
-      setError("Erro ao enviar ficheiro");
+      setIndeterminate(false);
+      setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
   }
 
@@ -98,12 +136,18 @@ export function FileUploadInput({
       {uploading && (
         <div className="mt-2">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-            <div
-              className="h-full rounded-full bg-blue-600 transition-[width] duration-150"
-              style={{ width: `${progress}%` }}
-            />
+            {indeterminate ? (
+              <div className="h-full w-full animate-pulse rounded-full bg-blue-600" />
+            ) : (
+              <div
+                className="h-full rounded-full bg-blue-600 transition-[width] duration-150"
+                style={{ width: `${progress}%` }}
+              />
+            )}
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A enviar... {progress}%</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            A enviar{indeterminate ? "..." : ` (${progress}%)`}
+          </p>
         </div>
       )}
       {uploadedName && !uploading && (

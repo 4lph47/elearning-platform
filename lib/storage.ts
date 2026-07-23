@@ -51,3 +51,32 @@ class SupabaseStorage implements Storage {
 }
 
 export const storage: Storage = new SupabaseStorage();
+
+export interface SignedUpload {
+  signedUrl: string;
+  token: string;
+  path: string;
+  publicUrl: string;
+  bucket: string;
+}
+
+// Vídeos/documentos são grandes demais pro limite de 4.5MB no corpo de um
+// pedido a uma serverless function do Vercel — em vez de passar o ficheiro
+// por aqui (app/api/upload), isto só gera uma URL assinada e o browser
+// envia diretamente para o Storage (ver components/instructor/FileUploadInput.tsx).
+export async function createSignedUpload(kind: string, fileName: string): Promise<SignedUpload> {
+  const folder = `${kind.toLowerCase()}s`;
+  const ext = fileName.includes(".") ? fileName.slice(fileName.lastIndexOf(".")) : "";
+  const objectPath = `${folder}/${crypto.randomUUID()}${ext}`;
+
+  const { data, error } = await getClient().storage.from(bucket).createSignedUploadUrl(objectPath);
+  if (error) throw error;
+
+  const signedUrl = data.signedUrl.startsWith("http")
+    ? data.signedUrl
+    : `${process.env.SUPABASE_URL}${data.signedUrl}`;
+
+  const { data: publicUrlData } = getClient().storage.from(bucket).getPublicUrl(data.path);
+
+  return { signedUrl, token: data.token, path: data.path, publicUrl: publicUrlData.publicUrl, bucket };
+}

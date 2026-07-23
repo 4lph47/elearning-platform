@@ -109,7 +109,11 @@ const ALLOWED_MIME_BY_TYPE: Record<string, string[]> = {
 const MAX_SIZE_BY_TYPE: Record<string, number> = {
   VIDEO: 500 * 1024 * 1024,
   DOCUMENT: 20 * 1024 * 1024,
-  IMAGE: 20 * 1024 * 1024,
+  // Imagens continuam a passar pelo corpo de um pedido ao Vercel (para o
+  // sharp comprimir server-side) — esse limite é 4.5MB, por isso o teto
+  // fica com margem abaixo disso, não nos 20MB de antes (vídeo/documento já
+  // não têm este problema, vão diretos para o Storage).
+  IMAGE: 4 * 1024 * 1024,
 };
 
 export function validateUpload(kind: "VIDEO" | "DOCUMENT" | "IMAGE", mimeType: string, sizeBytes: number) {

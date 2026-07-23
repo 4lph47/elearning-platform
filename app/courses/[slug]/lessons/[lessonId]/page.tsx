@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug } from "@/lib/courseCache";
+import { getRawLessonComments, toCommentTree } from "@/lib/commentsCache";
 import { buildCourseSequence, hrefFor } from "@/lib/courseSequence";
 import { LessonBody } from "@/components/course/LessonBody";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
@@ -69,18 +70,7 @@ export default async function LessonPage({
           select: { quizId: true },
         })
       : Promise.resolve([]),
-    prisma.lessonComment.findMany({
-      where: { lessonId, parentId: null },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: { select: { id: true, name: true } },
-        likes: { select: { userId: true } },
-        replies: {
-          orderBy: { createdAt: "asc" },
-          include: { user: { select: { id: true, name: true } }, likes: { select: { userId: true } } },
-        },
-      },
-    }),
+    getRawLessonComments(lessonId),
     prisma.lessonReaction.count({ where: { lessonId, type: "LIKE" } }),
     prisma.lessonReaction.findUnique({
       where: { userId_lessonId: { userId: session.user.id, lessonId } },
@@ -124,23 +114,7 @@ export default async function LessonPage({
   const doneQuizIds = new Set(doneQuizAttempts.map((a) => a.quizId));
 
   const authors = [course.instructor, ...course.collaborators];
-  const commentTree: CommentData[] = topLevelComments.map((c) => ({
-    id: c.id,
-    content: c.content,
-    createdAt: c.createdAt.toISOString(),
-    user: c.user,
-    likeCount: c.likes.length,
-    likedByMe: c.likes.some((l) => l.userId === session.user.id),
-    replies: c.replies.map((r) => ({
-      id: r.id,
-      content: r.content,
-      createdAt: r.createdAt.toISOString(),
-      user: r.user,
-      likeCount: r.likes.length,
-      likedByMe: r.likes.some((l) => l.userId === session.user.id),
-      replies: [],
-    })),
-  }));
+  const commentTree: CommentData[] = toCommentTree(topLevelComments, session.user.id);
 
   const totalItems = allLessons.length + allQuizIds.length;
   const completedCount = completedLessonsCount + doneQuizIds.size;

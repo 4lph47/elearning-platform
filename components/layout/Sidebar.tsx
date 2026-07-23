@@ -46,6 +46,10 @@ export function Sidebar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [openGroup, setOpenGroup] = useState<string | null>("instructor");
+  // Hover expande visualmente a barra minimizada (só sobrepõe o conteúdo,
+  // fixed já garante isso) sem tocar no state persistido — sair do rato
+  // devolve-a ao tamanho mini, sem afetar a margem do conteúdo principal.
+  const [peeking, setPeeking] = useState(false);
 
   function handleNavClick(e: React.MouseEvent, href: string) {
     if (pathname === href) return;
@@ -85,7 +89,7 @@ export function Sidebar() {
       : []),
   ];
 
-  const isMini = state === "mini";
+  const isMini = state === "mini" && !peeking;
   const widthClass = state === "closed" ? "w-0" : isMini ? "w-16" : "w-60";
   const edgeLeftClass = state === "closed" ? "left-0" : isMini ? "left-16" : "left-60";
   const isActive = (item: LeafItem) => {
@@ -103,8 +107,22 @@ export function Sidebar() {
           aria-hidden
         />
       )}
+      {/* Navbar fica transparente nas páginas com hero (revela a imagem por
+          baixo, de propósito) — sem isto, essa faixa transparente passava
+          por cima da coluna da sidebar também, mostrando a hero em vez de
+          branco/preto sólido nos primeiros 64px, acima do <aside> (que só
+          começa em top-16). Tapa só a largura da sidebar, por baixo da navbar. */}
+      {state !== "closed" && (
+        <div
+          className={`pointer-events-none fixed left-0 top-0 z-30 h-16 bg-white transition-[width] duration-200 dark:bg-black ${widthClass}`}
+        />
+      )}
       <aside
-        className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden bg-white transition-[width] duration-200 dark:bg-black ${widthClass}`}
+        onMouseEnter={() => state === "mini" && setPeeking(true)}
+        onMouseLeave={() => setPeeking(false)}
+        className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden bg-white transition-[width] duration-200 dark:bg-black ${widthClass} ${
+          peeking ? "shadow-xl" : ""
+        }`}
       >
         {state !== "closed" && (
           <div

@@ -47,16 +47,26 @@ export default async function DashboardPage() {
   ]);
   const progressByLesson = new Map(allProgress.map((p) => [p.lessonId, p]));
 
-  const courseSummaries = enrollments.map(({ course }) => {
-    const lessons = course.modules.flatMap((m) => m.lessons);
-    const completedCount = lessons.filter((l) => progressByLesson.get(l.id)?.completed).length;
-    const percent = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
+  // Ordenado por última visita (não por data de matrícula): mesma lógica do
+  // "Continuar onde paraste" da página principal — max entre a matrícula e o
+  // progresso mais recente em qualquer aula do curso.
+  const courseSummaries = enrollments
+    .map((enrollment) => {
+      const { course } = enrollment;
+      const lessons = course.modules.flatMap((m) => m.lessons);
+      const completedCount = lessons.filter((l) => progressByLesson.get(l.id)?.completed).length;
+      const percent = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
 
-    const nextLesson = lessons.find((l) => !progressByLesson.get(l.id)?.completed) ?? lessons[0];
-    const trailerLesson = lessons.find((l) => l.isFreePreview) ?? lessons[0];
+      const nextLesson = lessons.find((l) => !progressByLesson.get(l.id)?.completed) ?? lessons[0];
+      const trailerLesson = lessons.find((l) => l.isFreePreview) ?? lessons[0];
+      const lastActivity = Math.max(
+        enrollment.enrolledAt.getTime(),
+        ...lessons.map((l) => progressByLesson.get(l.id)?.updatedAt.getTime() ?? 0)
+      );
 
-    return { course, lessons, completedCount, percent, nextLesson, trailerLesson };
-  });
+      return { course, lessons, completedCount, percent, nextLesson, trailerLesson, lastActivity };
+    })
+    .sort((a, b) => b.lastActivity - a.lastActivity);
 
   const inProgress = courseSummaries.filter((c) => c.percent > 0 && c.percent < 100).length;
   const completed = courseSummaries.filter((c) => c.percent === 100).length;

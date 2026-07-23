@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { commentsTag, getRawLessonComments, toCommentTree } from "@/lib/commentsCache";
 
 const commentSchema = z.object({
   content: z.string().min(1, "Escreve um comentário").max(2000),
@@ -34,38 +36,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ les
   const lesson = await canAccessLesson(lessonId, session.user.id);
   if (!lesson) return NextResponse.json({ error: "Não tens acesso a esta aula" }, { status: 403 });
 
-  const topLevelComments = await prisma.lessonComment.findMany({
-    where: { lessonId, parentId: null },
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { id: true, name: true } },
-      likes: { select: { userId: true } },
-      replies: {
-        orderBy: { createdAt: "asc" },
-        include: { user: { select: { id: true, name: true } }, likes: { select: { userId: true } } },
-      },
-    },
-  });
-
-  const comments = topLevelComments.map((c) => ({
-    id: c.id,
-    content: c.content,
-    createdAt: c.createdAt.toISOString(),
-    user: c.user,
-    likeCount: c.likes.length,
-    likedByMe: c.likes.some((l) => l.userId === session.user.id),
-    replies: c.replies.map((r) => ({
-      id: r.id,
-      content: r.content,
-      createdAt: r.createdAt.toISOString(),
-      user: r.user,
-      likeCount: r.likes.length,
-      likedByMe: r.likes.some((l) => l.userId === session.user.id),
-      replies: [] as never[],
-    })),
-  }));
-
-  return NextResponse.json(comments);
+  const raw = await getRawLessonComments(lessonId);
+  return NextResponse.json(toCommentTree(raw, session.user.id));
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
@@ -98,5 +70,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
     include: { user: { select: { id: true, name: true } } },
   });
 
+  revalidateTag(commentsTag(lessonId));
   return NextResponse.json(comment, { status: 201 });
 }

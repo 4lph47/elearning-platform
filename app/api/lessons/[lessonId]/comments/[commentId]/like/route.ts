@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { commentsTag } from "@/lib/commentsCache";
 
 export async function POST(
   _request: Request,
@@ -30,5 +32,6 @@ export async function POST(
   }
 
   const likeCount = await prisma.commentLike.count({ where: { commentId } });
+  revalidateTag(commentsTag(lessonId));
   return NextResponse.json({ liked, likeCount });
 }

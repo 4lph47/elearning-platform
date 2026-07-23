@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// javascript:/data: URLs stored here get rendered unescaped as <a href>/<img src>/
+// <video src>/<iframe src> for every student that opens the course — must be http(s).
+const httpUrlField = z
+  .string()
+  .refine((v) => v === "" || /^https?:\/\//i.test(v), "Link deve começar com http:// ou https://")
+  .optional()
+  .nullable();
+
 export const registerSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido"),
@@ -19,8 +27,8 @@ export const courseSchema = z.object({
   description: z.string().min(10, "Descrição deve ter pelo menos 10 caracteres"),
   category: z.string().min(2, "Categoria é obrigatória"),
   level: z.enum(["beginner", "intermediate", "advanced"]),
-  thumbnailUrl: z.string().optional().nullable(),
-  trailerUrl: z.string().optional().nullable(),
+  thumbnailUrl: httpUrlField,
+  trailerUrl: httpUrlField,
   published: z.boolean().optional().default(false),
   price: z.number().min(0, "Preço não pode ser negativo").optional().default(0),
   originalPrice: z.number().min(0, "Preço original não pode ser negativo").optional().nullable(),
@@ -42,8 +50,8 @@ export const lessonSchema = z.object({
   order: z.number().int().min(0),
   isFreePreview: z.boolean().optional().default(false),
   type: z.enum(["VIDEO", "TEXT"]).optional().default("VIDEO"),
-  contentUrl: z.string().optional().nullable(),
-  thumbnailUrl: z.string().optional().nullable(),
+  contentUrl: httpUrlField,
+  thumbnailUrl: httpUrlField,
   textContent: z.string().optional().nullable(),
   durationSeconds: z.number().int().min(0).optional().nullable(),
   description: z.string().optional().nullable(),

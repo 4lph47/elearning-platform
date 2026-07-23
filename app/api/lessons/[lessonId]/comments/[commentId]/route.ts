@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { commentsTag } from "@/lib/commentsCache";
 
 export async function DELETE(
   _request: Request,
@@ -25,5 +27,6 @@ export async function DELETE(
   }
 
   await prisma.lessonComment.delete({ where: { id: commentId } });
+  revalidateTag(commentsTag(lessonId));
   return NextResponse.json({ ok: true });
 }

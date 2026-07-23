@@ -24,6 +24,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
   if (typeof name !== "string" || typeof url !== "string" || typeof sizeBytes !== "number") {
     return NextResponse.json({ error: "Dados de recurso inválidos" }, { status: 400 });
   }
+  if (!/^https?:\/\//i.test(url)) {
+    return NextResponse.json({ error: "Link do recurso deve começar com http:// ou https://" }, { status: 400 });
+  }
 
   const resource = await prisma.lessonResource.create({
     data: {

@@ -211,7 +211,7 @@ export function Navbar() {
           ? accentGradient
             ? ""
             : "bg-gradient-to-b from-white/70 via-white/30 to-transparent dark:from-black/70 dark:via-black/30 dark:to-transparent"
-          : "bg-gradient-to-b from-white via-white/90 to-transparent backdrop-blur-md dark:from-black dark:via-black/90 dark:to-transparent"
+          : "border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-black/90"
       }`}
       style={accentGradient ? { backgroundImage: accentGradient } : undefined}
     >

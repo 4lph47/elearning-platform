@@ -49,14 +49,17 @@ export function InstructorCourseGrid({
           Cursos de {instructorFirstName}
         </h2>
         {courses.length > 0 && (
-          <div ref={searchWrapRef} className="relative order-1 w-full sm:order-2 sm:max-w-xs">
+          <div
+            ref={searchWrapRef}
+            className="relative order-1 w-full sm:order-2 sm:max-w-xs"
+            style={{ "--instructor-accent": `rgb(${mid})` } as React.CSSProperties}
+          >
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={handleSearchFocus}
               placeholder={`Procurar nos cursos de ${instructorFirstName}...`}
-              style={{ borderColor: `rgb(${mid})` }}
-              className="w-full rounded-full border bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+              className="w-full rounded-full border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-[var(--instructor-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--instructor-accent)] dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
             />
             <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
           </div>

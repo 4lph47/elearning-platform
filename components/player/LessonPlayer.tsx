@@ -113,6 +113,7 @@ export function LessonPlayer({
   cinemaMode,
   onToggleCinemaMode,
   onDoubleTapLike,
+  fluidWidth,
 }: {
   lessonId: string;
   type: "VIDEO" | "TEXT";
@@ -125,6 +126,11 @@ export function LessonPlayer({
   cinemaMode?: boolean;
   onToggleCinemaMode?: () => void;
   onDoubleTapLike?: () => void;
+  // Página da aula usa larguras fixas em lg (alinhadas ao resto do layout,
+  // sidebar/chat incluídos) — em qualquer sítio mais estreito (ex.: preview
+  // no editor, dentro de uma card a meio de um grid) isso transbordava.
+  // fluidWidth mantém sempre w-full, sem overrides fixos em lg.
+  fluidWidth?: boolean;
 }) {
   const lastSentRef = useRef(0);
   const hasAppliedInitialSeekRef = useRef(false);
@@ -617,9 +623,8 @@ export function LessonPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [youtubeId]);
 
-  const playerClassName = `aspect-video w-full rounded-lg bg-black lg:max-w-none ${
-    collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
-  }`;
+  const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1200px]" : "lg:w-[900px]"}`;
+  const playerClassName = `aspect-video w-full rounded-lg bg-black ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);
 
@@ -627,9 +632,7 @@ export function LessonPlayer({
     <div className="space-y-4">
       {type === "TEXT" ? (
         <div
-          className={`overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-neutral-900 lg:max-w-none ${
-            collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
-          }`}
+          className={`overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-neutral-900 ${widthClass}`}
         >
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>

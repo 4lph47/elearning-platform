@@ -8,11 +8,10 @@ import { CornerCard, CornerCardStack, CornerCardButtonNeutral, CornerCardButtonP
 import { Card } from "@/components/ui/Card";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
-import { HlsVideo } from "@/components/player/HlsVideo";
+import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { QuizEditor } from "@/components/instructor/QuizEditor";
 import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard";
 import { useFadeNav } from "@/components/course/FadeNavContext";
-import { getYouTubeId } from "@/lib/youtube";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
 import type { LessonData } from "@/components/instructor/LessonRow";
@@ -96,7 +95,12 @@ export function LessonEditScreen({
     window.location.reload();
   }
 
-  const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
+  // Vídeo enviado agora (worker já comprimiu antes de devolver) já vem como
+  // um master.m3u8 pronto — mesma marca usada em lib/videoTranscode.ts, mas
+  // sem importar esse módulo aqui (arrasta o Prisma client pro bundle do
+  // browser). Aula já gravada usa o hlsMasterUrl guardado na BD.
+  const isHlsContent = Boolean(contentUrl?.endsWith("/master.m3u8"));
+  const previewHlsMasterUrl = isHlsContent ? contentUrl : lesson?.hlsMasterUrl ?? null;
 
   function toggleContributor(id: string) {
     setContributorIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -305,19 +309,21 @@ export function LessonEditScreen({
                   onBlur={(e) => e.target.value && setContentUrl(e.target.value)}
                 />
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
-                    vídeo real (nativo) ou embed do YouTube, logo que haja URL. */}
+                    mesmo LessonPlayer usado na aula a sério (gestos, seletor
+                    de qualidade, tudo igual), só que a largura fica fluida
+                    (fluidWidth) em vez das larguras fixas da página da aula,
+                    que não cabiam nesta card mais estreita. */}
                 {contentUrl && (
                   <div className="mt-2 overflow-hidden rounded-md bg-black">
-                    {youtubeId ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${youtubeId}`}
-                        title="Preview do vídeo"
-                        allow="encrypted-media"
-                        className="aspect-video w-full"
-                      />
-                    ) : (
-                      <HlsVideo src={contentUrl} className="aspect-video w-full bg-black" />
-                    )}
+                    <LessonPlayer
+                      lessonId={lesson?.id ?? "preview"}
+                      type="VIDEO"
+                      contentUrl={contentUrl}
+                      hlsMasterUrl={previewHlsMasterUrl}
+                      initialWatchedSeconds={0}
+                      onComplete={() => {}}
+                      fluidWidth
+                    />
                   </div>
                 )}
 

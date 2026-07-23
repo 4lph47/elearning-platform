@@ -20,6 +20,7 @@ export interface LessonData {
   isFreePreview: boolean;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  hlsMasterUrl?: string | null;
   thumbnailUrl?: string | null;
   textContent?: string | null;
   durationSeconds: number | null;

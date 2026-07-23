@@ -302,12 +302,6 @@ export function LessonEditScreen({
               <div className="space-y-2">
                 <Label>Vídeo da aula (obrigatório)</Label>
                 <FileUploadInput kind="VIDEO" onUploaded={(r) => setContentUrl(r.url)} />
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">ou</p>
-                <Input
-                  placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"
-                  defaultValue={contentUrl?.includes("youtu") ? contentUrl : ""}
-                  onBlur={(e) => e.target.value && setContentUrl(e.target.value)}
-                />
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
                     mesmo LessonPlayer usado na aula a sério (gestos, seletor
                     de qualidade, tudo igual), só que a largura fica fluida

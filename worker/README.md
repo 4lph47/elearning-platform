@@ -2,9 +2,17 @@
 
 Serviço separado, sempre ligado, que faz o trabalho que o Vercel não
 consegue fazer: correr `ffmpeg` para gerar HLS (segmentado, várias
-qualidades, 480p a 2160p) de cada vídeo de aula enviado. Expõe um endpoint
+qualidades) de cada vídeo de aula enviado. Expõe um endpoint
 HTTP de upload direto — passou a precisar de porta exposta, deixou de ser só
 um poller em fundo.
+
+> **Teto temporário: 1080p.** A escada (`QUALITY_LADDER` em `index.js`) só
+> vai até 1080p — 1440p/2160p ficavam mortos por SIGKILL (falta de memória
+> no container), mesmo já com o encoder ajustado ao mínimo razoável
+> (preset `fast`, `rc-lookahead=20`, `ref=2`, `-threads 2`). Pra voltar a
+> 4K de verdade: aumenta a RAM alocada ao serviço do worker no Railway
+> (Settings do serviço, ou plano da conta se for isso que limita), depois
+> acrescenta `1440p`/`2160p` de volta ao array.
 
 ## Como funciona
 

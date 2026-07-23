@@ -54,12 +54,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, { auth: { persi
 // ficar reproduzível o mais cedo possível (rung pequeno = rápido de
 // codificar). Só se gera uma rendition se o vídeo de origem for pelo menos
 // dessa altura (nunca faz upscale).
+//
+// Teto temporário em 1080p: 1440p/2160p confirmaram SIGKILL (OOM) mesmo já
+// com lookahead/threads/ref cortados ao mínimo razoável — é limite real de
+// RAM do container do Railway, não parâmetro do ffmpeg. Volta a incluir
+// 1440p/2160p aqui assim que os recursos do worker forem aumentados (ver
+// worker/README.md).
 const QUALITY_LADDER = [
   { label: "480p", height: 480 },
   { label: "720p", height: 720 },
   { label: "1080p", height: 1080 },
-  { label: "1440p", height: 1440 },
-  { label: "2160p", height: 2160 },
 ];
 
 async function apiFetch(pathname, init) {

@@ -282,18 +282,40 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition) {
 // upload (não está ligado a nenhuma aula ainda, isso só acontece quando a
 // aula é gravada com este hlsMasterUrl).
 function verifyUploadToken(token) {
-  if (!token) return null;
+  if (!token) {
+    console.warn("[token] pedido sem Authorization: Bearer <token>");
+    return null;
+  }
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3) {
+    console.warn(`[token] formato inesperado (${parts.length} partes, esperava 3)`);
+    return null;
+  }
   const [assetId, expiresAtStr, signature] = parts;
   const expiresAt = Number(expiresAtStr);
-  if (!assetId || !/^[a-zA-Z0-9_-]+$/.test(assetId) || !Number.isFinite(expiresAt) || Date.now() > expiresAt) {
+  if (!assetId || !/^[a-zA-Z0-9_-]+$/.test(assetId)) {
+    console.warn(`[token] assetId inválido: "${assetId}"`);
+    return null;
+  }
+  if (!Number.isFinite(expiresAt)) {
+    console.warn(`[token] expiresAt inválido: "${expiresAtStr}"`);
+    return null;
+  }
+  if (Date.now() > expiresAt) {
+    console.warn(`[token] expirado — agora=${Date.now()}, expirava=${expiresAt}`);
     return null;
   }
   const expectedSig = crypto.createHmac("sha256", WORKER_API_SECRET).update(`${assetId}.${expiresAtStr}`).digest("hex");
   const sigBuf = Buffer.from(signature, "hex");
   const expectedBuf = Buffer.from(expectedSig, "hex");
-  if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) return null;
+  if (sigBuf.length !== expectedBuf.length) {
+    console.warn(`[token] assinatura com tamanho errado — recebida ${sigBuf.length} bytes, esperava ${expectedBuf.length}`);
+    return null;
+  }
+  if (!crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+    console.warn("[token] assinatura não bate certo com WORKER_API_SECRET deste worker");
+    return null;
+  }
   return assetId;
 }
 
@@ -314,6 +336,7 @@ function setCorsHeaders(res) {
 }
 
 async function handleUploadRequest(req, res) {
+  console.log(`[upload] pedido recebido — content-length=${req.headers["content-length"] || "?"} content-type=${req.headers["content-type"] || "?"}`);
   const authHeader = req.headers["authorization"] || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   const assetId = verifyUploadToken(token);
@@ -347,6 +370,7 @@ async function handleUploadRequest(req, res) {
 }
 
 const server = http.createServer((req, res) => {
+  console.log(`[http] ${req.method} ${req.url} — origin=${req.headers["origin"] || "?"}`);
   if (req.method === "OPTIONS") {
     setCorsHeaders(res);
     res.writeHead(204);

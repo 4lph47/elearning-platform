@@ -100,6 +100,7 @@ function uploadToWorker(
         const auth = await authRes.json();
         if (!authRes.ok) throw new Error(auth.error ?? "Erro ao preparar envio");
 
+        console.log("[upload] a enviar pro worker:", auth.uploadUrl);
         const xhr = new XMLHttpRequest();
         xhr.open("POST", auth.uploadUrl);
         xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
@@ -108,6 +109,7 @@ function uploadToWorker(
         };
         xhr.upload.onload = () => onPhaseChange("compressing");
         xhr.onload = () => {
+          console.log(`[upload] resposta do worker: status=${xhr.status} body=`, xhr.responseText.slice(0, 500));
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const data = JSON.parse(xhr.responseText) as { hlsMasterUrl: string };
@@ -125,7 +127,10 @@ function uploadToWorker(
             reject(new Error(message));
           }
         };
-        xhr.onerror = () => reject(new Error("Falha de rede ao enviar para compressão"));
+        xhr.onerror = () => {
+          console.error(`[upload] falha de rede — readyState=${xhr.readyState} status=${xhr.status}`);
+          reject(new Error("Falha de rede ao enviar para compressão"));
+        };
         xhr.send(file);
       })
       .catch(reject);

@@ -2,31 +2,47 @@
 
 Serviço separado, sempre ligado, que faz o trabalho que o Vercel não
 consegue fazer: correr `ffmpeg` para gerar HLS (segmentado, várias
-qualidades, 480p a 2160p) de cada vídeo de aula enviado.
+qualidades, 480p a 2160p) de cada vídeo de aula enviado. Expõe um endpoint
+HTTP de upload direto — passou a precisar de porta exposta, deixou de ser só
+um poller em fundo.
 
 ## Como funciona
 
-1. A app Next.js grava um `VideoTranscodeJob` (status `PENDING`) sempre que
-   uma aula fica com um vídeo novo (`lib/videoTranscode.ts`). O `sourceUrl`
-   do job tanto pode ser um vídeo direto como um `manifest.json` (vídeos
-   grandes sobem em partes por causa do teto de 50MB por objeto do Supabase
-   Free — ver `components/instructor/FileUploadInput.tsx`).
-2. Este worker faz poll a `GET /api/worker/jobs/next` a cada poucos
-   segundos, reclama o job mais antigo pendente.
-3. Descarrega o vídeo original (ou reconstitui-o a partir das partes do
-   manifesto), corre `ffprobe` para saber a resolução, e para cada qualidade
-   — do MENOR pro MAIOR, pra ficar reproduzível o mais cedo possível — gera
-   uma variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz upscale) e
-   sobe pra Supabase Storage.
-4. Depois de CADA variante (não só no fim), chama
-   `POST /api/worker/jobs/:id/complete` com essa rendition e o master
-   playlist atualizado — a aula fica reproduzível assim que a 1ª existe, o
-   resto da escada vai enchendo em fundo. `/fail` se algo correr mal.
+**Caminho normal — upload direto:**
 
-O player (`components/player/LessonPlayer.tsx`) usa hls.js (ou HLS nativo no
-Safari) para ler o master playlist da aula e troca de qualidade sozinho
-consoante a largura de banda — o menu de qualidade só lista manualmente as
-aulas antigas que ainda não passaram por este pipeline.
+1. O browser pede um token de upload a `POST /api/upload/authorize-direct`
+   (app Next.js, autenticado por sessão de instrutor) — token de curta
+   duração (30min), assinado com `WORKER_API_SECRET`, ligado a um `assetId`
+   novo (a aula ainda nem existe na BD nesta altura).
+2. O browser envia o vídeo bruto diretamente para `POST /upload` neste
+   worker (streaming, sem passar pelo Vercel nem pelo Supabase Storage — só
+   este worker recebe o ficheiro inteiro). Sem o teto de 50MB por objeto do
+   Supabase Free, porque o Storage nem entra em jogo nesta parte.
+3. O worker valida o token, grava o ficheiro em disco local, corre
+   `ffprobe`, e para cada qualidade — do MENOR pro MAIOR — gera uma
+   variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz upscale) e SÓ
+   ENTÃO sobe pro Supabase Storage (já comprimido).
+4. Quando a escada toda estiver pronta, responde ao pedido original com o
+   URL do master playlist. O browser guarda-o como `contentUrl` da aula —
+   ao gravar a aula, a app já regista isto como `hlsMasterUrl` diretamente
+   (ver `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila nenhuma.
+
+**Caminho de recurso — fila assíncrona** (só entra em jogo se alguém colar
+um URL de vídeo à mão em vez de fazer upload):
+
+1. A app grava um `VideoTranscodeJob` (`lib/videoTranscode.ts`).
+2. Este worker faz poll a `GET /api/worker/jobs/next`, reclama o job mais
+   antigo pendente, descarrega o vídeo desse URL.
+3. Mesmo pipeline de transcode (núcleo partilhado, `transcodeToHls` em
+   `index.js`) — mas reporta cada rendition via
+   `POST /api/worker/jobs/:id/complete` à medida que fica pronta, em vez de
+   devolver tudo numa resposta HTTP síncrona.
+
+O player (`components/player/LessonPlayer.tsx`, e a pré-visualização do
+editor em `components/player/HlsVideo.tsx`) usa hls.js (ou HLS nativo no
+Safari) para ler o master playlist e trocar de qualidade sozinho consoante a
+largura de banda — o menu de qualidade manual só serve pra aulas antigas de
+antes deste pipeline.
 
 ## Deploy no Railway
 
@@ -41,10 +57,14 @@ aulas antigas que ainda não passaram por este pipeline.
    - `SUPABASE_SECRET_KEY` — igual ao da app
    - `SUPABASE_STORAGE_BUCKET` — igual ao da app (default `course-media`)
    - `POLL_INTERVAL_MS` — opcional, default `8000`
-4. Deploy. Não expõe porta nenhuma (não é um servidor HTTP) — no Railway,
-   marca o serviço como **worker/background**, não "web", para não tentar
-   fazer healthcheck a uma porta.
-5. Gerar o `WORKER_API_SECRET` uma vez: `openssl rand -hex 32` (ou
+   - `PORT` — o Railway injeta isto automaticamente, não precisas de definir
+4. Deploy. **Agora expõe porta** (endpoint de upload direto) — marca o
+   serviço como **web** (não "worker/background" como antes), Railway faz
+   healthcheck a `GET /health`.
+5. Copia o domínio público que o Railway atribuiu ao serviço (Settings →
+   Networking → Public Networking → Generate Domain, se ainda não tiver
+   um) e mete-o no Vercel como `WORKER_PUBLIC_URL` (sem barra final).
+6. Gerar o `WORKER_API_SECRET` uma vez: `openssl rand -hex 32` (ou
    qualquer string aleatória longa) — mete o mesmo valor no Vercel
    (`WORKER_API_SECRET`) e no Railway.
 
@@ -54,15 +74,27 @@ Por defeito o Render tenta correr como app Node normal (`npm run build` +
 `npm start`) — este worker não tem `build`, por isso falha com
 `Missing script: "build"` a não ser que se force o runtime Docker.
 
-1. **New → Background Worker** (não "Web Service" — isto não expõe porta
-   nenhuma) → liga ao repositório.
+1. **New → Web Service** (não "Background Worker" — agora expõe porta) →
+   liga ao repositório.
 2. **Root Directory**: `worker`
 3. **Runtime**: muda de "Node" para **Docker** — só assim usa o
    `worker/Dockerfile` em vez do buildpack automático.
-4. **Environment** → adiciona as mesmas variáveis da secção do Railway
+4. **Health Check Path**: `/health`
+5. **Environment** → adiciona as mesmas variáveis da secção do Railway
    acima (`APP_URL`, `WORKER_API_SECRET`, `SUPABASE_URL`,
    `SUPABASE_SECRET_KEY`, `SUPABASE_STORAGE_BUCKET`).
-5. Deploy. Nos **Logs** deve aparecer `Worker de transcoding a arrancar`.
+6. Deploy. Copia o domínio público do serviço, mete-o no Vercel como
+   `WORKER_PUBLIC_URL`.
+7. Nos **Logs** deve aparecer `Servidor de upload direto a ouvir na porta`
+   e `Worker de transcoding a arrancar`.
+
+## Variáveis do lado da app (Vercel)
+
+Além do `WORKER_API_SECRET` (mesmo valor dos dois lados), a app agora
+também precisa de:
+- `WORKER_PUBLIC_URL` — URL pública do worker (Railway/Render), sem barra
+  final. Usado só server-side (`app/api/upload/authorize-direct`) para
+  dizer ao browser para onde enviar o vídeo.
 
 ## Testar localmente
 
@@ -74,5 +106,10 @@ APP_URL=http://localhost:3000 \
 WORKER_API_SECRET=dev-secret \
 SUPABASE_URL=... \
 SUPABASE_SECRET_KEY=... \
+PORT=8080 \
 node index.js
 ```
+
+Na app Next.js, também precisas de `WORKER_API_SECRET=dev-secret` e
+`WORKER_PUBLIC_URL=http://localhost:8080` no `.env` local para testar o
+upload direto de ponta a ponta.

@@ -389,7 +389,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           <h2 className="font-medium">Marketing</h2>
           <div>
             <Label>Trailer do curso</Label>
-            <FileUploadInput kind="VIDEO" onUploaded={(r) => setTrailerUrl(r.url)} />
+            <FileUploadInput kind="TRAILER" onUploaded={(r) => setTrailerUrl(r.url)} />
             <p className="my-1.5 text-center text-xs text-slate-400 dark:text-slate-500">ou</p>
             <Input
               placeholder="Colar link do YouTube (https://youtube.com/watch?v=...)"

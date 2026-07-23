@@ -7,7 +7,7 @@ import { lessonSchema, validateLessonContent, zodIssueMessages } from "@/lib/val
 import { getOwnedLesson } from "@/lib/instructor-guard";
 import { deleteQuiz } from "@/lib/quiz";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
-import { needsTranscode, requeueTranscode } from "@/lib/videoTranscode";
+import { needsTranscode, requeueTranscode, isProcessedHlsUrl } from "@/lib/videoTranscode";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -32,7 +32,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
     }
   }
 
-  const updated = await prisma.lesson.update({ where: { id: lessonId }, data: parsed.data });
+  const updated = await prisma.lesson.update({
+    where: { id: lessonId },
+    data: {
+      ...parsed.data,
+      ...("contentUrl" in parsed.data
+        ? { hlsMasterUrl: isProcessedHlsUrl(parsed.data.contentUrl) ? parsed.data.contentUrl : null }
+        : {}),
+    },
+  });
 
   if (parsed.data.type === "TEXT" && lesson.type !== "TEXT") {
     await deleteQuiz("LESSON", lessonId);

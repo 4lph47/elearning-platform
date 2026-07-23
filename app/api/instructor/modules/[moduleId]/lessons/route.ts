@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent, zodIssueMessages } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
-import { needsTranscode, requeueTranscode } from "@/lib/videoTranscode";
+import { needsTranscode, requeueTranscode, isProcessedHlsUrl } from "@/lib/videoTranscode";
 
 export async function POST(request: Request, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -37,6 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
   const lesson = await prisma.lesson.create({
     data: {
       ...parsed.data,
+      hlsMasterUrl: isProcessedHlsUrl(parsed.data.contentUrl) ? parsed.data.contentUrl : null,
       moduleId,
       contributors: contributorIds.length > 0 ? { connect: contributorIds.map((id) => ({ id })) } : undefined,
     },

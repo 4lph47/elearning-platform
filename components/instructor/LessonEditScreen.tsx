@@ -8,6 +8,7 @@ import { CornerCard, CornerCardStack, CornerCardButtonNeutral, CornerCardButtonP
 import { Card } from "@/components/ui/Card";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
+import { HlsVideo } from "@/components/player/HlsVideo";
 import { QuizEditor } from "@/components/instructor/QuizEditor";
 import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard";
 import { useFadeNav } from "@/components/course/FadeNavContext";
@@ -315,7 +316,7 @@ export function LessonEditScreen({
                         className="aspect-video w-full"
                       />
                     ) : (
-                      <video src={contentUrl} controls className="aspect-video w-full bg-black" />
+                      <HlsVideo src={contentUrl} className="aspect-video w-full bg-black" />
                     )}
                   </div>
                 )}

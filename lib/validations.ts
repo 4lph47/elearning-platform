@@ -102,15 +102,21 @@ export type ProgressInput = z.infer<typeof progressSchema>;
 
 const ALLOWED_MIME_BY_TYPE: Record<string, string[]> = {
   VIDEO: ["video/mp4", "video/webm"],
+  TRAILER: ["video/mp4", "video/webm"],
   DOCUMENT: ["application/pdf"],
   IMAGE: ["image/png", "image/jpeg", "image/webp"],
 };
 
 const MAX_SIZE_BY_TYPE: Record<string, number> = {
-  // 4K de verdade pode passar longe de 500MB — teto real acaba por ser o
-  // limite do bucket Supabase (ver lib/storage.ts / scripts/raise-bucket-limit.ts),
-  // que no plano Free trava em 50MB independente disto.
+  // Vídeo de aula vai direto pro worker (Railway), sem o teto de 50MB do
+  // Supabase Storage (só as renditions HLS já comprimidas chegam lá) — 4K
+  // de verdade pode passar longe disto.
   VIDEO: 5 * 1024 * 1024 * 1024,
+  // Trailer continua a ir direto pro Supabase Storage (raw, sem HLS — o
+  // hover-preview em CourseTile.tsx usa <video> simples, não hls.js), por
+  // isso fica sujeito ao teto real de 50MB por objeto do bucket (margem
+  // abaixo disso).
+  TRAILER: 45 * 1024 * 1024,
   DOCUMENT: 20 * 1024 * 1024,
   // Imagens continuam a passar pelo corpo de um pedido ao Vercel (para o
   // sharp comprimir server-side) — esse limite é 4.5MB, por isso o teto
@@ -126,7 +132,7 @@ export function zodIssueMessages(error: z.ZodError): string[] {
   return error.issues.map((i) => i.message);
 }
 
-export function validateUpload(kind: "VIDEO" | "DOCUMENT" | "IMAGE", mimeType: string, sizeBytes: number) {
+export function validateUpload(kind: "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE", mimeType: string, sizeBytes: number) {
   const allowedMimes = ALLOWED_MIME_BY_TYPE[kind];
   if (!allowedMimes.includes(mimeType)) {
     return { ok: false as const, error: `Tipo de ficheiro não permitido para ${kind}: ${mimeType}` };

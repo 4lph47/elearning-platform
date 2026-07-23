@@ -143,10 +143,6 @@ export function LessonPlayer({
   // videoRenditions (mp4 plano) ficam só de recurso: aulas antigas de antes
   // desta mudança, ou uma aula nova enquanto o worker ainda nem começou.
   const usingHls = Boolean(hlsMasterUrl) && !youtubeId;
-  // Vídeos grandes sobem em partes (ver FileUploadInput.tsx) — contentUrl
-  // fica a apontar pra um manifest.json (lista das partes), não um vídeo a
-  // sério, por isso não dá pra usar como fallback enquanto o HLS não existe.
-  const isManifestSource = Boolean(contentUrl?.endsWith("/manifest.json"));
 
   // Só oferece o seletor quando há mais que uma rendition (senão não há
   // escolha nenhuma a fazer) — ordenadas da maior pra menor resolução.
@@ -655,11 +651,6 @@ export function LessonPlayer({
               }}
               className={playerClassName}
             />
-          ) : isManifestSource && !usingHls ? (
-            <div className={`flex flex-col items-center justify-center gap-3 text-slate-400 ${playerClassName}`}>
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
-              <p className="text-sm">A preparar vídeo…</p>
-            </div>
           ) : (
             <div
               ref={containerRef}
@@ -796,15 +787,13 @@ export function LessonPlayer({
 
                     {menuOpen && (
                       <div className="absolute bottom-full right-0 mb-2 w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md">
-                        {!isManifestSource && (
-                          <button
-                            onClick={handleDownload}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
-                          >
-                            <Download size={16} />
-                            Download
-                          </button>
-                        )}
+                        <button
+                          onClick={handleDownload}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
+                        >
+                          <Download size={16} />
+                          Download
+                        </button>
 
                         <button
                           onClick={() => setSpeedOpen((v) => !v)}
@@ -953,15 +942,13 @@ export function LessonPlayer({
                     Repetir
                     {loop && <Check size={16} className="ml-auto text-blue-400" />}
                   </button>
-                  {!isManifestSource && (
-                    <button
-                      onClick={copyVideoUrl}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
-                    >
-                      <Link2 size={16} />
-                      {urlCopied ? "Copiado!" : "Copiar URL do vídeo"}
-                    </button>
-                  )}
+                  <button
+                    onClick={copyVideoUrl}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
+                  >
+                    <Link2 size={16} />
+                    {urlCopied ? "Copiado!" : "Copiar URL do vídeo"}
+                  </button>
                 </div>
               )}
             </div>

@@ -13,6 +13,7 @@ import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
+import { CornerCard, CornerCardStack } from "@/components/ui/CornerCard";
 
 interface CourseData {
   id: string;
@@ -138,7 +139,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [collaborators, setCollaborators] = useState(draft?.value.collaborators ?? course.collaborators);
   const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveIssues, setSaveIssues] = useState<string[] | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -209,7 +210,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
 
   async function save(overrides: Record<string, unknown> = {}, redirectAfter = false) {
     setSaving(true);
-    setError(null);
+    setSaveIssues(null);
     const res = await fetch(`/api/instructor/courses/${course.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -233,7 +234,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     setSaving(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Erro ao guardar");
+      setSaveIssues(data.issues ?? [data.error ?? "Erro ao guardar"]);
       return;
     }
     setDirty(false);
@@ -266,29 +267,52 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         </h1>
       </div>
 
-      {draftBannerVisible && draft && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-600/5 px-4 py-2.5 text-sm dark:border-blue-400/30 dark:bg-blue-400/10">
-          <p className="text-blue-800 dark:text-blue-300">
-            Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
-          </p>
-          <div className="flex shrink-0 gap-3">
-            <button
-              type="button"
-              onClick={discardDraft}
-              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
-            >
-              Descartar
-            </button>
-            <button
-              type="button"
-              onClick={() => setDraftBannerVisible(false)}
-              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
-            >
-              Continuar com este rascunho
-            </button>
-          </div>
-        </div>
-      )}
+      <CornerCardStack>
+        {draftBannerVisible && draft && (
+          <CornerCard>
+            <p className="text-slate-700 dark:text-slate-200">
+              Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
+            </p>
+            <div className="mt-3 flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraftBannerVisible(false)}
+                className="text-sm font-medium text-slate-900 hover:underline dark:text-white"
+              >
+                Continuar com este rascunho
+              </button>
+            </div>
+          </CornerCard>
+        )}
+
+        {saveIssues && (
+          <CornerCard>
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium text-slate-900 dark:text-white">Falta preencher</p>
+              <button
+                type="button"
+                onClick={() => setSaveIssues(null)}
+                aria-label="Fechar"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
+              {saveIssues.map((issue, i) => (
+                <li key={i}>{issue}</li>
+              ))}
+            </ul>
+          </CornerCard>
+        )}
+      </CornerCardStack>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
         <div className="flex flex-wrap items-center gap-2">
@@ -304,7 +328,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         </div>
         <div className="flex gap-2">
           <Button type="submit" form="course-form" variant="premium" disabled={saving}>
-            {saving ? "A guardar..." : "Guardar alterações"}
+            {saving ? "A guardar..." : "Publicar"}
           </Button>
         </div>
       </div>
@@ -313,7 +337,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         id="course-form"
         onSubmit={(e) => {
           e.preventDefault();
-          save({}, true);
+          save({ published: true }, true);
         }}
         className="space-y-4"
       >
@@ -469,7 +493,6 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         document.getElementById("course-save-anchor") &&
         createPortal(
           <div className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-white/10">
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={() => save({ published: !course.published })} disabled={saving}>
                 {course.published ? "Despublicar" : "Publicar"}

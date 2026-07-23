@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CornerCard, CornerCardStack } from "@/components/ui/CornerCard";
 import { Card } from "@/components/ui/Card";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
@@ -64,7 +66,7 @@ export function LessonEditScreen({
     draft?.value.contributorIds ?? lesson?.contributors?.map((c) => c.id) ?? []
   );
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveIssues, setSaveIssues] = useState<string[] | null>(null);
 
   const [dirty, setDirty] = useState(false);
   const skipDirtyRef = useRef(true);
@@ -101,14 +103,14 @@ export function LessonEditScreen({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setSaveIssues(null);
 
     if (type === "VIDEO" && !contentUrl) {
-      setError("Envia o vídeo desta aula antes de guardar");
+      setSaveIssues(["Envia o vídeo desta aula antes de guardar"]);
       return;
     }
     if (type === "TEXT" && !textContent.trim()) {
-      setError("Escreve o conteúdo desta aula antes de guardar");
+      setSaveIssues(["Escreve o conteúdo desta aula antes de guardar"]);
       return;
     }
 
@@ -137,7 +139,7 @@ export function LessonEditScreen({
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Erro ao guardar aula");
+      setSaveIssues(data.issues ?? [data.error ?? "Erro ao guardar aula"]);
       return;
     }
 
@@ -169,29 +171,52 @@ export function LessonEditScreen({
         ← Voltar ao curso
       </Button>
 
-      {draftBannerVisible && draft && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-600/5 px-4 py-2.5 text-sm dark:border-blue-400/30 dark:bg-blue-400/10">
-          <p className="text-blue-800 dark:text-blue-300">
-            Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
-          </p>
-          <div className="flex shrink-0 gap-3">
-            <button
-              type="button"
-              onClick={discardDraft}
-              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
-            >
-              Descartar
-            </button>
-            <button
-              type="button"
-              onClick={() => setDraftBannerVisible(false)}
-              className="text-sm font-medium text-blue-800 hover:underline dark:text-blue-300"
-            >
-              Continuar com este rascunho
-            </button>
-          </div>
-        </div>
-      )}
+      <CornerCardStack>
+        {draftBannerVisible && draft && (
+          <CornerCard>
+            <p className="text-slate-700 dark:text-slate-200">
+              Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
+            </p>
+            <div className="mt-3 flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraftBannerVisible(false)}
+                className="text-sm font-medium text-slate-900 hover:underline dark:text-white"
+              >
+                Continuar com este rascunho
+              </button>
+            </div>
+          </CornerCard>
+        )}
+
+        {saveIssues && (
+          <CornerCard>
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium text-slate-900 dark:text-white">Falta preencher</p>
+              <button
+                type="button"
+                onClick={() => setSaveIssues(null)}
+                aria-label="Fechar"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
+              {saveIssues.map((issue, i) => (
+                <li key={i}>{issue}</li>
+              ))}
+            </ul>
+          </CornerCard>
+        )}
+      </CornerCardStack>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
         <div>
@@ -206,7 +231,6 @@ export function LessonEditScreen({
           {saving ? "A guardar..." : "Guardar aula"}
         </Button>
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <form id="lesson-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">

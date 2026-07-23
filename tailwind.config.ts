@@ -26,10 +26,15 @@ const config: Config = {
           "20%": { opacity: "1" },
           "100%": { opacity: "0" },
         },
+        "corner-card-in": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "like-pop": "like-pop 800ms ease-out forwards",
         "seek-flash": "seek-flash 500ms ease-out forwards",
+        "corner-card-in": "corner-card-in 220ms ease-out",
       },
     },
   },

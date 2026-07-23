@@ -119,6 +119,13 @@ const MAX_SIZE_BY_TYPE: Record<string, number> = {
   IMAGE: 4 * 1024 * 1024,
 };
 
+// Todas as mensagens de erro de um ZodError, não só a primeira — usado pelo
+// popup "falta preencher" no ecrã de curso/aula (ver components/ui/CornerCard.tsx),
+// que lista tudo o que falta corrigir de uma vez, não campo a campo.
+export function zodIssueMessages(error: z.ZodError): string[] {
+  return error.issues.map((i) => i.message);
+}
+
 export function validateUpload(kind: "VIDEO" | "DOCUMENT" | "IMAGE", mimeType: string, sizeBytes: number) {
   const allowedMimes = ALLOWED_MIME_BY_TYPE[kind];
   if (!allowedMimes.includes(mimeType)) {

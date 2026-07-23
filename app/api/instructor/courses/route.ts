@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { courseSchema } from "@/lib/validations";
+import { courseSchema, zodIssueMessages } from "@/lib/validations";
 import { slugify } from "@/lib/slug";
 
 export async function POST(request: Request) {
@@ -15,7 +15,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const parsed = courseSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message, issues: zodIssueMessages(parsed.error) },
+      { status: 400 }
+    );
   }
 
   const baseSlug = slugify(parsed.data.title) || "curso";

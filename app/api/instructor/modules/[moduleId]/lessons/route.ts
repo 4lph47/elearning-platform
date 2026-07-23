@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { lessonSchema, validateLessonContent } from "@/lib/validations";
+import { lessonSchema, validateLessonContent, zodIssueMessages } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
 import { needsTranscode, requeueTranscode } from "@/lib/videoTranscode";
@@ -19,11 +19,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
   const body = await request.json();
   const parsed = lessonSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message, issues: zodIssueMessages(parsed.error) },
+      { status: 400 }
+    );
   }
   const contentError = validateLessonContent(parsed.data);
   if (contentError) {
-    return NextResponse.json({ error: contentError }, { status: 400 });
+    return NextResponse.json({ error: contentError, issues: [contentError] }, { status: 400 });
   }
 
   const authorIds = new Set([courseModule.course.instructorId, ...courseModule.course.collaborators.map((c) => c.id)]);

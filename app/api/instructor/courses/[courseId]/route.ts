@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { courseSchema } from "@/lib/validations";
+import { courseSchema, zodIssueMessages } from "@/lib/validations";
 import { getOwnedCourse } from "@/lib/instructor-guard";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ courseId: string }> }) {
@@ -17,7 +17,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
   const body = await request.json();
   const parsed = courseSchema.partial().safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message, issues: zodIssueMessages(parsed.error) },
+      { status: 400 }
+    );
   }
 
   const updated = await prisma.course.update({
@@ -76,10 +79,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     const foundEmails = new Set(users.map((u) => u.email.toLowerCase()));
     const notFound = emails.filter((e) => !foundEmails.has(e.toLowerCase()));
     if (notFound.length > 0) {
-      return NextResponse.json(
-        { error: `Utilizador(es) não encontrado(s) ou sem conta de instrutor: ${notFound.join(", ")}` },
-        { status: 400 }
-      );
+      const message = `Utilizador(es) não encontrado(s) ou sem conta de instrutor: ${notFound.join(", ")}`;
+      return NextResponse.json({ error: message, issues: [message] }, { status: 400 });
     }
 
     await prisma.course.update({

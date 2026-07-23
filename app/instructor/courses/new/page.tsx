@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { CornerCard, CornerCardStack } from "@/components/ui/CornerCard";
 
 export default function NewCoursePage() {
   const router = useRouter();
@@ -12,13 +13,13 @@ export default function NewCoursePage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
-  const [error, setError] = useState<string | null>(null);
+  const [saveIssues, setSaveIssues] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setSaveIssues(null);
 
     const res = await fetch("/api/instructor/courses", {
       method: "POST",
@@ -29,7 +30,7 @@ export default function NewCoursePage() {
     setLoading(false);
 
     if (!res.ok) {
-      setError(data.error ?? "Erro ao criar curso");
+      setSaveIssues(data.issues ?? [data.error ?? "Erro ao criar curso"]);
       return;
     }
 
@@ -78,12 +79,24 @@ export default function NewCoursePage() {
               <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="advanced">Avançado</option>
             </select>
           </div>
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "A criar..." : "Criar curso e continuar"}
           </Button>
         </form>
       </Card>
+
+      <CornerCardStack>
+        {saveIssues && (
+          <CornerCard>
+            <p className="font-medium text-slate-900 dark:text-white">Falta preencher</p>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
+              {saveIssues.map((issue, i) => (
+                <li key={i}>{issue}</li>
+              ))}
+            </ul>
+          </CornerCard>
+        )}
+      </CornerCardStack>
     </div>
   );
 }

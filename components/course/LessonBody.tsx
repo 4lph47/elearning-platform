@@ -60,10 +60,8 @@ export function LessonBody({
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
   const [cinemaMode, setCinemaMode] = useState(getStoredAmbient);
-  const { handleTouchStart, handleTouchEnd, swipeClassName, goPrevious, goNext, showSpinner } = useSwipeNav(
-    previousHref,
-    nextHref
-  );
+  const { handleTouchStart, handleTouchEnd, swipeClassName, isTransitioning, goPrevious, goNext, showSpinner } =
+    useSwipeNav(previousHref, nextHref);
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
@@ -127,7 +125,7 @@ export function LessonBody({
     });
 
   return (
-    <div className="overflow-x-hidden">
+    <div className={isTransitioning ? "overflow-x-hidden" : ""}>
     {showSpinner && (
       <div className="pointer-events-none fixed inset-0 z-[998] flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-white/15 dark:border-t-white/70" />

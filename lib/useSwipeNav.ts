@@ -106,5 +106,16 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
     swipeClassName = "transition-all duration-[900ms] ease-out translate-x-0 opacity-100";
   }
 
-  return { handleTouchStart, handleTouchEnd, swipeClassName, goNext, goPrevious, showSpinner };
+  return {
+    handleTouchStart,
+    handleTouchEnd,
+    swipeClassName,
+    // Só true durante a transição em si (translateX de ±40px) — o resto do
+    // tempo (estado normal) não há deslocamento nenhum, não precisa de
+    // conter overflow nenhum.
+    isTransitioning: swipeExit !== null || swipeEnter !== null,
+    goNext,
+    goPrevious,
+    showSpinner,
+  };
 }

@@ -133,10 +133,12 @@ async function probeDuration(filePath) {
   return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
 }
 
-// HLS segmentado — para o rung mais próximo da fonte, "-c copy" só remuxa
-// (sem recodificar, muito mais rápido, sem perda); os restantes recodificam
-// no tamanho alvo.
-async function transcodeRenditionHls(sourcePath, outDir, targetHeight, copyOnly) {
+// HLS segmentado — TODOS os rungs recodificam agora, incluindo o mais
+// próximo da fonte (antes ficava só remuxado, "-c copy", do mesmo tamanho
+// do original). CRF mais baixo (20, quase sem perda visível) no rung de
+// topo, CRF 23 (ainda alta qualidade) nos restantes — troca CPU extra no
+// upload por espaço a sério poupado no Storage, mesmo na melhor qualidade.
+async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
   await fs.mkdir(outDir, { recursive: true });
   const playlistPath = path.join(outDir, "index.m3u8");
   const segmentPattern = path.join(outDir, "seg%03d.ts");
@@ -146,24 +148,22 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, copyOnly)
   // — testado antes de decidir, não é suposição). Preset "slow" em vez de
   // "veryfast": mesmo CRF, ~10-15% menos bytes pela mesma qualidade visual —
   // custa mais tempo de CPU, mas isto corre em fundo, sem ninguém à espera.
-  const codecArgs = copyOnly
-    ? ["-c", "copy"]
-    : [
-        "-vf",
-        `scale=-2:${targetHeight}`,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "slow",
-        "-profile:v",
-        "high",
-        "-crf",
-        "23",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-      ];
+  const codecArgs = [
+    "-vf",
+    `scale=-2:${targetHeight}`,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "slow",
+    "-profile:v",
+    "high",
+    "-crf",
+    String(crf),
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+  ];
 
   await execFileAsync(
     "ffmpeg",
@@ -246,9 +246,8 @@ async function uploadMasterPlaylist(key, variants) {
 // ffmpeg "-vf scale=-2:H" arredonda a largura pro múltiplo de 2 mais
 // próximo (exigido por libx264) — reproduz esse arredondamento aqui, pra
 // não depender de sondar um segmento .ts com ffprobe pelas dimensões
-// (frágil: o 1º segmento pode não ter um keyframe logo à entrada,
-// sobretudo em remux "-c copy", e ffprobe falha a ler as suas dimensões
-// mesmo com o ficheiro perfeitamente válido).
+// (frágil: o 1º segmento pode não ter um keyframe logo à entrada, e
+// ffprobe falha a ler as suas dimensões mesmo com o ficheiro válido).
 function scaledEvenWidth(sourceWidth, sourceHeight, targetHeight) {
   const width = Math.round((sourceWidth * targetHeight) / sourceHeight);
   return width % 2 === 0 ? width : width - 1;
@@ -271,12 +270,15 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition) {
   for (let i = 0; i < rungs.length; i++) {
     const rung = rungs[i];
     const outDir = path.join(workDir, rung.label);
-    const isNearSource = Math.abs(sourceHeight - rung.height) <= sourceHeight * 0.1;
+    // rungs vem do menor pro maior — o último é sempre o de maior qualidade
+    // da escada (o mais próximo da fonte), fica com CRF mais baixo.
+    const isTopRung = i === rungs.length - 1;
+    const crf = isTopRung ? 20 : 23;
 
-    await transcodeRenditionHls(sourcePath, outDir, rung.height, isNearSource);
+    await transcodeRenditionHls(sourcePath, outDir, rung.height, crf);
 
-    const width = isNearSource ? sourceWidth : scaledEvenWidth(sourceWidth, sourceHeight, rung.height);
-    const height = isNearSource ? sourceHeight : rung.height;
+    const width = scaledEvenWidth(sourceWidth, sourceHeight, rung.height);
+    const height = rung.height;
     const { indexUrl, totalBytes } = await uploadRenditionDir(key, rung.label, outDir);
     const bandwidth = durationSeconds > 0 ? Math.round((totalBytes * 8) / durationSeconds) : 1_000_000;
 

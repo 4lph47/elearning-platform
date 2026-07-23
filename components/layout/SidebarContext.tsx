@@ -16,20 +16,34 @@ const SidebarContext = createContext<SidebarContextValue | null>(null);
 const MOBILE_QUERY = "(max-width: 767px)";
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SidebarState>("mini");
+  // Começa sempre "closed" — mesmo em desktop. Não há como saber o tamanho
+  // do ecrã no servidor, e arrancar em "mini" (visível, só minimizada)
+  // dava um frame da barra à mostra antes de sabermos se era mobile ou
+  // desktop. Escondida por omissão elimina esse frame nos dois casos; a
+  // 1ª correção abaixo é que decide se expande (desktop) ou fica assim
+  // (mobile).
+  const [state, setState] = useState<SidebarState>("closed");
   const isMobileRef = useRef(false);
+  const hasSyncedOnceRef = useRef(false);
 
-  // useLayoutEffect (não useEffect) — corre antes do browser pintar. Estado
-  // inicial é sempre "mini" (não há como saber o tamanho do ecrã no
-  // servidor); em mobile isto corrigia-se DEPOIS da 1ª pintura com
-  // useEffect normal, dando um frame visível da barra "mini" antes de
-  // esconder. Os fades (Sidebar.tsx) vêm todos do mesmo `state`, por isso
+  // useLayoutEffect (não useEffect) — corre antes do browser pintar, senão
+  // a correção só acontecia DEPOIS da 1ª pintura, dando um frame visível
+  // errado. Os fades (Sidebar.tsx) vêm todos do mesmo `state`, por isso
   // corrigem-se sozinhos também.
   useLayoutEffect(() => {
     const mql = window.matchMedia(MOBILE_QUERY);
     function sync(isMobile: boolean) {
       isMobileRef.current = isMobile;
-      // No mobile a barra nunca pode ficar minimizada — só expandida ou invisível.
+      if (!hasSyncedOnceRef.current) {
+        // 1ª correção depois de montar: desktop expande, mobile fica escondida.
+        hasSyncedOnceRef.current = true;
+        setState(isMobile ? "closed" : "full");
+        return;
+      }
+      // Mudanças de viewport depois disso (resize a atravessar o breakpoint)
+      // — no mobile a barra nunca pode ficar minimizada, só expandida ou
+      // invisível; não mexe em nada ao voltar pra desktop (não força por
+      // cima duma escolha manual da pessoa).
       if (isMobile) setState((prev) => (prev === "mini" ? "closed" : prev));
     }
     sync(mql.matches);

@@ -147,14 +147,15 @@ const KIND_LABEL: Record<Kind, string> = {
 export function FileUploadInput({
   kind,
   currentUrl,
+  currentName,
   onUploaded,
 }: {
   kind: Kind;
-  // Nome original nunca é guardado (só o URL final, com path aleatório) —
-  // depois de mudar de ecrã ou dar refresh não há como mostrar o nome
-  // verdadeiro outra vez. Isto só confirma que já existe alguma coisa
-  // anexada, pra não parecer que desapareceu.
+  // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
+  // rascunho, ou é conteúdo antigo de antes desta prop existir), mostra-se
+  // só uma confirmação genérica em vez de nada.
   currentUrl?: string | null;
+  currentName?: string | null;
   onUploaded: (result: UploadResult) => void;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -254,7 +255,9 @@ export function FileUploadInput({
         <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Enviado: {uploadedName}</p>
       )}
       {!uploadedName && !uploading && currentUrl && (
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{KIND_LABEL[kind]} já anexado.</p>
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+          {currentName ? `Enviado: ${currentName}` : `${KIND_LABEL[kind]} já anexado.`}
+        </p>
       )}
       {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>

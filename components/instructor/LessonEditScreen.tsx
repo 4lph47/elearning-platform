@@ -22,7 +22,9 @@ interface LessonDraft {
   isFreePreview: boolean;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  contentName: string | null;
   thumbnailUrl: string | null;
+  thumbnailName: string | null;
   textContent: string;
   contributorIds: string[];
 }
@@ -58,9 +60,11 @@ export function LessonEditScreen({
   const [isFreePreview, setIsFreePreview] = useState(draft?.value.isFreePreview ?? lesson?.isFreePreview ?? false);
   const [type, setType] = useState<"VIDEO" | "TEXT">(draft?.value.type ?? lesson?.type ?? initialType ?? "VIDEO");
   const [contentUrl, setContentUrl] = useState<string | null>(draft?.value.contentUrl ?? lesson?.contentUrl ?? null);
+  const [contentName, setContentName] = useState<string | null>(draft?.value.contentName ?? null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
     draft?.value.thumbnailUrl ?? lesson?.thumbnailUrl ?? null
   );
+  const [thumbnailName, setThumbnailName] = useState<string | null>(draft?.value.thumbnailName ?? null);
   const [textContent, setTextContent] = useState(draft?.value.textContent ?? lesson?.textContent ?? "");
   const [contributorIds, setContributorIds] = useState<string[]>(
     draft?.value.contributorIds ?? lesson?.contributors?.map((c) => c.id) ?? []
@@ -82,12 +86,25 @@ export function LessonEditScreen({
       isFreePreview,
       type,
       contentUrl,
+      contentName,
       thumbnailUrl,
+      thumbnailName,
       textContent,
       contributorIds,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, description, isFreePreview, type, contentUrl, thumbnailUrl, textContent, contributorIds]);
+  }, [
+    title,
+    description,
+    isFreePreview,
+    type,
+    contentUrl,
+    contentName,
+    thumbnailUrl,
+    thumbnailName,
+    textContent,
+    contributorIds,
+  ]);
   useUnsavedChangesGuard(dirty);
 
   function discardDraft() {
@@ -299,7 +316,15 @@ export function LessonEditScreen({
             {type === "VIDEO" ? (
               <div className="space-y-2">
                 <Label>Vídeo da aula (obrigatório)</Label>
-                <FileUploadInput kind="VIDEO" currentUrl={contentUrl} onUploaded={(r) => setContentUrl(r.url)} />
+                <FileUploadInput
+                  kind="VIDEO"
+                  currentUrl={contentUrl}
+                  currentName={contentName}
+                  onUploaded={(r) => {
+                    setContentUrl(r.url);
+                    setContentName(r.name);
+                  }}
+                />
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
                     mesmo LessonPlayer usado na aula a sério (gestos, seletor
                     de qualidade, tudo igual), só que a largura fica fluida
@@ -324,7 +349,15 @@ export function LessonEditScreen({
                   <p className="mb-1.5 text-xs text-slate-400 dark:text-slate-500">
                     O thumbnail da primeira aula do curso é o que aparece nos cards (página principal, catálogo, etc.).
                   </p>
-                  <FileUploadInput kind="IMAGE" currentUrl={thumbnailUrl} onUploaded={(r) => setThumbnailUrl(r.url)} />
+                  <FileUploadInput
+                    kind="IMAGE"
+                    currentUrl={thumbnailUrl}
+                    currentName={thumbnailName}
+                    onUploaded={(r) => {
+                      setThumbnailUrl(r.url);
+                      setThumbnailName(r.name);
+                    }}
+                  />
                   {thumbnailUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

@@ -101,6 +101,7 @@ interface CourseDraft {
   price: string;
   originalPrice: string;
   trailerUrl: string | null;
+  trailerName: string | null;
   learningOutcomes: string[];
   requirements: string[];
   targetAudience: string[];
@@ -129,6 +130,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     draft?.value.originalPrice ?? (course.originalPrice != null ? String(course.originalPrice) : "")
   );
   const [trailerUrl, setTrailerUrl] = useState(draft?.value.trailerUrl ?? course.trailerUrl);
+  const [trailerName, setTrailerName] = useState<string | null>(draft?.value.trailerName ?? null);
   const outcomes = useEditableList(draft?.value.learningOutcomes ?? course.learningOutcomes);
   const requirements = useEditableList(draft?.value.requirements ?? course.requirements);
   const audience = useEditableList(draft?.value.targetAudience ?? course.targetAudience);
@@ -160,6 +162,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
       price,
       originalPrice,
       trailerUrl,
+      trailerName,
       learningOutcomes: outcomes.items,
       requirements: requirements.items,
       targetAudience: audience.items,
@@ -177,6 +180,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     price,
     originalPrice,
     trailerUrl,
+    trailerName,
     outcomes.items,
     requirements.items,
     audience.items,
@@ -388,7 +392,15 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         <CollapsibleCard title="Marketing">
           <div>
             <Label>Trailer do curso</Label>
-            <FileUploadInput kind="TRAILER" currentUrl={trailerUrl} onUploaded={(r) => setTrailerUrl(r.url)} />
+            <FileUploadInput
+              kind="TRAILER"
+              currentUrl={trailerUrl}
+              currentName={trailerName}
+              onUploaded={(r) => {
+                setTrailerUrl(r.url);
+                setTrailerName(r.name);
+              }}
+            />
             {trailerUrl && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Trailer atual: {trailerUrl}</p>}
           </div>
 

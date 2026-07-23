@@ -6,7 +6,6 @@ import {
   Check,
   Download,
   Gauge,
-  Heart,
   Link2,
   Maximize,
   Minimize,
@@ -18,6 +17,7 @@ import {
   RotateCw,
   Settings,
   Sparkles,
+  ThumbsUp,
   Video,
   Volume2,
   VolumeX,
@@ -241,8 +241,10 @@ export function LessonPlayer({
 
   // Duplo-clique/duplo-tap: 1º clique adia o play/pause (setTimeout); se um
   // 2º chegar a tempo, cancela-se o adiado e interpreta-se como gesto duplo
-  // (seek ou like, consoante a zona do vídeo onde caiu).
-  const DOUBLE_CLICK_MS = 300;
+  // (seek ou like, consoante a zona do vídeo onde caiu). 220ms em vez de
+  // 300ms — cliques normais (play/pause) ficavam com atraso perceptível;
+  // duplo-tap intencional continua bem dentro disto na prática.
+  const DOUBLE_CLICK_MS = 220;
   const lastClickRef = useRef<number | null>(null);
   const clickTimerRef = useRef<number | null>(null);
   const gestureIdRef = useRef(0);
@@ -689,10 +691,10 @@ export function LessonPlayer({
               {likeBurst && (
                 <div
                   key={likeBurst.id}
-                  className="pointer-events-none absolute z-20 animate-like-pop"
+                  className="pointer-events-none absolute z-20 flex h-20 w-20 animate-like-pop items-center justify-center rounded-full bg-black/50"
                   style={{ left: likeBurst.x, top: likeBurst.y }}
                 >
-                  <Heart size={72} className="fill-white text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                  <ThumbsUp size={40} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
                 </div>
               )}
 

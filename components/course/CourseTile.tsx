@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { Play } from "lucide-react";
 import { StarRating } from "@/components/ui/StarRating";
 import { getYouTubeId } from "@/lib/youtube";
@@ -246,8 +247,13 @@ export function CourseTile({
             className="h-full w-full object-cover"
           />
         ) : course.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={course.thumbnailUrl} alt={course.title} className="h-full w-full object-cover" />
+          <Image
+            src={course.thumbnailUrl}
+            alt={course.title}
+            fill
+            sizes="(max-width: 640px) 90vw, 320px"
+            className="object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-slate-500">
             {course.title.charAt(0).toUpperCase()}

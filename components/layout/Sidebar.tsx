@@ -130,7 +130,15 @@ export function Sidebar() {
           resolve pra w-0 sozinho quando "closed", nem precisa do condicional. */}
       <div
         className={`pointer-events-none fixed left-0 top-0 z-30 h-16 bg-white transition-[width] duration-200 dark:bg-black ${widthClass}`}
-      />
+      >
+        {/* Mesma fita de fade do <aside> lá em baixo, só que para os 64px
+            tapados pelo header — sem isto, o fade da barra lateral só
+            começava a meio do ecrã (top-16 pra baixo), com um troço sólido
+            sem gradiente nenhum por cima dele. */}
+        {state !== "closed" && (
+          <div className="pointer-events-none absolute inset-y-0 left-full z-30 w-6 bg-gradient-to-r from-white to-transparent dark:from-black" />
+        )}
+      </div>
       {/* Wrapper sem overflow restrito nenhum — só ele controla posição/largura
           (fixed + widthClass). O <aside> lá dentro é que faz scroll
           (overflow-y-auto), com overflow-x explicitamente hidden (não

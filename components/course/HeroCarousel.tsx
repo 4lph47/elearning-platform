@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { BookOpen, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getYouTubeId } from "@/lib/youtube";
@@ -77,8 +78,14 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
             }`}
           >
             {item.card.thumbnailUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.card.thumbnailUrl} alt={item.card.title} className="h-full w-full object-cover" />
+              <Image
+                src={item.card.thumbnailUrl}
+                alt={item.card.title}
+                fill
+                sizes="100vw"
+                priority={i === 0}
+                className="object-cover"
+              />
             ) : (
               <div className="h-full w-full bg-slate-200 dark:bg-slate-900" />
             )}

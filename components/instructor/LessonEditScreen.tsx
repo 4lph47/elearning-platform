@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +10,7 @@ import { QuizEditor } from "@/components/instructor/QuizEditor";
 import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { getYouTubeId } from "@/lib/youtube";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { LessonData } from "@/components/instructor/LessonRow";
 
 // Tela dedicada (não painel a expandir por baixo da aula na lista) — conteúdo
@@ -31,7 +32,7 @@ export function LessonEditScreen({
   courseAuthors: { id: string; name: string }[];
 }) {
   const router = useRouter();
-  const { fadeNavigate } = useFadeNav();
+  const { fadeNavigate, setNavigationGuard } = useFadeNav();
   const isEditing = Boolean(lesson);
   const backHref = `/instructor/courses/${courseId}`;
 
@@ -45,6 +46,17 @@ export function LessonEditScreen({
   const [contributorIds, setContributorIds] = useState<string[]>(lesson?.contributors?.map((c) => c.id) ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [dirty, setDirty] = useState(false);
+  const skipDirtyRef = useRef(true);
+  useEffect(() => {
+    if (skipDirtyRef.current) {
+      skipDirtyRef.current = false;
+      return;
+    }
+    setDirty(true);
+  }, [title, description, isFreePreview, type, contentUrl, thumbnailUrl, textContent, contributorIds]);
+  useUnsavedChangesGuard(dirty);
 
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
 
@@ -93,6 +105,15 @@ export function LessonEditScreen({
       setError(data.error ?? "Erro ao guardar aula");
       return;
     }
+
+    // Antes de navegar (fadeNavigate/router.refresh abaixo) — senão o guard
+    // ainda via "dirty" e perguntava "sair sem guardar?" logo depois de ter
+    // acabado de guardar com sucesso. setDirty(false) só limpa o guard no
+    // próximo render (efeito em useUnsavedChangesGuard); fadeNavigate a
+    // seguir, ainda síncrono, apanhava-o desatualizado — daí limpar direto
+    // também.
+    setDirty(false);
+    setNavigationGuard(null);
 
     if (isEditing) {
       fadeNavigate(backHref);

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, useTransition, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { pauseAllVideos } from "@/lib/pauseAllVideos";
 
@@ -26,6 +26,11 @@ const SPINNER_DELAY_MS = 500;
 interface FadeNavContextValue {
   fadeNavigate: (href: string) => void;
   curtainActive: boolean;
+  // Formulário com alterações por guardar regista aqui uma função que
+  // devolve true enquanto isso for verdade (ver lib/useUnsavedChangesGuard.ts)
+  // — fadeNavigate confirma com a pessoa antes de sair, em vez de perder o
+  // que ela escreveu silenciosamente.
+  setNavigationGuard: (guard: (() => boolean) | null) => void;
 }
 
 const FadeNavContext = createContext<FadeNavContextValue | null>(null);
@@ -38,9 +43,19 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
   const [curtainActive, setCurtainActive] = useState(false);
   const [covered, setCovered] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
+  const guardRef = useRef<(() => boolean) | null>(null);
+
+  const setNavigationGuard = useCallback((guard: (() => boolean) | null) => {
+    guardRef.current = guard;
+  }, []);
 
   const fadeNavigate = useCallback(
     (href: string) => {
+      if (guardRef.current?.()) {
+        const proceed = window.confirm("Tens alterações por guardar. Queres sair sem guardar?");
+        if (!proceed) return;
+        guardRef.current = null;
+      }
       pauseAllVideos();
       setCurtainActive(true);
       setCovered(false);
@@ -80,7 +95,7 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
   }, [covered, isPending]);
 
   return (
-    <FadeNavContext.Provider value={{ fadeNavigate, curtainActive }}>
+    <FadeNavContext.Provider value={{ fadeNavigate, curtainActive, setNavigationGuard }}>
       {children}
       {curtainActive && (
         <div

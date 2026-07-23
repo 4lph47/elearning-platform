@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Play, Pause, X } from "lucide-react";
 import { StarRating } from "@/components/ui/StarRating";
 import { getYouTubeId } from "@/lib/youtube";
@@ -238,8 +239,7 @@ export function CourseHero({
             className="h-full w-full object-cover"
           />
         ) : thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumbnailUrl} alt={title} className="h-full w-full object-cover" />
+          <Image src={thumbnailUrl} alt={title} fill sizes="100vw" priority className="object-cover" />
         ) : (
           <div className="h-full w-full bg-slate-200 dark:bg-slate-900" />
         )}

@@ -108,6 +108,19 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [hasHero]);
 
+  // Fade por baixo do header quer aparecer ao rolar em QUALQUER página, não
+  // só nas de hero (isso é só o `scrolled` acima, que fica sempre false
+  // fora delas) — tracker próprio, sem gate nenhum.
+  const [pageScrolled, setPageScrolled] = useState(false);
+  useEffect(() => {
+    function onScroll() {
+      setPageScrolled(window.scrollY > 40);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   useEffect(() => {
     if (!menuOpen) return;
     function handleClickOutside(e: MouseEvent) {
@@ -483,11 +496,17 @@ export function Navbar() {
     </header>
     {/* Mesma linguagem visual do fade da sidebar (esmorece de um lado sólido
         até transparente) — aqui de cima para baixo, em vez do border-b/bg
-        sólido abrupto que o header tinha antes. Fora do <header> (que já tem
-        transition-colors própria) e sempre presente, em qualquer página. */}
+        sólido abrupto que o header tinha antes. z-30 (não z-40, o do
+        próprio header) para ficar ao mesmo nível da sidebar, e só visível
+        depois de rolar — no topo o header já não tem nada "abrupto" pra
+        suavizar (sem scroll, ou está solto/transparente sobre o hero, ou
+        no valor por defeito; o fade é só pra suavizar o estado com fundo
+        sólido, que só entra depois de rolar). */}
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-16 z-40 h-6 bg-gradient-to-b from-white/90 to-transparent dark:from-black/90"
+      className={`pointer-events-none fixed inset-x-0 top-16 z-30 h-3 bg-gradient-to-b from-white/90 to-transparent transition-opacity duration-300 dark:from-black/90 ${
+        pageScrolled ? "opacity-100" : "opacity-0"
+      }`}
     />
     </>
   );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Card, Badge } from "@/components/ui/Card";
 import { StarRating } from "@/components/ui/StarRating";
 
@@ -33,13 +34,14 @@ export function CourseCard({ course }: { course: CourseCardData }) {
   return (
     <Link href={`/courses/${course.slug}`} prefetch className="group block h-full">
       <Card className="h-full overflow-hidden transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
-        <div className="flex h-36 items-center justify-center overflow-hidden bg-slate-200 text-3xl font-bold text-slate-500">
+        <div className="relative flex h-36 items-center justify-center overflow-hidden bg-slate-200 text-3xl font-bold text-slate-500">
           {course.thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={course.thumbnailUrl}
               alt={course.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 90vw, 300px"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             course.title.charAt(0).toUpperCase()

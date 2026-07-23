@@ -11,7 +11,7 @@ const variantClasses: Record<Variant, string> = {
   light: "bg-white text-slate-900 shadow-md hover:bg-slate-100",
   accent: "bg-blue-600 text-white hover:bg-blue-500",
   "outline-dark": "border border-slate-900/25 text-slate-900 hover:bg-slate-900/10 dark:border-white/25 dark:text-white dark:hover:bg-white/10",
-  premium: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 hover:from-blue-500 hover:to-indigo-500",
+  premium: "bg-blue-600 text-white shadow-md shadow-blue-600/30 hover:bg-blue-500 active:scale-95",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -23,7 +23,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
+        className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
         {...props}
       />
     );

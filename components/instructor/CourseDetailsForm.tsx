@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Star, Plus, X } from "lucide-react";
+import { useFadeNav } from "@/components/course/FadeNavContext";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card, Badge } from "@/components/ui/Card";
 import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 
 interface CourseData {
   id: string;
@@ -90,6 +92,7 @@ function EditableListField({
 // guardar — as cards são só organização visual.
 export function CourseDetailsForm({ course, otherCourses }: { course: CourseData; otherCourses: { id: string; title: string }[] }) {
   const router = useRouter();
+  const { fadeNavigate, setNavigationGuard } = useFadeNav();
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description);
   const [category, setCategory] = useState(course.category);
@@ -112,6 +115,33 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const [dirty, setDirty] = useState(false);
+  const skipDirtyRef = useRef(true);
+  useEffect(() => {
+    if (skipDirtyRef.current) {
+      skipDirtyRef.current = false;
+      return;
+    }
+    setDirty(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    title,
+    description,
+    category,
+    level,
+    price,
+    originalPrice,
+    trailerUrl,
+    outcomes.items,
+    requirements.items,
+    audience.items,
+    topics.items,
+    bundleName,
+    bundleCourseIds,
+    collaborators,
+  ]);
+  useUnsavedChangesGuard(dirty);
+
   function toggleBundleCourse(id: string) {
     setBundleCourseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
@@ -129,7 +159,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     setCollaborators((prev) => prev.filter((c) => c.email !== email));
   }
 
-  async function save(overrides: Record<string, unknown> = {}) {
+  async function save(overrides: Record<string, unknown> = {}, redirectAfter = false) {
     setSaving(true);
     setError(null);
     const res = await fetch(`/api/instructor/courses/${course.id}`, {
@@ -158,7 +188,17 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
       setError(data.error ?? "Erro ao guardar");
       return;
     }
-    router.refresh();
+    setDirty(false);
+    if (redirectAfter) {
+      // setDirty(false) só limpa o guard no próximo render (useEffect em
+      // useUnsavedChangesGuard) — fadeNavigate a seguir, na mesma função
+      // síncrona, ainda o via desatualizado (dirty) e perguntava "sair sem
+      // guardar?" logo depois de ter acabado de guardar. Limpa já, direto.
+      setNavigationGuard(null);
+      fadeNavigate("/instructor");
+    } else {
+      router.refresh();
+    }
   }
 
   async function handleDelete() {
@@ -200,7 +240,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         id="course-form"
         onSubmit={(e) => {
           e.preventDefault();
-          save();
+          save({}, true);
         }}
         className="space-y-4"
       >

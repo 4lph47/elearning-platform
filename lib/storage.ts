@@ -1,5 +1,4 @@
-import { writeFile, mkdir, unlink } from "fs/promises";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 
 export interface SavedFile {
   url: string;
@@ -11,38 +10,35 @@ export interface Storage {
   delete(url: string): Promise<void>;
 }
 
-const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
+const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "course-media";
 
-/**
- * Storage local em disco, pensado apenas para desenvolvimento.
- * Antes de fazer deploy na Vercel (filesystem efémero, sem persistência),
- * substituir por uma implementação equivalente que grave em storage cloud
- * (ex: S3Storage / R2Storage) mantendo a mesma interface `Storage`.
- */
-class LocalDiskStorage implements Storage {
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
+  auth: { persistSession: false },
+});
+
+class SupabaseStorage implements Storage {
   async save(file: File, folder: string): Promise<SavedFile> {
     const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "");
-    const dir = path.join(UPLOADS_ROOT, safeFolder);
-    await mkdir(dir, { recursive: true });
-
-    const ext = path.extname(file.name);
-    const filename = `${crypto.randomUUID()}${ext}`;
-    const filePath = path.join(dir, filename);
+    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+    const objectPath = `${safeFolder}/${crypto.randomUUID()}${ext}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(objectPath, buffer, { contentType: file.type || undefined, upsert: false });
+    if (error) throw error;
 
-    return {
-      url: `/uploads/${safeFolder}/${filename}`,
-      sizeBytes: buffer.byteLength,
-    };
+    const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+    return { url: data.publicUrl, sizeBytes: buffer.byteLength };
   }
 
   async delete(url: string): Promise<void> {
-    if (!url.startsWith("/uploads/")) return;
-    const filePath = path.join(process.cwd(), "public", url);
-    await unlink(filePath).catch(() => undefined);
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    const idx = url.indexOf(marker);
+    if (idx === -1) return;
+    const objectPath = url.slice(idx + marker.length);
+    await supabase.storage.from(bucket).remove([objectPath]);
   }
 }
 
-export const storage: Storage = new LocalDiskStorage();
+export const storage: Storage = new SupabaseStorage();

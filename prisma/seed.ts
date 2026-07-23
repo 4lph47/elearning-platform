@@ -8,9 +8,10 @@ import { buildSlideDeck } from "../lib/slideDeck";
 
 const prisma = new PrismaClient();
 
-const SAMPLE_VIDEO = "/uploads/sample/sample-video.mp4";
-const SAMPLE_DOC = "/uploads/sample/sample-doc.pdf";
-const SAMPLE_IMAGE = "/uploads/sample/sample-image.jpg";
+const SUPABASE_MEDIA_BASE = "https://gnynvupaqvzfthiecjix.supabase.co/storage/v1/object/public/course-media";
+const SAMPLE_VIDEO = `${SUPABASE_MEDIA_BASE}/sample/sample-video.mp4`;
+const SAMPLE_DOC = `${SUPABASE_MEDIA_BASE}/sample/sample-doc.pdf`;
+const SAMPLE_IMAGE = `${SUPABASE_MEDIA_BASE}/sample/sample-image.jpg`;
 const GENERATED_DIR = path.join(process.cwd(), "public", "uploads", "generated");
 fs.mkdirSync(GENERATED_DIR, { recursive: true });
 

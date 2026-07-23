@@ -32,6 +32,17 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
     router.push(`${pathname}?${params.toString()}`);
   }
 
+  // Remover um filtro já aplicado muda a lista de cursos visível (ao
+  // contrário de digitar no campo de texto, que só atualiza depois do
+  // debounce) — por isso passa por fadeNavigate, igual ao "Aplicar filtros"
+  // do painel, em vez do router.push instantâneo do updateParam acima.
+  function removeFilter(key: string, value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    fadeNavigate(`${pathname}?${params.toString()}`);
+  }
+
   // Atualiza sozinho pouco depois de parar de escrever — sem esperar por
   // Enter/submit, mas também sem disparar um pedido a cada letra.
   useEffect(() => {
@@ -117,8 +128,8 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
               type="button"
               onClick={() =>
                 f.key.startsWith("category:")
-                  ? updateParam("category", selectedCategories.filter((c) => c !== f.key.slice("category:".length)).join(","))
-                  : updateParam(f.key, "")
+                  ? removeFilter("category", selectedCategories.filter((c) => c !== f.key.slice("category:".length)).join(","))
+                  : removeFilter(f.key, "")
               }
               className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-400 bg-slate-200 px-3 py-1 text-xs font-medium text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"
             >
@@ -128,7 +139,7 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
           ))}
           <button
             type="button"
-            onClick={() => router.push(pathname)}
+            onClick={() => fadeNavigate(pathname)}
             className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
             Limpar tudo

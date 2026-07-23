@@ -16,6 +16,7 @@ import { PageEntranceFade } from "@/components/course/PageEntranceFade";
 import { TextFlyProvider } from "@/components/course/TextFlyContext";
 import { TextFlyOverlay } from "@/components/course/TextFlyOverlay";
 import { CookieConsentBanner } from "@/components/layout/CookieConsentBanner";
+import { PageAccentProvider } from "@/components/layout/PageAccentContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -48,14 +49,16 @@ export default function RootLayout({
             <CardTransitionProvider>
               <FadeNavProvider>
                 <TextFlyProvider>
-                  <SidebarProvider>
-                    <Navbar />
-                    <Sidebar />
-                    <PageEntranceFade>
-                      <SidebarMainShell>{children}</SidebarMainShell>
-                    </PageEntranceFade>
-                    <Footer />
-                  </SidebarProvider>
+                  <PageAccentProvider>
+                    <SidebarProvider>
+                      <Navbar />
+                      <Sidebar />
+                      <PageEntranceFade>
+                        <SidebarMainShell>{children}</SidebarMainShell>
+                      </PageEntranceFade>
+                      <Footer />
+                    </SidebarProvider>
+                  </PageAccentProvider>
                   <FadeOutScrim />
                   <CardTransitionOverlay />
                   <TextFlyOverlay />

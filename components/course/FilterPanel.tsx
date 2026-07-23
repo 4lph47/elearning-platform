@@ -76,6 +76,12 @@ export function FilterPanel({
   const [minDuration, setMinDuration] = useState(values.minDuration);
   const [minEnrollments, setMinEnrollments] = useState(values.minEnrollments);
   const [openSlider, setOpenSlider] = useState<SliderKey | null>(null);
+  // Sem isto o painel desaparecia de repente ao aplicar/cancelar — o
+  // fadeNavigate do curtain só começa a cobrir a página POR BAIXO; se o
+  // painel some instantâneo, dá um flash do conteúdo antigo antes da
+  // cortina apanhar. Esmorecer aqui primeiro liga as duas transições.
+  const CLOSE_MS = 200;
+  const [closing, setClosing] = useState(false);
 
   function toggleSlider(key: SliderKey) {
     setOpenSlider((s) => (s === key ? null : key));
@@ -85,18 +91,28 @@ export function FilterPanel({
     setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   }
 
+  function requestClose() {
+    setClosing(true);
+    setTimeout(onClose, CLOSE_MS);
+  }
+
   function apply() {
     onApply({ sort, categories, level, maxPrice, minDuration, minEnrollments });
-    onClose();
+    requestClose();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-black">
+    <div
+      className={`fixed inset-0 z-50 flex flex-col bg-white transition-opacity dark:bg-black ${
+        closing ? "opacity-0" : "opacity-100"
+      }`}
+      style={{ transitionDuration: `${CLOSE_MS}ms` }}
+    >
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 dark:border-white/10 sm:px-8">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Filtros</h2>
         <button
           type="button"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label="Fechar filtros"
           className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
         >

@@ -11,13 +11,17 @@ import { useSidebar } from "@/components/layout/SidebarContext";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { FadeLink } from "@/components/course/FadeLink";
 import { getRecentCourseSearches, addRecentCourseSearch, type RecentCourseSearch } from "@/lib/recentCourseSearches";
+import { usePageAccent } from "@/components/layout/PageAccentContext";
 
 const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$/;
 const SUGGEST_DEBOUNCE_MS = 250;
 
 interface MinimalSpeechRecognition {
   lang: string;
+  interimResults: boolean;
+  continuous: boolean;
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
   onend: (() => void) | null;
   start: () => void;
 }
@@ -37,6 +41,7 @@ export function Navbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { toggle: toggleSidebar } = useSidebar();
   const { curtainActive, fadeNavigate } = useFadeNav();
+  const { accent } = usePageAccent();
   const [mounted, setMounted] = useState(false);
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -160,10 +165,23 @@ export function Navbar() {
   function startVoiceSearch() {
     const Recognition = getSpeechRecognition();
     if (!Recognition) return;
+    // Foco + seleção explícitos: sem isto o campo podia não estar mesmo
+    // "ativo" quando o clique no botão do lado lhe tirava o foco, e o texto
+    // ditado substitui o que já lá estava em vez de ficar escondido atrás.
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+
     const recognition = new Recognition();
     recognition.lang = "pt-PT";
+    // interimResults: methods como o Chrome Android só disparam o resultado
+    // final depois de uma pausa a falar — sem parciais, se a sessão acabar
+    // antes disso (blur, timeout) nada chega a aparecer. Isto escreve à
+    // medida que a pessoa fala, não só no fim.
+    recognition.interimResults = true;
+    recognition.continuous = false;
     recognition.onresult = (e) => {
-      const transcript = e.results[0]?.[0]?.transcript;
+      const last = e.results[e.results.length - 1];
+      const transcript = last?.[0]?.transcript;
       if (transcript) setQ(transcript);
     };
     recognition.start();
@@ -176,15 +194,26 @@ export function Navbar() {
     .map((p) => p[0]?.toUpperCase())
     .join("") ?? "?";
 
+  // Perfil público do instrutor propaga a cor da sua foto pra cá (ver
+  // PageAccentContext) — o header já é transparente nessas páginas antes de
+  // rolar, por isso a cor aparece logo, não só depois do scroll.
+  const accentGradient =
+    transparent && accent
+      ? `linear-gradient(to bottom, rgba(${accent.top}, 0.85) 0%, rgba(${accent.mid}, 0.55) 55%, rgba(${accent.mid}, 0) 100%)`
+      : null;
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
         curtainActive
           ? "bg-white dark:bg-black"
           : transparent
-          ? "bg-gradient-to-b from-white/70 via-white/30 to-transparent dark:from-black/70 dark:via-black/30 dark:to-transparent"
-          : "border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-black/90"
+          ? accentGradient
+            ? ""
+            : "bg-gradient-to-b from-white/70 via-white/30 to-transparent dark:from-black/70 dark:via-black/30 dark:to-transparent"
+          : "bg-gradient-to-b from-white via-white/90 to-transparent backdrop-blur-md dark:from-black dark:via-black/90 dark:to-transparent"
       }`}
+      style={accentGradient ? { backgroundImage: accentGradient } : undefined}
     >
       <div className="grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-5 sm:gap-4">
         <div className="flex shrink-0 items-center">

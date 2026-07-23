@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { CornerCard, CornerCardStack } from "@/components/ui/CornerCard";
+import { CornerCard, CornerCardStack, CornerCardButtonNeutral, CornerCardButtonPrimary } from "@/components/ui/CornerCard";
 import { Card } from "@/components/ui/Card";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
@@ -177,21 +177,11 @@ export function LessonEditScreen({
             <p className="text-slate-700 dark:text-slate-200">
               Restaurámos um rascunho não guardado de {new Date(draft.savedAt).toLocaleString("pt-PT")}.
             </p>
-            <div className="mt-3 flex justify-end gap-4">
-              <button
-                type="button"
-                onClick={discardDraft}
-                className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-              >
-                Descartar
-              </button>
-              <button
-                type="button"
-                onClick={() => setDraftBannerVisible(false)}
-                className="text-sm font-medium text-slate-900 hover:underline dark:text-white"
-              >
+            <div className="mt-3 flex justify-end gap-2">
+              <CornerCardButtonNeutral onClick={discardDraft}>Descartar</CornerCardButtonNeutral>
+              <CornerCardButtonPrimary onClick={() => setDraftBannerVisible(false)}>
                 Continuar com este rascunho
-              </button>
+              </CornerCardButtonPrimary>
             </div>
           </CornerCard>
         )}

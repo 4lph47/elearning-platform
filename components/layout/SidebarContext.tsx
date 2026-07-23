@@ -35,9 +35,10 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     function sync(isMobile: boolean) {
       isMobileRef.current = isMobile;
       if (!hasSyncedOnceRef.current) {
-        // 1ª correção depois de montar: desktop expande, mobile fica escondida.
+        // 1ª correção depois de montar: desktop começa minimizada (não
+        // cheia), mobile fica escondida.
         hasSyncedOnceRef.current = true;
-        setState(isMobile ? "closed" : "full");
+        setState(isMobile ? "closed" : "mini");
         return;
       }
       // Mudanças de viewport depois disso (resize a atravessar o breakpoint)

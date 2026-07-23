@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { ThumbsUp, MessageSquare, Trash2, ChevronDown } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
 
@@ -33,7 +32,7 @@ function CommentRow({
   canModerate,
   isReply,
   rootId,
-  onReplyPosted,
+  onChanged,
 }: {
   comment: CommentData;
   lessonId: string;
@@ -41,9 +40,8 @@ function CommentRow({
   canModerate: boolean;
   isReply: boolean;
   rootId: string;
-  onReplyPosted: () => void;
+  onChanged: () => void;
 }) {
-  const router = useRouter();
   const [liked, setLiked] = useState(comment.likedByMe);
   const [likeCount, setLikeCount] = useState(comment.likeCount);
   const [replying, setReplying] = useState(false);
@@ -78,7 +76,7 @@ function CommentRow({
       setReplyText("");
       setReplying(false);
       setShowReplies(true);
-      onReplyPosted();
+      onChanged();
     }
   }
 
@@ -87,7 +85,7 @@ function CommentRow({
     const res = await fetch(`/api/lessons/${lessonId}/comments/${comment.id}`, { method: "DELETE" });
     if (res.ok) {
       setDeleted(true);
-      router.refresh();
+      onChanged();
     }
   }
 
@@ -171,7 +169,7 @@ function CommentRow({
                     canModerate={canModerate}
                     isReply
                     rootId={rootId}
-                    onReplyPosted={onReplyPosted}
+                    onChanged={onChanged}
                   />
                 ))}
               </div>
@@ -198,11 +196,11 @@ export function LessonComments({
   canModerate: boolean;
   isAuthenticated: boolean;
 }) {
-  const router = useRouter();
   const [comments, setComments] = useState(initialComments);
   const [sort, setSort] = useState<"top" | "recent">("recent");
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
+  const fetchingRef = useRef(false);
 
   const totalCount = comments.reduce((sum, c) => sum + 1 + c.replies.length, 0);
   const sorted = [...comments].sort((a, b) =>
@@ -211,6 +209,29 @@ export function LessonComments({
       : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  async function fetchComments() {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/comments`);
+      if (res.ok) setComments(await res.json());
+    } finally {
+      fetchingRef.current = false;
+    }
+  }
+
+  useEffect(() => {
+    const interval = setInterval(fetchComments, 8000);
+    const onFocus = () => fetchComments();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
 
   async function submitComment(e: React.FormEvent) {
     e.preventDefault();
@@ -303,7 +324,7 @@ export function LessonComments({
             canModerate={canModerate}
             isReply={false}
             rootId={comment.id}
-            onReplyPosted={() => router.refresh()}
+            onChanged={fetchComments}
           />
         ))}
       </div>

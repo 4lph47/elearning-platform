@@ -26,6 +26,48 @@ async function canAccessLesson(lessonId: string, userId: string) {
   return enrollment ? lesson : null;
 }
 
+export async function GET(_request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Precisas de iniciar sessão" }, { status: 401 });
+
+  const { lessonId } = await params;
+  const lesson = await canAccessLesson(lessonId, session.user.id);
+  if (!lesson) return NextResponse.json({ error: "Não tens acesso a esta aula" }, { status: 403 });
+
+  const topLevelComments = await prisma.lessonComment.findMany({
+    where: { lessonId, parentId: null },
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: { select: { id: true, name: true } },
+      likes: { select: { userId: true } },
+      replies: {
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, name: true } }, likes: { select: { userId: true } } },
+      },
+    },
+  });
+
+  const comments = topLevelComments.map((c) => ({
+    id: c.id,
+    content: c.content,
+    createdAt: c.createdAt.toISOString(),
+    user: c.user,
+    likeCount: c.likes.length,
+    likedByMe: c.likes.some((l) => l.userId === session.user.id),
+    replies: c.replies.map((r) => ({
+      id: r.id,
+      content: r.content,
+      createdAt: r.createdAt.toISOString(),
+      user: r.user,
+      likeCount: r.likes.length,
+      likedByMe: r.likes.some((l) => l.userId === session.user.id),
+      replies: [] as never[],
+    })),
+  }));
+
+  return NextResponse.json(comments);
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Precisas de iniciar sessão" }, { status: 401 });

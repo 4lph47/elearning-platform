@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   ResponsiveContainer,
@@ -78,6 +78,7 @@ interface Totals {
 }
 
 type TileKey = "courses" | "enrollments" | "revenue" | "lessons" | "views" | "likes" | "comments" | "quizzes" | "activity";
+const TILE_KEYS: TileKey[] = ["courses", "enrollments", "revenue", "lessons", "views", "likes", "comments", "quizzes", "activity"];
 
 const AXIS_COLOR = "#94a3b8"; // slate-400 — legível em fundo claro e escuro
 const GRID_COLOR = "#94a3b833";
@@ -243,7 +244,12 @@ export function AnalyticsCharts({
   hourOfDay: HourPoint[];
 }) {
   const router = useRouter();
-  const [selectedTile, setSelectedTile] = useState<TileKey>("enrollments");
+  // Cards do dashboard (app/instructor/page.tsx) linkam para cá com ?tile=X —
+  // deixa aterrar diretamente no gráfico certo, em vez de sempre em "Matrículas".
+  const tileParam = useSearchParams().get("tile") as TileKey | null;
+  const [selectedTile, setSelectedTile] = useState<TileKey>(
+    tileParam && TILE_KEYS.includes(tileParam) ? tileParam : "enrollments"
+  );
   const [fadingOut, setFadingOut] = useState(false);
 
   const FADE_OUT_MS = 250;
@@ -675,6 +681,7 @@ export function AnalyticsCharts({
           </ResponsiveContainer>
         </ChartCard>
 
+        <div id="rating" className="scroll-mt-20">
         <ChartCard title="Cursos mais bem avaliados" hint="Top 10 por avaliação média (só com avaliações). Clica numa barra para abrir o curso.">
           <ResponsiveContainer width="100%" height={courseBarHeight(byRating.length)}>
             <BarChart data={byRating} layout="vertical" margin={{ left: 8 }}>
@@ -705,6 +712,7 @@ export function AnalyticsCharts({
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
+        </div>
 
         <ChartCard title="Cursos com mais engajamento" hint="Top 10 por likes + comentários somados nas suas aulas. Clica numa barra para abrir o curso.">
           <ResponsiveContainer width="100%" height={courseBarHeight(byEngagement.length)}>

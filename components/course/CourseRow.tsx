@@ -58,7 +58,7 @@ export function CourseRow({
       <button
         onClick={() => scrollBy(-1)}
         aria-label="Recuar"
-        className="absolute left-0 top-9 z-20 hidden h-36 w-10 items-center justify-center bg-gradient-to-r from-black/80 to-transparent text-white opacity-0 transition-opacity hover:from-black/90 group-hover/row:opacity-100 sm:flex sm:h-40"
+        className="absolute left-0 top-9 z-20 hidden h-36 w-10 items-center justify-center bg-gradient-to-r from-white/90 to-transparent text-slate-900 opacity-0 transition-opacity hover:from-white group-hover/row:opacity-100 dark:from-black/80 dark:text-white dark:hover:from-black/90 sm:flex sm:h-40"
       >
         <ChevronLeft size={22} />
       </button>
@@ -128,7 +128,7 @@ export function CourseRow({
       <button
         onClick={() => scrollBy(1)}
         aria-label="Avançar"
-        className="absolute right-0 top-9 z-20 hidden h-36 w-10 items-center justify-center bg-gradient-to-l from-black/80 to-transparent text-white opacity-0 transition-opacity hover:from-black/90 group-hover/row:opacity-100 sm:flex sm:h-40"
+        className="absolute right-0 top-9 z-20 hidden h-36 w-10 items-center justify-center bg-gradient-to-l from-white/90 to-transparent text-slate-900 opacity-0 transition-opacity hover:from-white group-hover/row:opacity-100 dark:from-black/80 dark:text-white dark:hover:from-black/90 sm:flex sm:h-40"
       >
         <ChevronRight size={22} />
       </button>

@@ -372,7 +372,7 @@ export function Navbar() {
             className={`flex shrink-0 items-center gap-3 transition-all duration-[900ms] ease-in-out ${
               mobileSearchOpen
                 ? "max-w-0 overflow-hidden opacity-0 sm:max-w-none sm:overflow-visible sm:opacity-100"
-                : "max-w-[220px] overflow-visible opacity-100"
+                : "max-w-[220px] overflow-visible opacity-100 sm:max-w-none"
             }`}
           >
           {mounted && status !== "authenticated" && (

@@ -73,30 +73,39 @@ export default async function Home() {
   const session = await getServerSession(authOptions);
 
   const [{ courses, courseCount, studentCount, instructorCount }, enrollments] = await Promise.all([
-    getCachedHomeData(),
+    getCachedHomeData().catch((err) => {
+      console.error("Falha ao carregar dados da home:", err);
+      return { courses: [], courseCount: 0, studentCount: 0, instructorCount: 0 };
+    }),
     session
-      ? prisma.enrollment.findMany({
-          where: { userId: session.user.id, course: { published: true } },
-          include: {
-            course: {
-              include: {
-                instructor: { select: { name: true } },
-                modules: {
-                  orderBy: { order: "asc" },
-                  include: {
-                    lessons: {
-                      orderBy: { order: "asc" },
-                      include: {
-                        _count: { select: { resources: true } },
-                        progress: { where: { userId: session.user.id } },
+      ? prisma.enrollment
+          .findMany({
+            where: { userId: session.user.id, course: { published: true } },
+            include: {
+              course: {
+                include: {
+                  instructor: { select: { name: true } },
+                  modules: {
+                    orderBy: { order: "asc" },
+                    include: {
+                      lessons: {
+                        orderBy: { order: "asc" },
+                        include: {
+                          _count: { select: { resources: true } },
+                          progress: { where: { userId: session.user.id } },
+                        },
                       },
                     },
                   },
                 },
               },
             },
-          },
-        })
+          })
+          // BD instável não deve derrubar a home inteira — sem inscrições, só perde-se a secção "continuar a aprender".
+          .catch((err) => {
+            console.error("Falha ao carregar inscrições na home:", err);
+            return [];
+          })
       : Promise.resolve([]),
   ]);
 

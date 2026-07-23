@@ -9,6 +9,7 @@ import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut
 import { Button } from "@/components/ui/Button";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useFadeNav } from "@/components/course/FadeNavContext";
+import { FadeLink } from "@/components/course/FadeLink";
 import { getRecentCourseSearches, addRecentCourseSearch, type RecentCourseSearch } from "@/lib/recentCourseSearches";
 
 const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$/;
@@ -214,7 +215,7 @@ export function Navbar() {
             >
               <Menu size={18} />
             </button>
-            <Link
+            <FadeLink
               href="/"
               className="flex shrink-0 items-center gap-2 text-lg font-bold text-slate-900 dark:text-white"
             >
@@ -222,7 +223,7 @@ export function Navbar() {
                 <GraduationCap className="h-4.5 w-4.5" size={18} />
               </span>
               <span>E-Learn</span>
-            </Link>
+            </FadeLink>
           </div>
         </div>
 
@@ -376,33 +377,33 @@ export function Navbar() {
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">{session.user.email}</p>
                   </div>
 
-                  <Link
+                  <FadeLink
                     href="/courses"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                   >
                     <LayoutGrid size={14} /> Catálogo
-                  </Link>
+                  </FadeLink>
 
                   {session.user.role !== "STUDENT" && (
-                    <Link
+                    <FadeLink
                       href="/instructor"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                     >
                       <GraduationCap size={14} /> Área de Instrutor
-                    </Link>
+                    </FadeLink>
                   )}
 
-                  <Link
+                  <FadeLink
                     href="/dashboard"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                   >
                     <LayoutDashboard size={14} /> A minha aprendizagem
-                  </Link>
+                  </FadeLink>
 
-                  <Link
+                  <FadeLink
                     href="/cart"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white sm:hidden"
@@ -415,7 +416,7 @@ export function Navbar() {
                         {cartCount}
                       </span>
                     )}
-                  </Link>
+                  </FadeLink>
 
                   {mounted && (
                     <button

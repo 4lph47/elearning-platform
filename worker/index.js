@@ -145,19 +145,25 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
 
   // H.264 continua a ser o único codec com suporte universal (Chrome/Firefox
   // não decodificam HEVC de forma fiável, Safari só suporta AV1 parcialmente
-  // — testado antes de decidir, não é suposição). Preset "medium" (não
-  // "slow") — "slow" com TODOS os rungs a recodificar (incluindo o de
-  // topo, ver transcodeToHls) estava a matar o processo sem erro nenhum no
-  // stderr, padrão clássico de OOM-kill num container com pouca memória;
-  // "medium" usa bastante menos RAM/CPU, ainda claramente melhor que
-  // "veryfast" na relação tamanho/qualidade.
+  // — testado antes de decidir, não é suposição). "medium" sozinho ainda
+  // estava a levar SIGKILL (OOM confirmado nos logs) a 1080p num container
+  // do Railway com pouca RAM — os dois maiores consumidores de memória do
+  // x264 são o lookahead (buffer de frames futuras pra decidir bitrate) e o
+  // nº de referências; limitam-se os dois diretamente via -x264-params, e
+  // -threads 2 evita cada thread duplicar os seus próprios buffers. "fast"
+  // em vez de "medium" soma-se a isto — mais uma redução de memória, não só
+  // de tempo.
   const codecArgs = [
     "-vf",
     `scale=-2:${targetHeight}`,
     "-c:v",
     "libx264",
     "-preset",
-    "medium",
+    "fast",
+    "-x264-params",
+    "rc-lookahead=20:ref=2",
+    "-threads",
+    "2",
     "-profile:v",
     "high",
     "-crf",

@@ -301,7 +301,7 @@ export function LessonEditScreen({
             {type === "VIDEO" ? (
               <div className="space-y-2">
                 <Label>Vídeo da aula (obrigatório)</Label>
-                <FileUploadInput kind="VIDEO" onUploaded={(r) => setContentUrl(r.url)} />
+                <FileUploadInput kind="VIDEO" currentUrl={contentUrl} onUploaded={(r) => setContentUrl(r.url)} />
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
                     mesmo LessonPlayer usado na aula a sério (gestos, seletor
                     de qualidade, tudo igual), só que a largura fica fluida
@@ -326,7 +326,7 @@ export function LessonEditScreen({
                   <p className="mb-1.5 text-xs text-slate-400 dark:text-slate-500">
                     O thumbnail da primeira aula do curso é o que aparece nos cards (página principal, catálogo, etc.).
                   </p>
-                  <FileUploadInput kind="IMAGE" onUploaded={(r) => setThumbnailUrl(r.url)} />
+                  <FileUploadInput kind="IMAGE" currentUrl={thumbnailUrl} onUploaded={(r) => setThumbnailUrl(r.url)} />
                   {thumbnailUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

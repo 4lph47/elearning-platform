@@ -533,36 +533,92 @@ export function LessonPlayer({
     }
   }
 
-  // Mobile: arrastar pra baixo sai do fullscreen; arrastar pra cima ENTRA em
-  // fullscreen (se ainda não estiver) ou roda pra horizontal (se já estiver,
-  // com o ecrã em pé) — só faz sentido em ecrã pequeno (desktop não maximiza
-  // por gesto). Os listeners ficam sempre ativos (não só quando maximizado),
-  // senão nunca havia gesto pra ENTRAR em fullscreen.
-  const fullscreenTouchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Mobile: tocar no vídeo e arrastar segue o dedo AO VIVO (escala visual),
+  // como um mini-player a crescer — solta depois de passar o meio do
+  // percurso e compromete-se a sério (Fullscreen API nativa); solta antes
+  // disso e volta ao tamanho normal. Arrastar pra cima cresce (maximizar);
+  // já em fullscreen, arrastar pra baixo encolhe (minimizar). Os listeners
+  // ficam sempre ativos (não só quando maximizado), senão nunca havia gesto
+  // pra ENTRAR em fullscreen. Só em ecrã pequeno — desktop não maximiza por
+  // gesto.
+  const dragStateRef = useRef<{ startX: number; startY: number; dy: number; dragging: boolean } | null>(null);
+  const [isDraggingVideo, setIsDraggingVideo] = useState(false);
+
+  const DRAG_ACTIVATE_PX = 12;
+  const DRAG_MAX_PX = 200;
+  const DRAG_COMMIT_PX = DRAG_MAX_PX * 0.45;
 
   function handleFullscreenTouchStart(e: React.TouchEvent) {
     if (window.innerWidth >= 1024) return;
     const t = e.touches[0];
-    fullscreenTouchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+    dragStateRef.current = { startX: t.clientX, startY: t.clientY, dy: 0, dragging: false };
   }
 
+  // touchmove tem de ser um listener NATIVO (não onTouchMove do React) com
+  // { passive: false } — só assim preventDefault() consegue mesmo travar o
+  // scroll da página; listeners passivos (o default do browser pra
+  // touchmove, por performance) ignoram preventDefault() silenciosamente.
+  // A escala em si também é mutação direta do DOM (não estado React) — nada
+  // de re-render a cada frame do gesto (o heatmap SVG por baixo recalcula
+  // em cada render), só assim fica mesmo 1:1 com o dedo sem engasgar.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    function onTouchMove(e: TouchEvent) {
+      const start = dragStateRef.current;
+      if (!start || window.innerWidth >= 1024) return;
+      const t = e.touches[0];
+      const dx = t.clientX - start.startX;
+      const dy = t.clientY - start.startY;
+
+      if (!start.dragging) {
+        // só confirma o drag com movimento vertical claro — evita competir
+        // com um tap simples (toggle play) ou um swipe horizontal (troca
+        // de aula) que passem por cima do vídeo.
+        if (Math.abs(dy) < DRAG_ACTIVATE_PX || Math.abs(dx) > Math.abs(dy)) return;
+        start.dragging = true;
+        container!.style.transition = "none";
+        setIsDraggingVideo(true);
+      }
+
+      e.preventDefault();
+      start.dy = dy;
+      const isFs = Boolean(document.fullscreenElement);
+      let scale = 1;
+      if (!isFs && dy < 0) {
+        scale = 1 + (Math.min(-dy, DRAG_MAX_PX) / DRAG_MAX_PX) * 0.6;
+      } else if (isFs && dy > 0) {
+        scale = 1 - (Math.min(dy, DRAG_MAX_PX) / DRAG_MAX_PX) * 0.4;
+      }
+      container!.style.transform = scale !== 1 ? `scale(${scale})` : "";
+    }
+
+    container.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => container.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
   function handleFullscreenTouchEnd(e: React.TouchEvent) {
-    const start = fullscreenTouchStartRef.current;
-    fullscreenTouchStartRef.current = null;
+    const start = dragStateRef.current;
+    dragStateRef.current = null;
     if (!start || window.innerWidth >= 1024) return;
+    if (!start.dragging) return; // só um tap — o click normal (play/pause) trata disso
 
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    const elapsed = Date.now() - start.t;
-    const isVerticalSwipe = Math.abs(dy) > 70 && Math.abs(dy) > Math.abs(dx) * 1.5 && elapsed < 600;
-    if (!isVerticalSwipe) return;
+    e.preventDefault(); // evita que o toque solto dispare um click sintético a seguir
+    const container = containerRef.current;
+    if (container) {
+      container.style.transition = "transform 200ms ease-out";
+      container.style.transform = "";
+    }
+    setIsDraggingVideo(false);
 
-    if (dy > 0) {
-      if (document.fullscreenElement) document.exitFullscreen();
-    } else if (!document.fullscreenElement) {
+    const isFs = Boolean(document.fullscreenElement);
+    if (!isFs && start.dy <= -DRAG_COMMIT_PX) {
       containerRef.current?.requestFullscreen().catch(() => {});
-    } else if (window.innerHeight > window.innerWidth) {
+    } else if (isFs && start.dy >= DRAG_COMMIT_PX) {
+      document.exitFullscreen().catch(() => {});
+    } else if (isFs && start.dy <= -DRAG_COMMIT_PX && window.innerHeight > window.innerWidth) {
+      // já maximizado, continuou a arrastar pra cima com o ecrã em pé — roda pra paisagem.
       const orientation = screen.orientation as unknown as { lock?: (type: string) => Promise<void> } | undefined;
       orientation?.lock?.("landscape").catch(() => {});
     }
@@ -665,7 +721,7 @@ export function LessonPlayer({
           ) : (
             <div
               ref={containerRef}
-              className={`group relative touch-manipulation overflow-hidden ${playerClassName}`}
+              className={`group relative touch-manipulation overflow-hidden ${isDraggingVideo ? "z-50" : ""} ${playerClassName}`}
               onContextMenu={handleContextMenu}
               onTouchStart={handleFullscreenTouchStart}
               onTouchEnd={handleFullscreenTouchEnd}

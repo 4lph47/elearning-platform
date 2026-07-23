@@ -121,23 +121,22 @@ export function Sidebar() {
           className={`pointer-events-none fixed left-0 top-0 z-30 h-16 bg-white transition-[width] duration-200 dark:bg-black ${widthClass}`}
         />
       )}
-      <aside
-        onMouseEnter={() => state === "mini" && setPeeking(true)}
-        onMouseLeave={() => setPeeking(false)}
-        className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-visible bg-white transition-[width] duration-200 dark:bg-black ${widthClass} ${
-          peeking ? "shadow-xl" : ""
-        }`}
-      >
-        {/* Ancorado ao próprio <aside> (absolute + left-full, não fixed com
-            um "left" próprio a animar em paralelo) — antes eram duas
-            transições independentes com a mesma duração "no papel" mas que
-            podiam dessincronizar (width é layout, left tende a compositar
-            diferente); assim o fade simplesmente HERDA a largura do aside,
-            não há como desalinhar. */}
-        {state !== "closed" && (
-          <div className="pointer-events-none absolute inset-y-0 left-full z-30 w-6 bg-gradient-to-r from-white to-transparent dark:from-black" />
-        )}
-        <nav className={`flex flex-col gap-1 p-2 transition-[width] duration-200 ${isMini ? "w-16" : "w-60"}`}>
+      {/* Wrapper sem overflow restrito nenhum — só ele controla posição/largura
+          (fixed + widthClass). O <aside> lá dentro é que faz scroll
+          (overflow-y-auto), com overflow-x explicitamente hidden (não
+          "visible"): misturar overflow-y:auto com overflow-x:visible no MESMO
+          elemento faz o browser converter esse "visible" sozinho para "auto"
+          (regra do spec do CSS overflow) — cortava o fade na mesma, apesar da
+          classe dizer "visible". Separar em dois elementos evita a regra. */}
+      <div className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] transition-[width] duration-200 ${widthClass}`}>
+        <aside
+          onMouseEnter={() => state === "mini" && setPeeking(true)}
+          onMouseLeave={() => setPeeking(false)}
+          className={`h-full w-full overflow-y-auto overflow-x-hidden bg-white dark:bg-black ${
+            peeking ? "shadow-xl" : ""
+          }`}
+        >
+          <nav className={`flex flex-col gap-1 p-2 transition-[width] duration-200 ${isMini ? "w-16" : "w-60"}`}>
           {items.map((item) => {
             if (!isGroup(item)) {
               const Icon = item.icon;
@@ -222,8 +221,12 @@ export function Sidebar() {
               </div>
             );
           })}
-        </nav>
-      </aside>
+          </nav>
+        </aside>
+        {state !== "closed" && (
+          <div className="pointer-events-none absolute inset-y-0 left-full z-30 w-6 bg-gradient-to-r from-white to-transparent dark:from-black" />
+        )}
+      </div>
     </>
   );
 }

@@ -219,6 +219,11 @@ model Lesson {
   isFreePreview   Boolean    @default(false)
   type            LessonType @default(VIDEO)
   contentUrl      String?
+  // Master playlist HLS (.m3u8) — atualizado pelo worker à medida que cada
+  // rendition fica pronta (ver lib/videoTranscode.ts, worker/index.js). Só
+  // referencia as variantes já concluídas, por isso fica reproduzível assim
+  // que a 1ª existe, mesmo com o job ainda PROCESSING.
+  hlsMasterUrl    String?
   thumbnailUrl    String?
   textContent     String?
   durationSeconds Int?

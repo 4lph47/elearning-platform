@@ -64,12 +64,15 @@ export interface SignedUpload {
 // pedido a uma serverless function do Vercel — em vez de passar o ficheiro
 // por aqui (app/api/upload), isto só gera uma URL assinada e o browser
 // envia diretamente para o Storage (ver components/instructor/FileUploadInput.tsx).
-export async function createSignedUpload(kind: string, fileName: string): Promise<SignedUpload> {
-  const folder = `${kind.toLowerCase()}s`;
+//
+// objectPath opcional: usado pelo upload de vídeo em partes (ver
+// app/api/upload/sign) para pôr todas as partes de um mesmo vídeo na mesma
+// pasta, em vez de um path aleatório novo por chamada.
+export async function createSignedUpload(kind: string, fileName: string, objectPath?: string): Promise<SignedUpload> {
   const ext = fileName.includes(".") ? fileName.slice(fileName.lastIndexOf(".")) : "";
-  const objectPath = `${folder}/${crypto.randomUUID()}${ext}`;
+  const path = objectPath ?? `${kind.toLowerCase()}s/${crypto.randomUUID()}${ext}`;
 
-  const { data, error } = await getClient().storage.from(bucket).createSignedUploadUrl(objectPath);
+  const { data, error } = await getClient().storage.from(bucket).createSignedUploadUrl(path);
   if (error) throw error;
 
   const signedUrl = data.signedUrl.startsWith("http")

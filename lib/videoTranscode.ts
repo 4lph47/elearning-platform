@@ -14,6 +14,7 @@ export function needsTranscode(type: string | undefined, contentUrl: string | nu
 export async function requeueTranscode(lessonId: string, sourceUrl: string) {
   await prisma.$transaction([
     prisma.lessonVideoRendition.deleteMany({ where: { lessonId } }),
+    prisma.lesson.update({ where: { id: lessonId }, data: { hlsMasterUrl: null } }),
     prisma.videoTranscodeJob.create({ data: { lessonId, sourceUrl } }),
   ]);
 }

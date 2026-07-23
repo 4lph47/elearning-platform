@@ -107,7 +107,10 @@ const ALLOWED_MIME_BY_TYPE: Record<string, string[]> = {
 };
 
 const MAX_SIZE_BY_TYPE: Record<string, number> = {
-  VIDEO: 500 * 1024 * 1024,
+  // 4K de verdade pode passar longe de 500MB — teto real acaba por ser o
+  // limite do bucket Supabase (ver lib/storage.ts / scripts/raise-bucket-limit.ts),
+  // que no plano Free trava em 50MB independente disto.
+  VIDEO: 5 * 1024 * 1024 * 1024,
   DOCUMENT: 20 * 1024 * 1024,
   // Imagens continuam a passar pelo corpo de um pedido ao Vercel (para o
   // sharp comprimir server-side) — esse limite é 4.5MB, por isso o teto

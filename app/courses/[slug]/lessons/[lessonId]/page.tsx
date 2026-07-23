@@ -190,6 +190,7 @@ export default async function LessonPage({
           lessonId={lesson.id}
           type={lesson.type}
           contentUrl={lesson.contentUrl}
+          hlsMasterUrl={lesson.hlsMasterUrl}
           videoRenditions={videoRenditions}
           textContent={lesson.textContent}
           initialCompleted={progress?.completed ?? false}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ThumbsUp, ThumbsDown, Share2, Check } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
@@ -8,6 +8,13 @@ import { timeAgo } from "@/lib/timeAgo";
 interface Author {
   id: string;
   name: string;
+}
+
+// Passado a onReady em cada render (fecha sempre sobre o estado mais
+// recente) — o duplo-clique/duplo-tap no centro do vídeo (LessonPlayer) usa
+// isto pra "gostar" da aula sem duplicar o estado de reação aqui.
+export interface LessonEngagementBarHandle {
+  like: () => void;
 }
 
 export function LessonEngagementBar({
@@ -19,6 +26,7 @@ export function LessonEngagementBar({
   initialReaction,
   isAuthenticated,
   completeButton,
+  onReady,
 }: {
   lessonId: string;
   authors: Author[];
@@ -28,17 +36,15 @@ export function LessonEngagementBar({
   initialReaction: "LIKE" | "DISLIKE" | null;
   isAuthenticated: boolean;
   completeButton?: ReactNode;
+  onReady?: (handle: LessonEngagementBarHandle) => void;
 }) {
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [reaction, setReaction] = useState(initialReaction);
   const [copied, setCopied] = useState(false);
   const primaryAuthor = authors[0];
 
-  async function react(type: "LIKE" | "DISLIKE") {
-    if (!isAuthenticated) return;
-    const next = reaction === type ? null : type;
+  async function applyReaction(next: "LIKE" | "DISLIKE" | null) {
     setReaction(next);
-
     const res = await fetch(`/api/lessons/${lessonId}/reaction`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -49,6 +55,22 @@ export function LessonEngagementBar({
       setLikeCount(data.likeCount);
     }
   }
+
+  async function react(type: "LIKE" | "DISLIKE") {
+    if (!isAuthenticated) return;
+    await applyReaction(reaction === type ? null : type);
+  }
+
+  // Duplo-tap/duplo-clique no vídeo só GOSTA (nunca tira o gosto), tal como
+  // no Instagram — se já estiver "LIKE" não há nada a fazer.
+  useEffect(() => {
+    onReady?.({
+      like: () => {
+        if (!isAuthenticated || reaction === "LIKE") return;
+        applyReaction("LIKE");
+      },
+    });
+  });
 
   async function share() {
     const url = window.location.href;

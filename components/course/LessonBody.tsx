@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } fr
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer, type VideoRendition } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
+import type { LessonEngagementBarHandle } from "@/components/course/LessonEngagementBar";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { ResourcePreviewContent as PreviewContent } from "@/components/course/ResourcePreviewContent";
 import { boxFromRect, useCardTransition } from "@/components/course/CardTransitionContext";
@@ -16,6 +17,7 @@ export function LessonBody({
   lessonId,
   type,
   contentUrl,
+  hlsMasterUrl,
   videoRenditions,
   textContent,
   initialCompleted,
@@ -36,6 +38,7 @@ export function LessonBody({
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  hlsMasterUrl?: string | null;
   videoRenditions?: VideoRendition[];
   textContent?: string | null;
   initialCompleted: boolean;
@@ -43,7 +46,7 @@ export function LessonBody({
   overview: string;
   resources: LessonResourceData[];
   progress?: React.ReactNode;
-  engagement?: ReactElement<{ completeButton?: React.ReactNode }>;
+  engagement?: ReactElement<{ completeButton?: React.ReactNode; onReady?: (handle: LessonEngagementBarHandle) => void }>;
   comments?: React.ReactNode;
   videoMeta?: VideoMeta;
   previousHref?: string | null;
@@ -67,6 +70,7 @@ export function LessonBody({
   const belowVideoWidth = `lg:max-w-none ${collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"}`;
 
   const playerBoxRef = useRef<HTMLDivElement>(null);
+  const engagementLikeRef = useRef<(() => void) | null>(null);
   const { state, arrive } = useCardTransition();
   const pending = state?.slug === courseSlug && !state.arrived;
 
@@ -113,7 +117,14 @@ export function LessonBody({
     </button>
   );
 
-  const engagementWithButton = engagement && cloneElement(engagement, { completeButton });
+  const engagementWithButton =
+    engagement &&
+    cloneElement(engagement, {
+      completeButton,
+      onReady: (handle: LessonEngagementBarHandle) => {
+        engagementLikeRef.current = handle.like;
+      },
+    });
 
   return (
     <div className="overflow-x-hidden">
@@ -157,11 +168,13 @@ export function LessonBody({
               lessonId={lessonId}
               type={type}
               contentUrl={contentUrl}
+              hlsMasterUrl={hlsMasterUrl}
               videoRenditions={videoRenditions}
               textContent={textContent}
               initialWatchedSeconds={initialWatchedSeconds}
               onComplete={markComplete}
               cinemaMode={cinemaMode}
+              onDoubleTapLike={() => engagementLikeRef.current?.()}
               onToggleCinemaMode={
                 type === "VIDEO"
                   ? () =>

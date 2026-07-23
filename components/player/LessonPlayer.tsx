@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Hls from "hls.js";
 import {
   Check,
   Download,
   Gauge,
+  Heart,
   Link2,
   Maximize,
   Minimize,
@@ -12,6 +14,8 @@ import {
   PictureInPicture2,
   Play,
   Repeat,
+  RotateCcw,
+  RotateCw,
   Settings,
   Sparkles,
   Video,
@@ -101,22 +105,26 @@ export function LessonPlayer({
   lessonId,
   type,
   contentUrl,
+  hlsMasterUrl,
   videoRenditions,
   textContent,
   initialWatchedSeconds,
   onComplete,
   cinemaMode,
   onToggleCinemaMode,
+  onDoubleTapLike,
 }: {
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  hlsMasterUrl?: string | null;
   videoRenditions?: VideoRendition[];
   textContent?: string | null;
   initialWatchedSeconds: number;
   onComplete: () => void;
   cinemaMode?: boolean;
   onToggleCinemaMode?: () => void;
+  onDoubleTapLike?: () => void;
 }) {
   const lastSentRef = useRef(0);
   const hasAppliedInitialSeekRef = useRef(false);
@@ -124,26 +132,85 @@ export function LessonPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const collapsed = useSidebarCollapsed();
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
   const ambientColor = useAmbientColor(videoRef, Boolean(cinemaMode) && !youtubeId && type === "VIDEO");
 
+  // HLS (master.m3u8 gerado pelo worker, ver worker/index.js) é o caminho
+  // normal a partir de agora — o vídeo fica reproduzível assim que a 1ª
+  // variante existe, o browser troca de qualidade sozinho. contentUrl/
+  // videoRenditions (mp4 plano) ficam só de recurso: aulas antigas de antes
+  // desta mudança, ou uma aula nova enquanto o worker ainda nem começou.
+  const usingHls = Boolean(hlsMasterUrl) && !youtubeId;
+  // Vídeos grandes sobem em partes (ver FileUploadInput.tsx) — contentUrl
+  // fica a apontar pra um manifest.json (lista das partes), não um vídeo a
+  // sério, por isso não dá pra usar como fallback enquanto o HLS não existe.
+  const isManifestSource = Boolean(contentUrl?.endsWith("/manifest.json"));
+
   // Só oferece o seletor quando há mais que uma rendition (senão não há
   // escolha nenhuma a fazer) — ordenadas da maior pra menor resolução.
   const sortedRenditions = [...(videoRenditions ?? [])].sort((a, b) => b.height - a.height);
-  const hasQualityOptions = sortedRenditions.length > 1;
+  const hasLegacyQualityOptions = !usingHls && sortedRenditions.length > 1;
   const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
   const activeSrc = selectedQuality
     ? sortedRenditions.find((r) => r.quality === selectedQuality)?.url ?? contentUrl
     : contentUrl;
 
   useEffect(() => {
-    if (sortedRenditions.length === 0) return;
+    if (usingHls || sortedRenditions.length === 0) return;
     const stored = getStoredQuality();
     const match = stored && sortedRenditions.some((r) => r.quality === stored) ? stored : sortedRenditions[0].quality;
     setSelectedQuality(match);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId]);
+  }, [lessonId, usingHls]);
+
+  // Níveis HLS (uma "rung" da escada = um <video>-friendly bitrate/resolução)
+  // — populados quando o hls.js lê o master.m3u8. currentLevel -1 = Auto
+  // (hls.js escolhe sozinho consoante a largura de banda).
+  const [hlsLevels, setHlsLevels] = useState<{ index: number; height: number; bitrate: number }[]>([]);
+  const [hlsCurrentLevel, setHlsCurrentLevel] = useState(-1);
+
+  useEffect(() => {
+    if (!usingHls || !hlsMasterUrl) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    setHlsLevels([]);
+    setHlsCurrentLevel(-1);
+
+    // Safari suporta HLS nativamente (sem hls.js) — tentar isso primeiro
+    // evita carregar a lib à toa nesses browsers.
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsMasterUrl;
+      return;
+    }
+
+    if (!Hls.isSupported()) return;
+
+    const hls = new Hls();
+    hlsRef.current = hls;
+    hls.loadSource(hlsMasterUrl);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      setHlsLevels(hls.levels.map((l, index) => ({ index, height: l.height, bitrate: l.bitrate })));
+    });
+    hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
+      setHlsCurrentLevel(data.level);
+    });
+
+    return () => {
+      hls.destroy();
+      hlsRef.current = null;
+    };
+  }, [usingHls, hlsMasterUrl]);
+
+  function setHlsQuality(levelIndex: number) {
+    if (hlsRef.current) hlsRef.current.currentLevel = levelIndex;
+    setHlsCurrentLevel(levelIndex);
+    setQualityOpen(false);
+    setMenuOpen(false);
+  }
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -163,6 +230,16 @@ export function LessonPlayer({
   const heatmapRef = useRef<number[]>(seededHeatmapBaseline(lessonId));
   const lastHeatmapRenderRef = useRef(0);
   const [, setHeatmapVersion] = useState(0);
+
+  // Duplo-clique/duplo-tap: 1º clique adia o play/pause (setTimeout); se um
+  // 2º chegar a tempo, cancela-se o adiado e interpreta-se como gesto duplo
+  // (seek ou like, consoante a zona do vídeo onde caiu).
+  const DOUBLE_CLICK_MS = 300;
+  const lastClickRef = useRef<number | null>(null);
+  const clickTimerRef = useRef<number | null>(null);
+  const gestureIdRef = useRef(0);
+  const [likeBurst, setLikeBurst] = useState<{ x: number; y: number; id: number } | null>(null);
+  const [seekFlash, setSeekFlash] = useState<{ dir: "back" | "fwd"; id: number } | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -195,6 +272,29 @@ export function LessonPlayer({
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
+
+  // Setas esquerda/direita do teclado (desktop) — mesmo efeito do duplo-clique
+  // nos lados do vídeo. Ignora quando o foco está num campo de escrita ou
+  // noutro input (ex: os sliders de volume/progresso já usam as setas).
+  useEffect(() => {
+    if (youtubeId) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key === "ArrowLeft") {
+        seekBy(-10);
+        triggerSeekFlash("back");
+        e.preventDefault();
+      } else if (e.key === "ArrowRight") {
+        seekBy(10);
+        triggerSeekFlash("fwd");
+        e.preventDefault();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [youtubeId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -305,6 +405,69 @@ export function LessonPlayer({
     else video.pause();
   }
 
+  function seekBy(delta: number) {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = Math.max(0, video.currentTime + delta);
+  }
+
+  function triggerLikeBurst(x: number, y: number) {
+    gestureIdRef.current += 1;
+    const id = gestureIdRef.current;
+    setLikeBurst({ x, y, id });
+    onDoubleTapLike?.();
+    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 800);
+  }
+
+  function triggerSeekFlash(dir: "back" | "fwd") {
+    gestureIdRef.current += 1;
+    const id = gestureIdRef.current;
+    setSeekFlash({ dir, id });
+    setTimeout(() => setSeekFlash((s) => (s?.id === id ? null : s)), 500);
+  }
+
+  // Terços laterais avançam/recuam 10s; o terço central "gosta" (like) com
+  // animação no ponto exato do toque — mesmo gesto em mobile (duplo-tap) e
+  // desktop (duplo-clique), porque ambos disparam onClick.
+  function handleDoubleInteraction(xRatio: number, localX: number, localY: number) {
+    if (xRatio < 0.4) {
+      seekBy(-10);
+      triggerSeekFlash("back");
+    } else if (xRatio > 0.6) {
+      seekBy(10);
+      triggerSeekFlash("fwd");
+    } else {
+      triggerLikeBurst(localX, localY);
+    }
+  }
+
+  function handleVideoClick(e: React.MouseEvent<HTMLVideoElement>) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (clickTimerRef.current) {
+      window.clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    if (!rect) {
+      togglePlay();
+      return;
+    }
+    const localX = e.clientX - rect.left;
+    const localY = e.clientY - rect.top;
+    const now = Date.now();
+    const last = lastClickRef.current;
+    if (last !== null && now - last < DOUBLE_CLICK_MS) {
+      lastClickRef.current = null;
+      handleDoubleInteraction(localX / rect.width, localX, localY);
+      return;
+    }
+    lastClickRef.current = now;
+    clickTimerRef.current = window.setTimeout(() => {
+      togglePlay();
+      lastClickRef.current = null;
+      clickTimerRef.current = null;
+    }, DOUBLE_CLICK_MS);
+  }
+
   function toggleMute() {
     const video = videoRef.current;
     if (!video) return;
@@ -360,13 +523,15 @@ export function LessonPlayer({
     }
   }
 
-  // Mobile, com o vídeo em fullscreen: arrastar pra baixo minimiza; arrastar
-  // pra cima com o ecrã em pé roda pra horizontal — só faz sentido em ecrã
-  // pequeno (desktop não maximiza por gesto).
+  // Mobile: arrastar pra baixo sai do fullscreen; arrastar pra cima ENTRA em
+  // fullscreen (se ainda não estiver) ou roda pra horizontal (se já estiver,
+  // com o ecrã em pé) — só faz sentido em ecrã pequeno (desktop não maximiza
+  // por gesto). Os listeners ficam sempre ativos (não só quando maximizado),
+  // senão nunca havia gesto pra ENTRAR em fullscreen.
   const fullscreenTouchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
   function handleFullscreenTouchStart(e: React.TouchEvent) {
-    if (!isFullscreen || window.innerWidth >= 1024) return;
+    if (window.innerWidth >= 1024) return;
     const t = e.touches[0];
     fullscreenTouchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
   }
@@ -374,7 +539,7 @@ export function LessonPlayer({
   function handleFullscreenTouchEnd(e: React.TouchEvent) {
     const start = fullscreenTouchStartRef.current;
     fullscreenTouchStartRef.current = null;
-    if (!start || !isFullscreen || window.innerWidth >= 1024) return;
+    if (!start || window.innerWidth >= 1024) return;
 
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
@@ -385,6 +550,8 @@ export function LessonPlayer({
 
     if (dy > 0) {
       if (document.fullscreenElement) document.exitFullscreen();
+    } else if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(() => {});
     } else if (window.innerHeight > window.innerWidth) {
       const orientation = screen.orientation as unknown as { lock?: (type: string) => Promise<void> } | undefined;
       orientation?.lock?.("landscape").catch(() => {});
@@ -488,10 +655,15 @@ export function LessonPlayer({
               }}
               className={playerClassName}
             />
+          ) : isManifestSource && !usingHls ? (
+            <div className={`flex flex-col items-center justify-center gap-3 text-slate-400 ${playerClassName}`}>
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
+              <p className="text-sm">A preparar vídeo…</p>
+            </div>
           ) : (
             <div
               ref={containerRef}
-              className={`group relative overflow-hidden ${playerClassName}`}
+              className={`group relative touch-manipulation overflow-hidden ${playerClassName}`}
               onContextMenu={handleContextMenu}
               onTouchStart={handleFullscreenTouchStart}
               onTouchEnd={handleFullscreenTouchEnd}
@@ -499,7 +671,7 @@ export function LessonPlayer({
               <video
                 ref={videoRef}
                 className="h-full w-full object-contain"
-                src={activeSrc ?? undefined}
+                src={usingHls ? undefined : activeSrc ?? undefined}
                 playsInline
                 crossOrigin="anonymous"
                 onLoadedMetadata={handleLoadedMetadata}
@@ -511,8 +683,32 @@ export function LessonPlayer({
                   setMuted(e.currentTarget.muted);
                   setVolume(e.currentTarget.volume);
                 }}
-                onClick={togglePlay}
+                onClick={handleVideoClick}
               />
+
+              {likeBurst && (
+                <div
+                  key={likeBurst.id}
+                  className="pointer-events-none absolute z-20 animate-like-pop"
+                  style={{ left: likeBurst.x, top: likeBurst.y }}
+                >
+                  <Heart size={72} className="fill-white text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                </div>
+              )}
+
+              {seekFlash && (
+                <div
+                  key={seekFlash.id}
+                  className={`pointer-events-none absolute inset-y-0 z-20 flex w-1/3 animate-seek-flash items-center ${
+                    seekFlash.dir === "back" ? "left-0 justify-start pl-6" : "right-0 justify-end pr-6"
+                  }`}
+                >
+                  <span className="flex flex-col items-center gap-1 text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                    {seekFlash.dir === "back" ? <RotateCcw size={32} /> : <RotateCw size={32} />}
+                    <span className="text-xs font-semibold">10s</span>
+                  </span>
+                </div>
+              )}
 
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
                 <div className="group/progress relative h-4">
@@ -600,13 +796,15 @@ export function LessonPlayer({
 
                     {menuOpen && (
                       <div className="absolute bottom-full right-0 mb-2 w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md">
-                        <button
-                          onClick={handleDownload}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
-                        >
-                          <Download size={16} />
-                          Download
-                        </button>
+                        {!isManifestSource && (
+                          <button
+                            onClick={handleDownload}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
+                          >
+                            <Download size={16} />
+                            Download
+                          </button>
+                        )}
 
                         <button
                           onClick={() => setSpeedOpen((v) => !v)}
@@ -638,7 +836,7 @@ export function LessonPlayer({
                           </div>
                         )}
 
-                        {hasQualityOptions && (
+                        {(usingHls ? hlsLevels.length > 1 : hasLegacyQualityOptions) && (
                           <>
                             <button
                               onClick={() => setQualityOpen((v) => !v)}
@@ -646,22 +844,56 @@ export function LessonPlayer({
                             >
                               <Video size={16} />
                               Qualidade
-                              <span className="ml-auto text-slate-400">{selectedQuality}</span>
+                              <span className="ml-auto text-slate-400">
+                                {usingHls
+                                  ? hlsCurrentLevel === -1
+                                    ? "Auto"
+                                    : `${hlsLevels.find((l) => l.index === hlsCurrentLevel)?.height ?? ""}p`
+                                  : selectedQuality}
+                              </span>
                             </button>
                             {qualityOpen && (
                               <div className="pb-1">
-                                {sortedRenditions.map((r) => (
-                                  <button
-                                    key={r.quality}
-                                    onClick={() => setQuality(r.quality)}
-                                    className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
-                                      r.quality === selectedQuality ? "text-blue-400" : "text-slate-300 hover:bg-white/10"
-                                    }`}
-                                  >
-                                    {r.quality}
-                                    {r.quality === selectedQuality && <Check size={13} className="ml-auto" />}
-                                  </button>
-                                ))}
+                                {usingHls ? (
+                                  <>
+                                    <button
+                                      onClick={() => setHlsQuality(-1)}
+                                      className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
+                                        hlsCurrentLevel === -1 ? "text-blue-400" : "text-slate-300 hover:bg-white/10"
+                                      }`}
+                                    >
+                                      Auto
+                                      {hlsCurrentLevel === -1 && <Check size={13} className="ml-auto" />}
+                                    </button>
+                                    {[...hlsLevels]
+                                      .sort((a, b) => b.height - a.height)
+                                      .map((l) => (
+                                        <button
+                                          key={l.index}
+                                          onClick={() => setHlsQuality(l.index)}
+                                          className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
+                                            l.index === hlsCurrentLevel ? "text-blue-400" : "text-slate-300 hover:bg-white/10"
+                                          }`}
+                                        >
+                                          {l.height}p
+                                          {l.index === hlsCurrentLevel && <Check size={13} className="ml-auto" />}
+                                        </button>
+                                      ))}
+                                  </>
+                                ) : (
+                                  sortedRenditions.map((r) => (
+                                    <button
+                                      key={r.quality}
+                                      onClick={() => setQuality(r.quality)}
+                                      className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
+                                        r.quality === selectedQuality ? "text-blue-400" : "text-slate-300 hover:bg-white/10"
+                                      }`}
+                                    >
+                                      {r.quality}
+                                      {r.quality === selectedQuality && <Check size={13} className="ml-auto" />}
+                                    </button>
+                                  ))
+                                )}
                               </div>
                             )}
                           </>
@@ -721,13 +953,15 @@ export function LessonPlayer({
                     Repetir
                     {loop && <Check size={16} className="ml-auto text-blue-400" />}
                   </button>
-                  <button
-                    onClick={copyVideoUrl}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
-                  >
-                    <Link2 size={16} />
-                    {urlCopied ? "Copiado!" : "Copiar URL do vídeo"}
-                  </button>
+                  {!isManifestSource && (
+                    <button
+                      onClick={copyVideoUrl}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
+                    >
+                      <Link2 size={16} />
+                      {urlCopied ? "Copiado!" : "Copiar URL do vídeo"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

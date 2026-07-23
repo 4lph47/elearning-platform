@@ -1,23 +1,32 @@
 # Worker de transcoding de vídeo
 
 Serviço separado, sempre ligado, que faz o trabalho que o Vercel não
-consegue fazer: correr `ffmpeg` para gerar várias qualidades (480p a 2160p)
-de cada vídeo de aula enviado.
+consegue fazer: correr `ffmpeg` para gerar HLS (segmentado, várias
+qualidades, 480p a 2160p) de cada vídeo de aula enviado.
 
 ## Como funciona
 
 1. A app Next.js grava um `VideoTranscodeJob` (status `PENDING`) sempre que
-   uma aula fica com um vídeo novo (`lib/videoTranscode.ts`).
+   uma aula fica com um vídeo novo (`lib/videoTranscode.ts`). O `sourceUrl`
+   do job tanto pode ser um vídeo direto como um `manifest.json` (vídeos
+   grandes sobem em partes por causa do teto de 50MB por objeto do Supabase
+   Free — ver `components/instructor/FileUploadInput.tsx`).
 2. Este worker faz poll a `GET /api/worker/jobs/next` a cada poucos
    segundos, reclama o job mais antigo pendente.
-3. Descarrega o vídeo original, corre `ffprobe` para saber a resolução,
-   gera uma rendition por qualidade (nunca upscale — só gera até à
-   resolução da fonte), sobe cada uma para o Supabase Storage.
-4. Chama `POST /api/worker/jobs/:id/complete` com os URLs resultantes (ou
-   `/fail` se algo correr mal).
+3. Descarrega o vídeo original (ou reconstitui-o a partir das partes do
+   manifesto), corre `ffprobe` para saber a resolução, e para cada qualidade
+   — do MENOR pro MAIOR, pra ficar reproduzível o mais cedo possível — gera
+   uma variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz upscale) e
+   sobe pra Supabase Storage.
+4. Depois de CADA variante (não só no fim), chama
+   `POST /api/worker/jobs/:id/complete` com essa rendition e o master
+   playlist atualizado — a aula fica reproduzível assim que a 1ª existe, o
+   resto da escada vai enchendo em fundo. `/fail` se algo correr mal.
 
-O player (`components/player/LessonPlayer.tsx`) lê as renditions da aula e
-mostra o seletor de qualidade quando há mais que uma.
+O player (`components/player/LessonPlayer.tsx`) usa hls.js (ou HLS nativo no
+Safari) para ler o master playlist da aula e troca de qualidade sozinho
+consoante a largura de banda — o menu de qualidade só lista manualmente as
+aulas antigas que ainda não passaram por este pipeline.
 
 ## Deploy no Railway
 

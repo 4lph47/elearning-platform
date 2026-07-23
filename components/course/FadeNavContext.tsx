@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { pauseAllVideos } from "@/lib/pauseAllVideos";
 
 // Transição simples curso->aula (sem vídeo a voar, a página de aula não tem
 // hero pra aterrar): tudo esmorece sob uma cortina opaca (mesma cor do fundo
@@ -40,6 +41,7 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
 
   const fadeNavigate = useCallback(
     (href: string) => {
+      pauseAllVideos();
       setCurtainActive(true);
       setCovered(false);
       setTransitionMs(FADE_IN_MS);

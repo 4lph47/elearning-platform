@@ -1,6 +1,6 @@
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "light" | "accent" | "outline-dark";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "light" | "accent" | "outline-dark" | "premium";
 
 const variantClasses: Record<Variant, string> = {
   primary: "bg-slate-900 text-white hover:bg-slate-700",
@@ -11,6 +11,7 @@ const variantClasses: Record<Variant, string> = {
   light: "bg-white text-slate-900 shadow-md hover:bg-slate-100",
   accent: "bg-blue-600 text-white hover:bg-blue-500",
   "outline-dark": "border border-slate-900/25 text-slate-900 hover:bg-slate-900/10 dark:border-white/25 dark:text-white dark:hover:bg-white/10",
+  premium: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 hover:from-blue-500 hover:to-indigo-500",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -91,7 +91,6 @@ export function Sidebar() {
 
   const isMini = state === "mini" && !peeking;
   const widthClass = state === "closed" ? "w-0" : isMini ? "w-16" : "w-60";
-  const edgeLeftClass = state === "closed" ? "left-0" : isMini ? "left-16" : "left-60";
   const isActive = (item: LeafItem) => {
     if (item.extraMatch?.includes(pathname)) return true;
     if (item.href === "/" || item.exact) return pathname === item.href;
@@ -125,14 +124,18 @@ export function Sidebar() {
       <aside
         onMouseEnter={() => state === "mini" && setPeeking(true)}
         onMouseLeave={() => setPeeking(false)}
-        className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden bg-white transition-[width] duration-200 dark:bg-black ${widthClass} ${
+        className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-visible bg-white transition-[width] duration-200 dark:bg-black ${widthClass} ${
           peeking ? "shadow-xl" : ""
         }`}
       >
+        {/* Ancorado ao próprio <aside> (absolute + left-full, não fixed com
+            um "left" próprio a animar em paralelo) — antes eram duas
+            transições independentes com a mesma duração "no papel" mas que
+            podiam dessincronizar (width é layout, left tende a compositar
+            diferente); assim o fade simplesmente HERDA a largura do aside,
+            não há como desalinhar. */}
         {state !== "closed" && (
-          <div
-            className={`pointer-events-none fixed inset-y-0 z-30 w-6 bg-gradient-to-r from-white to-transparent transition-[left] duration-200 dark:from-black ${edgeLeftClass}`}
-          />
+          <div className="pointer-events-none absolute inset-y-0 left-full z-30 w-6 bg-gradient-to-r from-white to-transparent dark:from-black" />
         )}
         <nav className={`flex flex-col gap-1 p-2 transition-[width] duration-200 ${isMini ? "w-16" : "w-60"}`}>
           {items.map((item) => {

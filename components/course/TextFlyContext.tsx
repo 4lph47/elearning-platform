@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import type { TransitionTextBox } from "@/components/course/CardTransitionContext";
+import { pauseAllVideos } from "@/lib/pauseAllVideos";
 
 // Voo só do título da aula (currículo -> página da aula) — ao contrário do
 // CardTransitionContext (vídeo do hero), aqui não há vídeo nem cortina, só o
@@ -30,6 +31,7 @@ export function TextFlyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<TextFlyState | null>(null);
 
   const start = useCallback((id: string, text: string, box: TransitionTextBox) => {
+    pauseAllVideos();
     setState({ id, text, sourceBox: box, targetBox: box, arrived: false, revealed: false });
   }, []);
 

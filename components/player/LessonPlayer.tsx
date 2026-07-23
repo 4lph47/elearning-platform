@@ -32,6 +32,7 @@ export interface VideoRendition {
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const HEATMAP_BUCKETS = 40;
+const MAXIMIZE_TRANSITION_MS = 400;
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -152,7 +153,17 @@ export function LessonPlayer({
   const [volume, setVolume] = useState(1);
   const [playbackRate, setPlaybackRate] = useState(getStoredSpeed);
   const [isPiP, setIsPiP] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Maximizar não usa a Fullscreen API nativa (snap instantâneo, sem
+  // controlo da transição) — CSS a animar a própria caixa da posição real
+  // na página até ecrã inteiro, e de volta. `settled` é a fase: false =
+  // ainda na caixa de origem (sourceRect, sem transição CSS ainda ligada,
+  // só depois do duplo rAF é que anima); true = já no alvo (fullscreen ao
+  // entrar, sourceRect outra vez ao sair).
+  const [maximized, setMaximized] = useState(false);
+  const [settled, setSettled] = useState(false);
+  const [sourceRect, setSourceRect] = useState<{ top: number; left: number; width: number; height: number } | null>(
+    null
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
@@ -187,14 +198,6 @@ export function LessonPlayer({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [contextMenuPos]);
-
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    }
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -350,13 +353,57 @@ export function LessonPlayer({
     setMenuOpen(false);
   }
 
-  async function toggleFullscreen() {
+  function enterMaximize() {
     const container = containerRef.current;
     if (!container) return;
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else {
-      await container.requestFullscreen();
+    const rect = container.getBoundingClientRect();
+    setSourceRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+    setMaximized(true);
+    setSettled(false);
+    // Duplo rAF: garante que o browser pinta a caixa de origem (sourceRect,
+    // já fixed mas ainda do tamanho pequeno) antes de ligar "settled" — só
+    // aí é que a transição CSS anima até ecrã inteiro em vez de saltar logo.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSettled(true));
+    });
+  }
+
+  function exitMaximize() {
+    setSettled(false);
+    setTimeout(() => {
+      setMaximized(false);
+      setSourceRect(null);
+    }, MAXIMIZE_TRANSITION_MS);
+  }
+
+  // Mobile, com o vídeo maximizado: arrastar pra baixo minimiza; arrastar
+  // pra cima com o ecrã em pé roda pra horizontal — só faz sentido em ecrã
+  // pequeno (desktop não maximiza por gesto).
+  const fullscreenTouchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  function handleFullscreenTouchStart(e: React.TouchEvent) {
+    if (!maximized || window.innerWidth >= 1024) return;
+    const t = e.touches[0];
+    fullscreenTouchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+  }
+
+  function handleFullscreenTouchEnd(e: React.TouchEvent) {
+    const start = fullscreenTouchStartRef.current;
+    fullscreenTouchStartRef.current = null;
+    if (!start || !maximized || window.innerWidth >= 1024) return;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const elapsed = Date.now() - start.t;
+    const isVerticalSwipe = Math.abs(dy) > 70 && Math.abs(dy) > Math.abs(dx) * 1.5 && elapsed < 600;
+    if (!isVerticalSwipe) return;
+
+    if (dy > 0) {
+      exitMaximize();
+    } else if (window.innerHeight > window.innerWidth) {
+      const orientation = screen.orientation as unknown as { lock?: (type: string) => Promise<void> } | undefined;
+      orientation?.lock?.("landscape").catch(() => {});
     }
   }
 
@@ -420,6 +467,23 @@ export function LessonPlayer({
   const playerClassName = `aspect-video w-full rounded-lg bg-black lg:max-w-none ${
     collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"
   }`;
+  // settled=false ainda está na caixa de origem (sourceRect) — igual ao
+  // ponto de partida, sem transição a correr ainda; settled=true é o alvo
+  // (ecrã inteiro a entrar, ou de volta ao sourceRect a sair).
+  const maximizeStyle: React.CSSProperties | undefined = maximized
+    ? settled
+      ? { position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh", zIndex: 60 }
+      : sourceRect
+      ? {
+          position: "fixed",
+          top: sourceRect.top,
+          left: sourceRect.left,
+          width: sourceRect.width,
+          height: sourceRect.height,
+          zIndex: 60,
+        }
+      : undefined
+    : undefined;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);
 
@@ -434,7 +498,7 @@ export function LessonPlayer({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>
       ) : (
-        <div className="relative" style={cinemaMode && !youtubeId ? { contain: "layout" } : undefined}>
+        <div className="relative" style={cinemaMode && !youtubeId && !maximized ? { contain: "layout" } : undefined}>
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
@@ -458,10 +522,21 @@ export function LessonPlayer({
               className={playerClassName}
             />
           ) : (
-            <div ref={containerRef} className={`group relative overflow-hidden ${playerClassName}`} onContextMenu={handleContextMenu}>
+            <div
+              ref={containerRef}
+              className={
+                maximized
+                  ? "group overflow-hidden bg-black transition-all ease-in-out"
+                  : `group relative overflow-hidden ${playerClassName}`
+              }
+              style={{ ...maximizeStyle, transitionDuration: maximized ? `${MAXIMIZE_TRANSITION_MS}ms` : undefined }}
+              onContextMenu={handleContextMenu}
+              onTouchStart={handleFullscreenTouchStart}
+              onTouchEnd={handleFullscreenTouchEnd}
+            >
               <video
                 ref={videoRef}
-                className="h-full w-full"
+                className="h-full w-full object-contain"
                 src={activeSrc ?? undefined}
                 playsInline
                 crossOrigin="anonymous"
@@ -543,8 +618,12 @@ export function LessonPlayer({
 
                   <div className="flex-1" />
 
-                  <button onClick={toggleFullscreen} aria-label={isFullscreen ? "Sair de ecrã inteiro" : "Ecrã inteiro"} className="hover:text-blue-400">
-                    {isFullscreen ? <Minimize size={22} /> : <Maximize size={22} />}
+                  <button
+                    onClick={() => (maximized ? exitMaximize() : enterMaximize())}
+                    aria-label={maximized ? "Sair de ecrã inteiro" : "Ecrã inteiro"}
+                    className="hover:text-blue-400"
+                  >
+                    {maximized ? <Minimize size={22} /> : <Maximize size={22} />}
                   </button>
 
                   <div ref={menuRef} className="relative flex items-center">

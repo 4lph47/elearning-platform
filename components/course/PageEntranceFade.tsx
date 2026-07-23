@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useCardTransition } from "@/components/course/CardTransitionContext";
 import { useTextFly } from "@/components/course/TextFlyContext";
+import { pauseAllVideos } from "@/lib/pauseAllVideos";
 
 const FADE_MS = 1400;
 
@@ -27,6 +28,11 @@ export function PageEntranceFade({ children }: { children: ReactNode }) {
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
     setVisible(false);
+    // Rede de segurança para navegação que não passa pelos hooks explícitos
+    // (fadeNavigate/CardTransition/TextFly/swipe) — ex.: botão voltar do
+    // browser. Os outros já pausam mais cedo (no clique, antes da própria
+    // transição); este apanha o resto depois do pathname já ter mudado.
+    pauseAllVideos();
   }
 
   // Numa transição de card, quem manda mostrar é o reveal() dela (sincronizado

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { pauseAllVideos } from "@/lib/pauseAllVideos";
 
 export interface TransitionBox {
   top: number;
@@ -122,6 +123,7 @@ export function CardTransitionProvider({ children }: { children: ReactNode }) {
   // scrim a 0 de opacidade onde a página nova pintava sem nada a tapar.
   // O card clicado continua a escapar ao scrim por z-index (CourseTile.tsx).
   const start = useCallback((payload: StartPayload) => {
+    pauseAllVideos();
     setState({
       ...payload,
       videoTargetBox: payload.videoBox,

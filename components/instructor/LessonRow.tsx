@@ -46,7 +46,8 @@ export function LessonRow({
   const router = useRouter();
 
   async function handleDelete() {
-    if (!confirm(`Eliminar a aula "${lesson.title}"?`)) return;
+    const typed = prompt(`Escreve "${lesson.title}" para confirmares a eliminação desta aula.`);
+    if (typed === null || typed.trim() !== lesson.title.trim()) return;
     const res = await fetch(`/api/instructor/lessons/${lesson.id}`, { method: "DELETE" });
     if (res.ok) router.refresh();
   }

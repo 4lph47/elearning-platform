@@ -111,16 +111,22 @@ export function LessonEditScreen({
       <Button variant="ghost" onClick={() => fadeNavigate(backHref)}>
         ← Voltar ao curso
       </Button>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          {isEditing ? "Editar aula" : "Nova aula"}
-        </p>
-        <h1 className="mt-2 truncate text-2xl font-bold text-slate-900 dark:text-white">
-          {title || "Sem título"}
-        </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {isEditing ? "Editar aula" : "Nova aula"}
+          </p>
+          <h1 className="mt-2 truncate text-2xl font-bold text-slate-900 dark:text-white">
+            {title || "Sem título"}
+          </h1>
+        </div>
+        <Button type="submit" form="lesson-form" variant="premium" disabled={saving}>
+          {saving ? "A guardar..." : "Guardar aula"}
+        </Button>
       </div>
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id="lesson-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="space-y-3 p-4">
             <h2 className="font-medium">Detalhes</h2>
@@ -258,11 +264,6 @@ export function LessonEditScreen({
             )}
           </Card>
         </div>
-
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <Button type="submit" disabled={saving}>
-          {saving ? "A guardar..." : "Guardar aula"}
-        </Button>
       </form>
 
       {isEditing && (

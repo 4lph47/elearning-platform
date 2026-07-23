@@ -196,7 +196,7 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
+      className={`fixed inset-x-0 top-0 z-40 select-none transition-colors duration-300 ${
         curtainActive
           ? "bg-white dark:bg-black"
           : transparent
@@ -261,7 +261,7 @@ export function Navbar() {
                 onFocus={() => setDesktopFocused(true)}
                 onBlur={() => setDesktopFocused(false)}
                 placeholder="Procurar cursos..."
-                className={`w-full rounded-full border py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 ${
+                className={`w-full select-text rounded-full border py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 ${
                   transparent
                     ? "border-slate-900/20 bg-slate-900/10 text-slate-900 placeholder-slate-600 focus:border-slate-900/40 focus:ring-slate-900/30 dark:border-white/20 dark:bg-white/10 dark:text-white dark:placeholder-slate-300 dark:focus:border-white/40 dark:focus:ring-white/30"
                     : "border-slate-300 bg-slate-50 text-slate-900 focus:border-slate-500 focus:bg-white focus:ring-slate-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:focus:bg-white/10"

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Star, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +9,7 @@ import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card, Badge } from "@/components/ui/Card";
 import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
+import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
 
 interface CourseData {
   id: string;
@@ -107,6 +109,8 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   function toggleBundleCourse(id: string) {
     setBundleCourseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -158,7 +162,6 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   }
 
   async function handleDelete() {
-    if (!confirm("Eliminar este curso e todo o seu conteúdo? Esta ação é irreversível.")) return;
     const res = await fetch(`/api/instructor/courses/${course.id}`, { method: "DELETE" });
     if (res.ok) router.push("/instructor");
   }
@@ -187,16 +190,14 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => save({ published: !course.published })} disabled={saving}>
-            {course.published ? "Despublicar" : "Publicar"}
-          </Button>
-          <Button variant="danger" onClick={handleDelete}>
-            Eliminar
+          <Button type="submit" form="course-form" variant="premium" disabled={saving}>
+            {saving ? "A guardar..." : "Guardar alterações"}
           </Button>
         </div>
       </div>
 
       <form
+        id="course-form"
         onSubmit={(e) => {
           e.preventDefault();
           save();
@@ -349,12 +350,27 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
             </div>
           </div>
         </Card>
-
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <Button type="submit" disabled={saving}>
-          {saving ? "A guardar..." : "Guardar alterações"}
-        </Button>
       </form>
+
+      {mounted &&
+        document.getElementById("course-save-anchor") &&
+        createPortal(
+          <div className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-white/10">
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={() => save({ published: !course.published })} disabled={saving}>
+                {course.published ? "Despublicar" : "Publicar"}
+              </Button>
+              <DeleteWithConfirmName
+                name={course.title}
+                label="Eliminar curso"
+                confirmingLabel="A eliminar curso..."
+                onConfirm={handleDelete}
+              />
+            </div>
+          </div>,
+          document.getElementById("course-save-anchor")!
+        )}
     </div>
   );
 }

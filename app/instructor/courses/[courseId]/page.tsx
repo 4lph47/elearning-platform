@@ -74,6 +74,12 @@ export default async function EditCoursePage({ params }: { params: Promise<{ cou
           </Card>
         </div>
       </div>
+
+      {/* CourseDetailsForm porta o botão de guardar (com o seu próprio
+          estado de saving/error) até aqui — fica sempre a fechar tudo, por
+          baixo de módulos/aulas/quiz, mesmo estando o <form> lá em cima na
+          coluna da esquerda. */}
+      <div id="course-save-anchor" className="mt-6" />
     </div>
   );
 }

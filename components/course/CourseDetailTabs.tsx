@@ -45,6 +45,8 @@ function mergeModuleItems(module: ModuleItem): MergedEntry[] {
   ].sort((a, b) => a.order - b.order);
 }
 
+const REVIEWS_PAGE_SIZE = 5;
+
 interface ReviewItem {
   id: string;
   rating: number;
@@ -95,6 +97,7 @@ export function CourseDetailTabs({
   studentName: string | null;
 }) {
   const [tab, setTab] = useState<"programa" | "avaliacoes" | "certificado">("programa");
+  const [visibleReviewCount, setVisibleReviewCount] = useState(REVIEWS_PAGE_SIZE);
   const allLessons = modules.flatMap((m) => m.lessons);
   const totalDuration = allLessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
   const quizAccessible = isEnrolled || isOwner;
@@ -319,22 +322,34 @@ export function CourseDetailTabs({
             {reviews.length === 0 ? (
               <p className="text-sm text-slate-500">Ainda não há avaliações para este curso.</p>
             ) : (
-              <ul className="space-y-4">
-                {reviews.map((r) => (
-                  <li key={r.id} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {initials(r.userName)}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{r.userName}</p>
-                        <StarRating rating={r.rating} />
+              <>
+                <ul className="space-y-4">
+                  {reviews.slice(0, visibleReviewCount).map((r) => (
+                    <li key={r.id} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {initials(r.userName)}
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{r.userName}</p>
+                          <StarRating rating={r.rating} />
+                        </div>
                       </div>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{r.comment}</p>
-                  </li>
-                ))}
-              </ul>
+                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{r.comment}</p>
+                    </li>
+                  ))}
+                </ul>
+
+                {visibleReviewCount < reviews.length && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleReviewCount((c) => c + REVIEWS_PAGE_SIZE)}
+                    className="text-sm font-medium text-blue-400 hover:text-blue-300"
+                  >
+                    Mostrar mais avaliações
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

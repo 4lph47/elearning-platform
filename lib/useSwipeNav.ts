@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { pauseAllVideos } from "@/lib/pauseAllVideos";
 
 const STORAGE_KEY = "swipeNavDir";
 // Depois do slide-out (900ms), o conteúdo fica a opacity-0 — se a próxima
@@ -48,6 +49,7 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
   // swipe e pelos botões "aula anterior"/"próxima aula" clicados — ambos
   // passam por aqui, nunca navegação simples sem transição.
   function goDirection(direction: "left" | "right", href: string) {
+    pauseAllVideos();
     setSwipeExit(direction);
     sessionStorage.setItem(STORAGE_KEY, direction);
     setTimeout(() => {

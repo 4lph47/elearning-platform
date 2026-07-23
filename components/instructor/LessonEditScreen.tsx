@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CornerCard, CornerCardStack, CornerCardButtonNeutral, CornerCardButtonPrimary } from "@/components/ui/CornerCard";
-import { Card } from "@/components/ui/Card";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
@@ -229,8 +229,7 @@ export function LessonEditScreen({
 
       <form id="lesson-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="space-y-3 p-4">
-            <h2 className="font-medium">Detalhes</h2>
+          <CollapsibleCard title="Detalhes">
             <div>
               <Label htmlFor="lesson-title">Título da aula</Label>
               <Input id="lesson-title" required value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -294,10 +293,9 @@ export function LessonEditScreen({
                 </div>
               </div>
             )}
-          </Card>
+          </CollapsibleCard>
 
-          <Card className="space-y-3 p-4">
-            <h2 className="font-medium">Conteúdo</h2>
+          <CollapsibleCard title="Conteúdo">
             {type === "VIDEO" ? (
               <div className="space-y-2">
                 <Label>Vídeo da aula (obrigatório)</Label>
@@ -359,7 +357,7 @@ export function LessonEditScreen({
                 )}
               </div>
             )}
-          </Card>
+          </CollapsibleCard>
         </div>
       </form>
 
@@ -367,10 +365,9 @@ export function LessonEditScreen({
         <div className="grid gap-4 lg:grid-cols-2">
           <LessonResourcesCard lessonId={lesson!.id} initialResources={lesson!.resources} />
           {type === "VIDEO" && (
-            <Card className="p-4">
-              <h2 className="mb-3 font-medium">Quiz da aula</h2>
+            <CollapsibleCard title="Quiz da aula">
               <QuizEditor scope="LESSON" parentId={lesson!.id} label="Quiz da aula" existingQuiz={lesson?.quiz} />
-            </Card>
+            </CollapsibleCard>
           )}
         </div>
       )}

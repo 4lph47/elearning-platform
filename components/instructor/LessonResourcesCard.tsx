@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Paperclip, FileText, Image as ImageIcon, Video, X } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { ResourcePreviewContent } from "@/components/course/ResourcePreviewContent";
 import type { LessonResourceData } from "@/components/course/LessonTabs";
@@ -61,9 +61,7 @@ export function LessonResourcesCard({
   }
 
   return (
-    <Card className="space-y-3 p-4">
-      <h2 className="font-medium">Recursos</h2>
-
+    <CollapsibleCard title="Recursos">
       {resources.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Ainda sem anexos.</p>
       ) : (
@@ -154,6 +152,6 @@ export function LessonResourcesCard({
           </div>
         </div>
       )}
-    </Card>
+    </CollapsibleCard>
   );
 }

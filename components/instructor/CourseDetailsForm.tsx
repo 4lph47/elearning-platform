@@ -7,7 +7,8 @@ import { Star, Plus, X } from "lucide-react";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
-import { Card, Badge } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Card";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
@@ -331,8 +332,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         }}
         className="space-y-4"
       >
-        <Card className="space-y-4 p-6">
-          <h2 className="font-medium">Detalhes e preço</h2>
+        <CollapsibleCard title="Detalhes e preço">
           <div>
             <Label htmlFor="title">Título</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -383,10 +383,9 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
               />
             </div>
           </div>
-        </Card>
+        </CollapsibleCard>
 
-        <Card className="space-y-4 p-6">
-          <h2 className="font-medium">Marketing</h2>
+        <CollapsibleCard title="Marketing">
           <div>
             <Label>Trailer do curso</Label>
             <FileUploadInput kind="TRAILER" currentUrl={trailerUrl} onUploaded={(r) => setTrailerUrl(r.url)} />
@@ -397,10 +396,9 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           <EditableListField label="Requisitos" placeholder="Ex.: Conhecimentos básicos de JavaScript" list={requirements} />
           <EditableListField label="Para quem é este curso" placeholder="Ex.: Iniciantes que querem mudar de carreira" list={audience} />
           <EditableListField label="Tópicos relacionados" placeholder="Ex.: React, TypeScript, APIs" list={topics} />
-        </Card>
+        </CollapsibleCard>
 
-        <Card className="space-y-4 p-6">
-          <h2 className="font-medium">Colaboração</h2>
+        <CollapsibleCard title="Colaboração">
           <div>
             <Label>Bundle (comprados frequentemente em conjunto)</Label>
             <Input
@@ -470,7 +468,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
               </Button>
             </div>
           </div>
-        </Card>
+        </CollapsibleCard>
       </form>
 
       {mounted &&

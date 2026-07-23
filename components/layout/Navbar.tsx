@@ -305,7 +305,7 @@ export function Navbar() {
               <Link href="/login">
                 <Button variant={transparent ? "outline-dark" : "ghost"}>Entrar</Button>
               </Link>
-              <Link href="/register">
+              <Link href="/register" className="hidden sm:inline-flex">
                 <Button variant="accent">Registar</Button>
               </Link>
             </div>

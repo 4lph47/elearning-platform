@@ -384,7 +384,7 @@ export function LessonPlayer({
           {youtubeId ? (
             <iframe
               ref={iframeRef}
-              src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1`}
+              src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1&playsinline=1`}
               title="Vídeo da aula"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -402,6 +402,7 @@ export function LessonPlayer({
                 ref={videoRef}
                 className="h-full w-full"
                 src={contentUrl ?? undefined}
+                playsInline
                 crossOrigin="anonymous"
                 onLoadedMetadata={handleLoadedMetadata}
                 onTimeUpdate={handleTimeUpdate}

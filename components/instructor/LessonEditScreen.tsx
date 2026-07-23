@@ -244,8 +244,16 @@ export function LessonEditScreen({
         </Button>
       </div>
 
-      <form id="lesson-form" onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid items-start gap-4 lg:grid-cols-2">
+      {/* Colunas independentes (flex, não grid) — Recursos/Quiz continuam
+          diretamente por baixo de Detalhes/Conteúdo na MESMA coluna, sem
+          depender da altura da coluna do lado (um grid empilhado em duas
+          fiadas separadas fazia a 2ª fiada começar só depois da fiada
+          INTEIRA anterior acabar, não da card diretamente acima). Recursos/
+          Quiz não fazem parte da submissão deste form (têm o próprio fetch
+          cada um), só ficam visualmente na mesma coluna. */}
+      <form id="lesson-form" onSubmit={handleSubmit}>
+        <div className="lg:flex lg:items-start lg:gap-4">
+        <div className="space-y-4 lg:flex-1">
           <CollapsibleCard title="Detalhes">
             <div>
               <Label htmlFor="lesson-title">Título da aula</Label>
@@ -311,7 +319,10 @@ export function LessonEditScreen({
               </div>
             )}
           </CollapsibleCard>
+          {isEditing && <LessonResourcesCard lessonId={lesson!.id} initialResources={lesson!.resources} />}
+        </div>
 
+        <div className="mt-4 space-y-4 lg:mt-0 lg:flex-1">
           <CollapsibleCard title="Conteúdo">
             {type === "VIDEO" ? (
               <div className="space-y-2">
@@ -391,19 +402,14 @@ export function LessonEditScreen({
               </div>
             )}
           </CollapsibleCard>
-        </div>
-      </form>
-
-      {isEditing && (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <LessonResourcesCard lessonId={lesson!.id} initialResources={lesson!.resources} />
-          {type === "VIDEO" && (
+          {isEditing && type === "VIDEO" && (
             <CollapsibleCard title="Quiz da aula">
               <QuizEditor scope="LESSON" parentId={lesson!.id} label="Quiz da aula" existingQuiz={lesson?.quiz} />
             </CollapsibleCard>
           )}
         </div>
-      )}
+        </div>
+      </form>
     </div>
   );
 }

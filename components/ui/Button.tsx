@@ -19,10 +19,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = "", variant = "primary", ...props }, ref) => {
+  ({ className = "", variant = "primary", type = "button", ...props }, ref) => {
+    // Nativo defaulta pra "submit" sem isto — qualquer <Button> dentro dum
+    // <form> sem type explícito submetia-o sozinho ao ser clicado. Quem
+    // precisa mesmo de submeter (ex.: "Guardar") já passa type="submit"
+    // explicitamente.
     return (
       <button
         ref={ref}
+        type={type}
         className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
         {...props}
       />

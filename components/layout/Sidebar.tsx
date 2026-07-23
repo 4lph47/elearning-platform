@@ -121,12 +121,16 @@ export function Sidebar() {
           baixo, de propósito) — sem isto, essa faixa transparente passava
           por cima da coluna da sidebar também, mostrando a hero em vez de
           branco/preto sólido nos primeiros 64px, acima do <aside> (que só
-          começa em top-16). Tapa só a largura da sidebar, por baixo da navbar. */}
-      {state !== "closed" && (
-        <div
-          className={`pointer-events-none fixed left-0 top-0 z-30 h-16 bg-white transition-[width] duration-200 dark:bg-black ${widthClass}`}
-        />
-      )}
+          começa em top-16). Tapa só a largura da sidebar, por baixo da navbar.
+          Sempre montado (igual ao wrapper de baixo, nunca condicional em
+          "closed") — condicional fazia isto aparecer/desaparecer de repente
+          (sem transição, porque nasce/morre já no valor final) enquanto o
+          wrapper de baixo, sempre montado, ia suavemente até w-0 — as duas
+          partes da barra pareciam ter velocidades diferentes. widthClass já
+          resolve pra w-0 sozinho quando "closed", nem precisa do condicional. */}
+      <div
+        className={`pointer-events-none fixed left-0 top-0 z-30 h-16 bg-white transition-[width] duration-200 dark:bg-black ${widthClass}`}
+      />
       {/* Wrapper sem overflow restrito nenhum — só ele controla posição/largura
           (fixed + widthClass). O <aside> lá dentro é que faz scroll
           (overflow-y-auto), com overflow-x explicitamente hidden (não

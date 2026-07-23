@@ -22,18 +22,25 @@ um poller em fundo.
    (app Next.js, autenticado por sessão de instrutor) — token de curta
    duração (30min), assinado com `WORKER_API_SECRET`, ligado a um `assetId`
    novo (a aula ainda nem existe na BD nesta altura).
-2. O browser envia o vídeo bruto diretamente para `POST /upload` neste
-   worker (streaming, sem passar pelo Vercel nem pelo Supabase Storage — só
-   este worker recebe o ficheiro inteiro). Sem o teto de 50MB por objeto do
-   Supabase Free, porque o Storage nem entra em jogo nesta parte.
-3. O worker valida o token, grava o ficheiro em disco local, corre
-   `ffprobe`, e para cada qualidade — do MENOR pro MAIOR — gera uma
-   variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz upscale) e SÓ
-   ENTÃO sobe pro Supabase Storage (já comprimido).
-4. Quando a escada toda estiver pronta, responde ao pedido original com o
-   URL do master playlist. O browser guarda-o como `contentUrl` da aula —
-   ao gravar a aula, a app já regista isto como `hlsMasterUrl` diretamente
-   (ver `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila nenhuma.
+2. O browser envia o vídeo bruto diretamente para este worker, em blocos de
+   50MB via `POST /upload-chunk` (sem passar pelo Vercel nem pelo Supabase
+   Storage). Cada bloco é um pedido HTTP curto — evita um único pedido a
+   durar o upload inteiro (minutos, em vídeos grandes), que se mostrou
+   vulnerável a resets de ligação a meio (proxy/rede, fora do nosso
+   controlo); um reset só perde o bloco em curso, não o envio todo. O
+   cliente confirma quantos bytes o worker já tem via `GET /upload-status`
+   antes de cada bloco, nunca confia só na sua própria contagem. Sem o teto
+   de 50MB por OBJETO do Supabase Free, porque o Storage nem entra em jogo
+   nesta parte (o teto é por objeto final, não pelo tamanho dos blocos).
+3. Depois do último bloco, o browser chama `POST /upload-finalize` (sem
+   corpo). O worker corre `ffprobe`, e para cada qualidade — do MENOR pro
+   MAIOR — gera uma variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz
+   upscale) e SÓ ENTÃO sobe pro Supabase Storage (já comprimido).
+4. Quando a escada toda estiver pronta, responde ao pedido de finalização
+   com o URL do master playlist. O browser guarda-o como `contentUrl` da
+   aula — ao gravar a aula, a app já regista isto como `hlsMasterUrl`
+   diretamente (ver `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila
+   nenhuma.
 
 **Caminho de recurso — fila assíncrona** (só entra em jogo se alguém colar
 um URL de vídeo à mão em vez de fazer upload):

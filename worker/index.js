@@ -4,11 +4,15 @@
 //
 // Dois jeitos de chegar aqui:
 // 1. Upload direto (normal): o browser envia o vídeo bruto diretamente pra
-//    cá via POST /upload (autenticado por um token HMAC de curta duração
-//    que a app gera — ver app/api/upload/authorize-direct). Comprime-se
-//    ANTES de qualquer coisa tocar o Supabase Storage — só as renditions
-//    finais (pequenas) lá chegam, nunca o ficheiro bruto. Resposta só volta
-//    quando a escada toda estiver pronta.
+//    cá, em blocos de tamanho fixo via POST /upload-chunk (autenticado por
+//    um token HMAC de curta duração que a app gera — ver
+//    app/api/upload/authorize-direct), seguido de POST /upload-finalize que
+//    dispara a compressão. Cada bloco é um pedido HTTP curto — evita ter um
+//    único pedido a durar o upload inteiro (minutos, em vídeos grandes),
+//    que se mostrou vulnerável a resets de ligação a meio (proxy/rede,
+//    fora do nosso controlo). Comprime-se ANTES de qualquer coisa tocar o
+//    Supabase Storage — só as renditions finais (pequenas) lá chegam, nunca
+//    o ficheiro bruto.
 // 2. Fila assíncrona (fallback): se alguém colar um URL de vídeo já
 //    existente em vez de fazer upload (ver contentUrl em LessonEditScreen),
 //    a app cria um VideoTranscodeJob e este worker apanha-o via poll a
@@ -434,7 +438,7 @@ function pipeRequestToFile(req, destPath, append) {
 function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Origin", APP_URL);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Upload-Offset");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Upload-Offset, X-Total-Bytes");
 }
 
 function authenticateRequest(req) {
@@ -458,8 +462,60 @@ async function handleUploadStatusRequest(req, res) {
   res.end(JSON.stringify({ receivedBytes }));
 }
 
-async function handleUploadRequest(req, res) {
-  console.log(`[upload] pedido recebido — content-length=${req.headers["content-length"] || "?"} content-type=${req.headers["content-type"] || "?"}`);
+// POST /upload-chunk — recebe um bloco de tamanho fixo (ver CHUNK_BYTES no
+// cliente) e só isso: acrescenta ao ficheiro fonte e responde já, sem
+// comprimir nada. X-Upload-Offset é sempre obrigatório (mesmo no 1º bloco,
+// com valor 0) — o cliente relê /upload-status antes de cada bloco, por
+// isso este valor é sempre o que o worker já confirmou ter, nunca um
+// contador só do lado do cliente; se não bater certo (corrida, worker
+// reiniciou), 409 força o cliente a resincronizar antes de repetir.
+async function handleUploadChunkRequest(req, res) {
+  const assetId = authenticateRequest(req);
+  if (!assetId) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Token de upload inválido ou expirado" }));
+    return;
+  }
+
+  const offsetHeader = req.headers["x-upload-offset"];
+  const expectedOffset = Number(offsetHeader);
+  if (typeof offsetHeader !== "string" || !Number.isFinite(expectedOffset) || expectedOffset < 0) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "X-Upload-Offset em falta ou inválido" }));
+    return;
+  }
+
+  const workDir = uploadWorkDir(assetId);
+  const sourcePath = path.join(workDir, "source");
+
+  try {
+    await fs.mkdir(workDir, { recursive: true });
+    const actualBytes = await getReceivedBytes(assetId);
+    if (expectedOffset !== actualBytes) {
+      res.writeHead(409, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Offset desatualizado", receivedBytes: actualBytes }));
+      return;
+    }
+    await pipeRequestToFile(req, sourcePath, expectedOffset > 0);
+    const receivedBytes = await getReceivedBytes(assetId);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ receivedBytes }));
+  } catch (err) {
+    console.error(`Bloco de upload ${assetId} falhou:`, err);
+    if (!res.headersSent) {
+      const receivedBytes = await getReceivedBytes(assetId).catch(() => 0);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err && err.message ? err.message : "Falha ao receber bloco", receivedBytes }));
+    }
+  }
+}
+
+// POST /upload-finalize — chamado depois de todos os blocos enviados, sem
+// corpo. Dispara a compressão sobre o ficheiro já recebido por completo.
+// Numa falha (OOM, etc.) o ficheiro fonte NÃO é apagado — um retry só desta
+// chamada recomeça a comprimir sem reenviar nada, já que os bytes já lá
+// estão todos.
+async function handleUploadFinalizeRequest(req, res) {
   const assetId = authenticateRequest(req);
   if (!assetId) {
     res.writeHead(401, { "Content-Type": "application/json" });
@@ -469,45 +525,35 @@ async function handleUploadRequest(req, res) {
 
   const workDir = uploadWorkDir(assetId);
   const sourcePath = path.join(workDir, "source");
-  const offsetHeader = req.headers["x-upload-offset"];
-  const isResume = typeof offsetHeader === "string";
+  const totalHeader = req.headers["x-total-bytes"];
+  const expectedTotal = Number(totalHeader);
 
   try {
-    await fs.mkdir(workDir, { recursive: true });
-
-    if (isResume) {
-      const expectedOffset = Number(offsetHeader);
-      const actualBytes = await getReceivedBytes(assetId);
-      if (!Number.isFinite(expectedOffset) || expectedOffset !== actualBytes) {
-        // corrida rara (2 retries em paralelo, ou o worker reiniciou entre
-        // tentativas) — devolve o valor real pro cliente sincronizar e
-        // tentar outra vez, em vez de corromper o ficheiro a meio.
-        res.writeHead(409, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Offset desatualizado", receivedBytes: actualBytes }));
-        return;
-      }
-      console.log(`[upload] a retomar ${assetId} a partir de ${actualBytes} bytes`);
-    } else {
-      console.log(`A receber upload direto ${assetId}`);
+    const actualBytes = await getReceivedBytes(assetId);
+    if (actualBytes === 0) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Nenhum byte recebido para este upload" }));
+      return;
     }
-
-    await pipeRequestToFile(req, sourcePath, isResume);
-    console.log(`  -> recebido, a comprimir ${assetId}`);
+    if (typeof totalHeader === "string" && Number.isFinite(expectedTotal) && expectedTotal !== actualBytes) {
+      res.writeHead(409, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Upload incompleto", receivedBytes: actualBytes }));
+      return;
+    }
+    console.log(`  -> ${assetId} recebido por completo (${actualBytes} bytes), a comprimir`);
     const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null);
     if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
     console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ hlsMasterUrl: masterPlaylistUrl, renditions }));
-    // só limpa em caso de sucesso — numa falha o ficheiro parcial fica pra
-    // um retry poder continuar dali, em vez de reenviar tudo outra vez.
+    // só limpa em caso de sucesso — numa falha o ficheiro fonte fica pra um
+    // retry só de finalize poder recomeçar a comprimir sem reenviar nada.
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
-    return;
   } catch (err) {
-    console.error(`Upload direto ${assetId} falhou:`, err);
+    console.error(`Finalização do upload ${assetId} falhou:`, err);
     if (!res.headersSent) {
-      const receivedBytes = await getReceivedBytes(assetId).catch(() => 0);
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err && err.message ? err.message : "Falha ao comprimir vídeo", receivedBytes }));
+      res.end(JSON.stringify({ error: err && err.message ? err.message : "Falha ao comprimir vídeo" }));
     }
   }
 }
@@ -520,10 +566,21 @@ const server = http.createServer((req, res) => {
     res.end();
     return;
   }
-  if (req.method === "POST" && req.url === "/upload") {
+  if (req.method === "POST" && req.url === "/upload-chunk") {
     setCorsHeaders(res);
-    handleUploadRequest(req, res).catch((err) => {
-      console.error("Erro não tratado no upload:", err);
+    handleUploadChunkRequest(req, res).catch((err) => {
+      console.error("Erro não tratado no /upload-chunk:", err);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Erro interno" }));
+      }
+    });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/upload-finalize") {
+    setCorsHeaders(res);
+    handleUploadFinalizeRequest(req, res).catch((err) => {
+      console.error("Erro não tratado no /upload-finalize:", err);
       if (!res.headersSent) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Erro interno" }));
@@ -591,11 +648,11 @@ async function loop() {
 // Node's http.Server tem um requestTimeout DEFAULT de 5 minutos (desde o
 // Node 18) — mata sozinho qualquer pedido que ainda esteja aberto passado
 // esse tempo, nada a ver com o limite da própria Railway (15min de teto na
-// plataforma). O pedido de /upload fica aberto durante o upload TODO mais
-// a compressão TODA — vídeos que juntam as duas partes e passam de 5min
-// batiam neste teto do Node e a ligação morria a meio, aparecendo como
-// "falha de rede" no browser mesmo sem nada de errado ter acontecido.
-// Sobe isto pro mesmo teto da Railway.
+// plataforma). /upload-chunk agora é sempre curto (bloco de tamanho fixo),
+// mas /upload-finalize fica aberto durante a compressão toda, que pode
+// passar de 5min em vídeos grandes — batia neste teto do Node e a ligação
+// morria a meio, aparecendo como "falha de rede" no browser mesmo sem nada
+// de errado ter acontecido. Sobe isto pro mesmo teto da Railway.
 server.requestTimeout = 15 * 60 * 1000;
 server.headersTimeout = 60 * 1000;
 // server.timeout (mecanismo mais antigo, timeout de inatividade do socket)

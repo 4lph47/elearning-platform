@@ -50,5 +50,7 @@ export async function POST(request: Request) {
   const signature = crypto.createHmac("sha256", workerSecret).update(payload).digest("hex");
   const token = `${payload}.${signature}`;
 
-  return NextResponse.json({ uploadUrl: `${workerUrl}/upload`, token, assetId });
+  // Base do worker — o cliente monta /upload-chunk, /upload-finalize e
+  // /upload-status a partir daqui (ver FileUploadInput.tsx).
+  return NextResponse.json({ uploadUrl: workerUrl, token, assetId });
 }

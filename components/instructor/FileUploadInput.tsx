@@ -123,13 +123,12 @@ async function authorizeWorkerUpload(file: File): Promise<WorkerAuth> {
 }
 
 // Pergunta ao worker quantos bytes já tem deste upload — chamado antes de
-// cada retry, pra saber exatamente de onde continuar em vez de reenviar o
-// ficheiro todo outra vez do zero (o que dói bastante num vídeo grande a
-// meio duma ligação instável).
+// cada bloco (não só nos retries), pra nunca depender só da contagem local:
+// se um bloco falhar a meio, o ficheiro no worker pode ter ficado com mais
+// (ou menos) bytes do que o cliente esperava, e é isto que resincroniza.
 async function getReceivedBytes(auth: WorkerAuth): Promise<number> {
   try {
-    const statusUrl = auth.uploadUrl.replace(/\/upload$/, "/upload-status");
-    const res = await fetch(statusUrl, { headers: { Authorization: `Bearer ${auth.token}` } });
+    const res = await fetch(`${auth.uploadUrl}/upload-status`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) return 0;
     const data = await res.json();
     return typeof data.receivedBytes === "number" ? data.receivedBytes : 0;
@@ -138,32 +137,73 @@ async function getReceivedBytes(auth: WorkerAuth): Promise<number> {
   }
 }
 
-// Envia um bloco (ficheiro inteiro na 1ª tentativa, só o resto a partir de
-// resumeOffset nas seguintes) diretamente pro worker (Railway). A resposta
-// só volta quando a escada HLS toda estiver pronta — onPhaseChange avisa a
-// UI para trocar a barra de progresso (percentagem) por um indicador
-// indeterminado enquanto o worker comprime, sem progresso conhecido nessa parte.
-function postToWorker(
+// Tamanho de cada bloco enviado ao worker — em vez de um único pedido HTTP
+// a cobrir o upload inteiro (minutos, em vídeos grandes; mostrou-se
+// vulnerável a resets de ligação a meio, fora do nosso controlo), o vídeo
+// vai em blocos deste tamanho, cada um o seu próprio pedido curto. Um reset
+// a meio custa no máximo este bloco, não o envio todo.
+const CHUNK_BYTES = 50 * 1024 * 1024;
+
+// Envia um único bloco começando em `offset`. Resolve com o receivedBytes
+// que o worker confirma ter guardado (não assume — usa a resposta como
+// fonte da verdade pro próximo bloco).
+function postChunk(
   auth: WorkerAuth,
   blob: Blob,
-  resumeOffset: number,
+  offset: number,
   xhrRef: XhrRef,
-  onProgress: (bytesSentInBlock: number) => void,
-  onPhaseChange: (phase: "uploading" | "compressing") => void
-): Promise<string> {
+  onProgress: (bytesSentInBlock: number) => void
+): Promise<number> {
   return new Promise((resolve, reject) => {
-    console.log(`[upload] a enviar pro worker (offset=${resumeOffset}, bloco=${blob.size} bytes):`, auth.uploadUrl);
     const xhr = new XMLHttpRequest();
     xhrRef.current = xhr;
-    xhr.open("POST", auth.uploadUrl);
+    xhr.open("POST", `${auth.uploadUrl}/upload-chunk`);
     xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
-    if (resumeOffset > 0) xhr.setRequestHeader("X-Upload-Offset", String(resumeOffset));
+    xhr.setRequestHeader("X-Upload-Offset", String(offset));
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded);
     };
-    xhr.upload.onload = () => onPhaseChange("compressing");
     xhr.onload = () => {
-      console.log(`[upload] resposta do worker: status=${xhr.status} body=`, xhr.responseText.slice(0, 500));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText) as { receivedBytes: number };
+          resolve(data.receivedBytes);
+        } catch {
+          reject(new UploadError("Resposta inválida do worker", true));
+        }
+      } else {
+        let message = "Erro ao enviar vídeo";
+        try {
+          message = JSON.parse(xhr.responseText).error ?? message;
+        } catch {
+          // resposta não-JSON (ex.: proxy/erro de rede a meio) — mensagem genérica já chega
+        }
+        // 5xx (worker/proxy com problema momentâneo), 401 (token expirado)
+        // e 409 (offset desatualizado — resincroniza sozinho no próximo
+        // bloco) valem retry; 4xx de validação não, repetir não muda nada.
+        reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401 || xhr.status === 409));
+      }
+    };
+    xhr.onerror = () => reject(new UploadError("Falha de rede ao enviar bloco", true));
+    // Disparado por xhrRef.current?.abort() lá em baixo, quando se escolhe
+    // um ficheiro novo enquanto este ainda estava a enviar — corta a
+    // ligação na hora, não é um erro de rede, não deve tentar outra vez.
+    xhr.onabort = () => reject(new UploadAbortedError());
+    xhr.send(blob);
+  });
+}
+
+// Dispara a compressão sobre o que já foi recebido — pedido sem corpo, só
+// fica aberto durante a compressão em si (não durante o envio do vídeo).
+function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open("POST", `${auth.uploadUrl}/upload-finalize`);
+    xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
+    xhr.setRequestHeader("X-Total-Bytes", String(totalBytes));
+    xhr.onload = () => {
+      console.log(`[upload] resposta da finalização: status=${xhr.status} body=`, xhr.responseText.slice(0, 500));
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const data = JSON.parse(xhr.responseText) as { hlsMasterUrl: string };
@@ -176,34 +216,48 @@ function postToWorker(
         try {
           message = JSON.parse(xhr.responseText).error ?? message;
         } catch {
-          // resposta não-JSON (ex.: proxy/erro de rede a meio) — mensagem genérica já chega
+          // resposta não-JSON — mensagem genérica já chega
         }
-        // 5xx (worker/proxy com problema momentâneo), 401 (token expirado)
-        // e 409 (offset desatualizado — sincroniza-se sozinho na próxima
-        // tentativa) valem retry; 4xx de validação não, repetir não muda o resultado.
         reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401 || xhr.status === 409));
       }
     };
-    xhr.onerror = () => {
-      console.error(`[upload] falha de rede — readyState=${xhr.readyState} status=${xhr.status}`);
-      reject(new UploadError("Falha de rede ao enviar para compressão", true));
-    };
-    // Disparado por xhrRef.current?.abort() lá em baixo, quando se escolhe
-    // um ficheiro novo enquanto este ainda estava a enviar — corta a
-    // ligação na hora, não é um erro de rede, não deve tentar outra vez.
+    xhr.onerror = () => reject(new UploadError("Falha de rede ao comprimir vídeo", true));
     xhr.onabort = () => reject(new UploadAbortedError());
-    xhr.send(blob);
+    xhr.send();
   });
 }
 
-const UPLOAD_RETRY_ATTEMPTS = 3;
+const CHUNK_RETRY_ATTEMPTS = 3;
+const FINALIZE_RETRY_ATTEMPTS = 2;
 
-// Autoriza uma vez só (mesmo token/assetId reaproveitado em todas as
-// tentativas — é o que liga um retry ao ficheiro parcial já recebido da
-// tentativa anterior) e, a cada retry, pergunta ao worker onde ficou e só
-// reenvia o que falta. Falha de validação (ficheiro inválido) não tenta
-// outra vez — só rede/servidor. Cancelamento (ficheiro novo escolhido a
-// meio) também não tenta outra vez, óbvio.
+async function withUploadRetries<T>(
+  fn: () => Promise<T>,
+  attempts: number,
+  onRetry: (attempt: number, maxAttempts: number) => void
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof UploadAbortedError) throw err;
+      lastErr = err;
+      const retryable = err instanceof UploadError ? err.retryable : true;
+      if (!retryable || attempt === attempts) throw err;
+      console.warn(`[upload] tentativa ${attempt} falhou, a repetir:`, err);
+      onRetry(attempt + 1, attempts);
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
+// Autoriza uma vez só (mesmo token/assetId reaproveitado em todos os blocos
+// — é o que liga o próximo bloco ao ficheiro parcial já recebido) e envia o
+// vídeo em blocos de CHUNK_BYTES, resincronizando com /upload-status antes
+// de cada um. Um reset de rede a meio de um bloco só perde esse bloco, não
+// o envio todo. Depois de todos os bytes enviados, finaliza (compressão)
+// numa chamada à parte, com o seu próprio retry.
 async function uploadToWorker(
   file: File,
   xhrRef: XhrRef,
@@ -211,36 +265,27 @@ async function uploadToWorker(
   onPhaseChange: (phase: "uploading" | "compressing") => void,
   onRetry: (attempt: number, maxAttempts: number) => void
 ): Promise<UploadResult> {
-  let auth: WorkerAuth | null = null;
-  let lastErr: unknown;
+  const auth = await authorizeWorkerUpload(file);
 
-  for (let attempt = 1; attempt <= UPLOAD_RETRY_ATTEMPTS; attempt++) {
-    try {
-      if (!auth) auth = await authorizeWorkerUpload(file);
-      const resumeOffset = attempt === 1 ? 0 : await getReceivedBytes(auth);
-      const blob = resumeOffset > 0 ? file.slice(resumeOffset) : file;
-      if (resumeOffset > 0) console.log(`[upload] a retomar a partir de ${resumeOffset}/${file.size} bytes`);
-
-      const url = await postToWorker(
-        auth,
-        blob,
-        resumeOffset,
-        xhrRef,
-        (bytesSentInBlock) => onProgress(Math.round(((resumeOffset + bytesSentInBlock) / file.size) * 100)),
-        onPhaseChange
-      );
-      return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
-    } catch (err) {
-      if (err instanceof UploadAbortedError) throw err;
-      lastErr = err;
-      const retryable = err instanceof UploadError ? err.retryable : true;
-      if (!retryable || attempt === UPLOAD_RETRY_ATTEMPTS) throw err;
-      console.warn(`[upload] tentativa ${attempt} falhou, a repetir a partir de onde ficou:`, err);
-      onRetry(attempt + 1, UPLOAD_RETRY_ATTEMPTS);
-      await new Promise((r) => setTimeout(r, 1500 * attempt));
-    }
+  let offset = 0;
+  while (offset < file.size) {
+    offset = await withUploadRetries(
+      async () => {
+        const actualOffset = await getReceivedBytes(auth);
+        const blob = file.slice(actualOffset, actualOffset + CHUNK_BYTES);
+        if (actualOffset > 0) console.log(`[upload] a continuar a partir de ${actualOffset}/${file.size} bytes`);
+        return postChunk(auth, blob, actualOffset, xhrRef, (bytesSentInBlock) =>
+          onProgress(Math.round(((actualOffset + bytesSentInBlock) / file.size) * 100))
+        );
+      },
+      CHUNK_RETRY_ATTEMPTS,
+      onRetry
+    );
   }
-  throw lastErr;
+
+  onPhaseChange("compressing");
+  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef), FINALIZE_RETRY_ATTEMPTS, onRetry);
+  return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
 const KIND_LABEL: Record<Kind, string> = {

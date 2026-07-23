@@ -39,28 +39,28 @@ enum ReactionType {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  role          Role      @default(STUDENT)
-  bio           String?
-  websiteUrl    String?
-  twitterUrl    String?
-  linkedinUrl   String?
-  youtubeUrl    String?
-  instagramUrl  String?
-  facebookUrl   String?
-  tiktokUrl     String?
-  githubUrl     String?
-  discordUrl    String?
-  mediumUrl     String?
-  twitchUrl     String?
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  role           Role            @default(STUDENT)
+  bio            String?
+  websiteUrl     String?
+  twitterUrl     String?
+  linkedinUrl    String?
+  youtubeUrl     String?
+  instagramUrl   String?
+  facebookUrl    String?
+  tiktokUrl      String?
+  githubUrl      String?
+  discordUrl     String?
+  mediumUrl      String?
+  twitchUrl      String?
   certifications Certification[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   accounts             Account[]
   sessions             Session[]
@@ -159,25 +159,25 @@ model Bundle {
 }
 
 model Course {
-  id           String   @id @default(cuid())
-  title        String
-  slug         String   @unique
-  description  String
-  thumbnailUrl String?
-  trailerUrl   String?
-  category     String
-  level        String   @default("beginner")
-  published    Boolean  @default(false)
-  price        Float    @default(0)
-  originalPrice Float?
-  rating       Float    @default(4.5)
-  ratingCount  Int      @default(0)
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  description      String
+  thumbnailUrl     String?
+  trailerUrl       String?
+  category         String
+  level            String   @default("beginner")
+  published        Boolean  @default(false)
+  price            Float    @default(0)
+  originalPrice    Float?
+  rating           Float    @default(4.5)
+  ratingCount      Int      @default(0)
   learningOutcomes String[] @default([])
   requirements     String[] @default([])
   targetAudience   String[] @default([])
   topics           String[] @default([])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   instructorId String
   instructor   User   @relation("InstructorCourses", fields: [instructorId], references: [id], onDelete: Cascade)
@@ -229,14 +229,17 @@ model Lesson {
 
   contributors User[] @relation("LessonContributors")
 
-  resources LessonResource[]
-  progress  LessonProgress[]
-  comments  LessonComment[]
-  reactions LessonReaction[]
-  quiz      Quiz?
-  viewCount Int      @default(0)
-  createdAt DateTime @default(now())
+  resources   LessonResource[]
+  progress    LessonProgress[]
+  comments    LessonComment[]
+  reactions   LessonReaction[]
+  quiz        Quiz?
+  viewCount   Int              @default(0)
+  createdAt   DateTime         @default(now())
   watchEvents WatchEvent[]
+
+  videoRenditions LessonVideoRendition[]
+  transcodeJobs   VideoTranscodeJob[]
 
   @@index([moduleId])
 }
@@ -303,9 +306,53 @@ model LessonResource {
   @@index([lessonId])
 }
 
+enum TranscodeStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+// Fila para o worker externo (ffmpeg, fora do Next.js/Vercel — sem binário
+// ffmpeg nem tempo de execução para isso nas functions serverless). O
+// worker faz poll de PENDING, marca PROCESSING, sobe as renditions e chama
+// de volta a completar/falhar (ver app/api/worker/jobs).
+model VideoTranscodeJob {
+  id        String          @id @default(cuid())
+  sourceUrl String
+  status    TranscodeStatus @default(PENDING)
+  error     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([lessonId])
+}
+
+// Uma linha por resolução gerada pelo worker para uma aula. "quality" é o
+// rótulo mostrado no seletor do player (ex. "1080p").
+model LessonVideoRendition {
+  id        String   @id @default(cuid())
+  quality   String
+  url       String
+  width     Int
+  height    Int
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, quality])
+  @@index([lessonId])
+}
+
 model Enrollment {
-  id          String   @id @default(cuid())
-  enrolledAt  DateTime @default(now())
+  id         String   @id @default(cuid())
+  enrolledAt DateTime @default(now())
 
   userId   String
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -375,9 +422,9 @@ model Quiz {
 }
 
 model QuizQuestion {
-  id     String @id @default(cuid())
-  text   String
-  order  Int
+  id    String @id @default(cuid())
+  text  String
+  order Int
 
   quizId String
   quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)

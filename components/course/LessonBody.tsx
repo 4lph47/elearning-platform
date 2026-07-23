@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
 import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
-import { LessonPlayer } from "@/components/player/LessonPlayer";
+import { LessonPlayer, type VideoRendition } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
 import { useChatOpen, useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { ResourcePreviewContent as PreviewContent } from "@/components/course/ResourcePreviewContent";
 import { boxFromRect, useCardTransition } from "@/components/course/CardTransitionContext";
+import { getStoredAmbient, setStoredAmbient } from "@/lib/playerPreferences";
 
 export function LessonBody({
   title,
@@ -15,6 +16,7 @@ export function LessonBody({
   lessonId,
   type,
   contentUrl,
+  videoRenditions,
   textContent,
   initialCompleted,
   initialWatchedSeconds,
@@ -34,6 +36,7 @@ export function LessonBody({
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  videoRenditions?: VideoRendition[];
   textContent?: string | null;
   initialCompleted: boolean;
   initialWatchedSeconds: number;
@@ -53,7 +56,7 @@ export function LessonBody({
   const [previewResource, setPreviewResource] = useState<LessonResourceData | null>(null);
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
-  const [cinemaMode, setCinemaMode] = useState(false);
+  const [cinemaMode, setCinemaMode] = useState(getStoredAmbient);
   const { handleTouchStart, handleTouchEnd, swipeClassName, goPrevious, goNext, showSpinner } = useSwipeNav(
     previousHref,
     nextHref
@@ -154,11 +157,20 @@ export function LessonBody({
               lessonId={lessonId}
               type={type}
               contentUrl={contentUrl}
+              videoRenditions={videoRenditions}
               textContent={textContent}
               initialWatchedSeconds={initialWatchedSeconds}
               onComplete={markComplete}
               cinemaMode={cinemaMode}
-              onToggleCinemaMode={type === "VIDEO" ? () => setCinemaMode((c) => !c) : undefined}
+              onToggleCinemaMode={
+                type === "VIDEO"
+                  ? () =>
+                      setCinemaMode((c) => {
+                        setStoredAmbient(!c);
+                        return !c;
+                      })
+                  : undefined
+              }
             />
           </div>
 

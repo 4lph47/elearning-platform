@@ -3,7 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug } from "@/lib/courseCache";
-import { getRawLessonComments, toCommentTree } from "@/lib/commentsCache";
+import {
+  getRawLessonComments,
+  getLessonCommentsCounts,
+  getTopLessonComments,
+  toCommentTree,
+  COMMENTS_PAGE_SIZE,
+} from "@/lib/commentsCache";
 import { buildCourseSequence, hrefFor } from "@/lib/courseSequence";
 import { LessonBody } from "@/components/course/LessonBody";
 import { LessonLayoutShell } from "@/components/course/LessonLayoutShell";
@@ -26,11 +32,16 @@ export default async function LessonPage({
     redirect(`/login?callbackUrl=${encodeURIComponent(`/courses/${slug}/lessons/${lessonId}`)}`);
   }
 
-  const [course, resources, progress] = await Promise.all([
+  const [course, resources, progress, videoRenditions] = await Promise.all([
     getCachedCourseBySlug(slug),
     prisma.lessonResource.findMany({ where: { lessonId } }),
     prisma.lessonProgress.findUnique({
       where: { userId_lessonId: { userId: session.user.id, lessonId } },
+    }),
+    prisma.lessonVideoRendition.findMany({
+      where: { lessonId },
+      orderBy: { height: "desc" },
+      select: { quality: true, url: true, width: true, height: true },
     }),
   ]);
   if (!course) notFound();
@@ -54,6 +65,8 @@ export default async function LessonPage({
     progressRows,
     doneQuizAttempts,
     topLevelComments,
+    commentCounts,
+    topComments,
     likeReactions,
     myReaction,
     updatedLesson,
@@ -70,7 +83,9 @@ export default async function LessonPage({
           select: { quizId: true },
         })
       : Promise.resolve([]),
-    getRawLessonComments(lessonId),
+    getRawLessonComments(lessonId, 0, COMMENTS_PAGE_SIZE),
+    getLessonCommentsCounts(lessonId),
+    getTopLessonComments(lessonId, 5),
     prisma.lessonReaction.count({ where: { lessonId, type: "LIKE" } }),
     prisma.lessonReaction.findUnique({
       where: { userId_lessonId: { userId: session.user.id, lessonId } },
@@ -115,6 +130,7 @@ export default async function LessonPage({
 
   const authors = [course.instructor, ...course.collaborators];
   const commentTree: CommentData[] = toCommentTree(topLevelComments, session.user.id);
+  const topCommentTree: CommentData[] = toCommentTree(topComments, session.user.id);
 
   const totalItems = allLessons.length + allQuizIds.length;
   const completedCount = completedLessonsCount + doneQuizIds.size;
@@ -174,6 +190,7 @@ export default async function LessonPage({
           lessonId={lesson.id}
           type={lesson.type}
           contentUrl={lesson.contentUrl}
+          videoRenditions={videoRenditions}
           textContent={lesson.textContent}
           initialCompleted={progress?.completed ?? false}
           initialWatchedSeconds={progress?.watchedSeconds ?? 0}
@@ -195,6 +212,9 @@ export default async function LessonPage({
             <LessonComments
               lessonId={lesson.id}
               comments={commentTree}
+              initialTopComments={topCommentTree}
+              initialTotal={commentCounts.all}
+              initialHasMore={topLevelComments.length < commentCounts.topLevel}
               currentUserId={session.user.id}
               currentUserName={session.user.name ?? null}
               canModerate={isOwner}

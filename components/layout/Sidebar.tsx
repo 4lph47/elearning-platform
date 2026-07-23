@@ -100,13 +100,18 @@ export function Sidebar() {
 
   return (
     <>
-      {state === "full" && (
-        <div
-          className="fixed inset-0 top-16 z-20 bg-black/20 md:hidden"
-          onClick={close}
-          aria-hidden
-        />
-      )}
+      {/* Sempre montado (não condicional) — só assim o fade consegue animar
+          nos dois sentidos. Antes desaparecia/aparecia instantâneo (sem
+          transição nenhuma) enquanto o <aside> ao lado levava 200ms a abrir
+          a largura, lendo como o fade "chegar primeiro". Mesma duração dos
+          dois agora, para acabarem juntos. */}
+      <div
+        className={`fixed inset-0 top-16 z-20 bg-black/20 transition-opacity duration-200 md:hidden ${
+          state === "full" ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={close}
+        aria-hidden
+      />
       {/* Navbar fica transparente nas páginas com hero (revela a imagem por
           baixo, de propósito) — sem isto, essa faixa transparente passava
           por cima da coluna da sidebar também, mostrando a hero em vez de

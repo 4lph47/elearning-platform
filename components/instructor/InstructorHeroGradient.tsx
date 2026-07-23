@@ -17,8 +17,13 @@ export function InstructorHeroGradient({ children }: { children: ReactNode }) {
   const { top, mid } = useInstructorAccent();
 
   return (
+    // -mt-16: desliza por baixo do header fixed (mesmo truque do hero da
+    // home/página de curso) para o header ficar mesmo por cima do
+    // gradiente — só assim o overlay semi-transparente do header deixa
+    // este gradiente aparecer "através" dele. Padding-top ganha os 64px do
+    // header de volta, senão o avatar ficava escondido atrás dele.
     <div
-      className="pb-10 pt-14 transition-[background-image] duration-700 sm:pt-20"
+      className="-mt-16 pb-10 pt-[7.5rem] transition-[background-image] duration-700 sm:pt-36"
       style={{ backgroundImage: `linear-gradient(to bottom, rgb(${top}) 0%, rgb(${mid}) 55%, rgba(${mid}, 0) 100%)` }}
     >
       {children}

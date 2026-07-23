@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
+import { needsTranscode, requeueTranscode } from "@/lib/videoTranscode";
 
 export async function POST(request: Request, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -38,6 +39,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
     },
   });
   await syncCourseThumbnail(courseModule.course.id);
+  if (needsTranscode(lesson.type, lesson.contentUrl)) {
+    await requeueTranscode(lesson.id, lesson.contentUrl);
+  }
   revalidateTag("courses");
 
   return NextResponse.json(lesson, { status: 201 });

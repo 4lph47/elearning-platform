@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { usePageAccent } from "@/components/layout/PageAccentContext";
 
 interface AccentColors {
   top: string;
@@ -22,16 +21,6 @@ const InstructorAccentContext = createContext<AccentColors>(DEFAULT_ACCENT);
 // (uma vez, não por frame de vídeo).
 export function InstructorAccentProvider({ imageUrl, children }: { imageUrl: string | null; children: ReactNode }) {
   const [accent, setAccent] = useState<AccentColors>(DEFAULT_ACCENT);
-  const { setAccent: setPageAccent } = usePageAccent();
-
-  // Header também fica com o gradiente do instrutor, mesmo antes de rolar a
-  // página (a navbar já é transparente nessa altura) — propaga pro contexto
-  // global que o Navbar lê. Limpa ao sair da página para não vazar a cor
-  // deste instrutor para as páginas seguintes.
-  useEffect(() => {
-    setPageAccent(accent);
-    return () => setPageAccent(null);
-  }, [accent, setPageAccent]);
 
   useEffect(() => {
     if (!imageUrl) return;

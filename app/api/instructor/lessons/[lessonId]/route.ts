@@ -7,6 +7,7 @@ import { lessonSchema, validateLessonContent } from "@/lib/validations";
 import { getOwnedLesson } from "@/lib/instructor-guard";
 import { deleteQuiz } from "@/lib/quiz";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
+import { needsTranscode, requeueTranscode } from "@/lib/videoTranscode";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -32,6 +33,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
 
   if (parsed.data.type === "TEXT" && lesson.type !== "TEXT") {
     await deleteQuiz("LESSON", lessonId);
+  }
+
+  const contentChanged = "contentUrl" in parsed.data && parsed.data.contentUrl !== lesson.contentUrl;
+  if (contentChanged && needsTranscode(updated.type, updated.contentUrl)) {
+    await requeueTranscode(updated.id, updated.contentUrl);
   }
 
   if ("contributorIds" in body) {

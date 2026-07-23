@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
@@ -14,19 +15,63 @@ interface EngagementRow {
   likeCount: bigint;
 }
 
-export default async function CoursesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    q?: string;
-    category?: string;
-    level?: string;
-    sort?: string;
-    maxPrice?: string;
-    minDuration?: string;
-    minEnrollments?: string;
-  }>;
-}) {
+type CoursesSearchParams = Promise<{
+  q?: string;
+  category?: string;
+  level?: string;
+  sort?: string;
+  maxPrice?: string;
+  minDuration?: string;
+  minEnrollments?: string;
+}>;
+
+// Título/header nunca ficam à espera da BD — só o resto (que depende de
+// searchParams + queries) fica atrás do Suspense. Sem isto, a página inteira
+// (Navbar incluído, que vem do layout) bloqueava até as queries todas
+// resolverem, porque não havia nenhuma fronteira de streaming na rota.
+export default function CoursesPage({ searchParams }: { searchParams: CoursesSearchParams }) {
+  return (
+    <div className="min-h-screen bg-white dark:bg-black">
+      <div className="border-b border-slate-200 bg-gradient-to-b from-slate-100 to-white px-4 py-5 dark:border-white/10 dark:from-slate-900 dark:to-black sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">Catálogo de Cursos</h1>
+          <p className="mt-2 hidden max-w-xl text-slate-600 dark:text-slate-400 sm:block">
+            Explora os cursos disponíveis e começa a aprender hoje.
+          </p>
+        </div>
+      </div>
+
+      <Suspense fallback={<CoursesSkeleton />}>
+        <CoursesResults searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+function CoursesSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-neutral-900/60 sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="h-9 w-full max-w-md rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+      </div>
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="aspect-video rounded-lg bg-slate-200 dark:bg-white/10" />
+              <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-white/10" />
+              <div className="h-3 w-1/2 rounded bg-slate-200 dark:bg-white/10" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function CoursesResults({ searchParams }: { searchParams: CoursesSearchParams }) {
   const { q, category, level, sort, maxPrice, minDuration, minEnrollments } = await searchParams;
   const selectedCategories = (category ?? "").split(",").filter(Boolean);
   const session = await getServerSession(authOptions);
@@ -186,16 +231,7 @@ export default async function CoursesPage({
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
-      <div className="border-b border-slate-200 bg-gradient-to-b from-slate-100 to-white px-4 py-5 dark:border-white/10 dark:from-slate-900 dark:to-black sm:px-8">
-        <div className="mx-auto max-w-6xl">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">Catálogo de Cursos</h1>
-          <p className="mt-2 hidden max-w-xl text-slate-600 dark:text-slate-400 sm:block">
-            Explora os cursos disponíveis e começa a aprender hoje.
-          </p>
-        </div>
-      </div>
-
+    <>
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-neutral-900/60 sm:px-8">
         <div className="mx-auto max-w-6xl">
           <SearchBar categories={categories.map((c) => c.category)} />
@@ -218,6 +254,6 @@ export default async function CoursesPage({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

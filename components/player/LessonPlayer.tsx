@@ -14,12 +14,21 @@ import {
   Repeat,
   Settings,
   Sparkles,
+  Video,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { getYouTubeId } from "@/lib/youtube";
 import { useAmbientColor } from "@/lib/useAmbientColor";
+import { getStoredSpeed, setStoredSpeed, getStoredQuality, setStoredQuality } from "@/lib/playerPreferences";
+
+export interface VideoRendition {
+  quality: string;
+  url: string;
+  width: number;
+  height: number;
+}
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const HEATMAP_BUCKETS = 40;
@@ -92,6 +101,7 @@ export function LessonPlayer({
   lessonId,
   type,
   contentUrl,
+  videoRenditions,
   textContent,
   initialWatchedSeconds,
   onComplete,
@@ -101,6 +111,7 @@ export function LessonPlayer({
   lessonId: string;
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
+  videoRenditions?: VideoRendition[];
   textContent?: string | null;
   initialWatchedSeconds: number;
   onComplete: () => void;
@@ -108,6 +119,7 @@ export function LessonPlayer({
   onToggleCinemaMode?: () => void;
 }) {
   const lastSentRef = useRef(0);
+  const hasAppliedInitialSeekRef = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -116,16 +128,34 @@ export function LessonPlayer({
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
   const ambientColor = useAmbientColor(videoRef, Boolean(cinemaMode) && !youtubeId && type === "VIDEO");
 
+  // Só oferece o seletor quando há mais que uma rendition (senão não há
+  // escolha nenhuma a fazer) — ordenadas da maior pra menor resolução.
+  const sortedRenditions = [...(videoRenditions ?? [])].sort((a, b) => b.height - a.height);
+  const hasQualityOptions = sortedRenditions.length > 1;
+  const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
+  const activeSrc = selectedQuality
+    ? sortedRenditions.find((r) => r.quality === selectedQuality)?.url ?? contentUrl
+    : contentUrl;
+
+  useEffect(() => {
+    if (sortedRenditions.length === 0) return;
+    const stored = getStoredQuality();
+    const match = stored && sortedRenditions.some((r) => r.quality === stored) ? stored : sortedRenditions[0].quality;
+    setSelectedQuality(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(getStoredSpeed);
   const [isPiP, setIsPiP] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
+  const [qualityOpen, setQualityOpen] = useState(false);
   const [loop, setLoop] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
@@ -140,6 +170,7 @@ export function LessonPlayer({
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
         setSpeedOpen(false);
+        setQualityOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -204,9 +235,38 @@ export function LessonPlayer({
 
   function handleLoadedMetadata(e: React.SyntheticEvent<HTMLVideoElement>) {
     setDuration(e.currentTarget.duration);
-    if (initialWatchedSeconds > 0 && initialWatchedSeconds < e.currentTarget.duration) {
+    // playbackRate persistido (lib/playerPreferences) aplica-se aqui — o
+    // <video> nasce sempre a 1x, só fica na velocidade guardada depois disto.
+    e.currentTarget.playbackRate = playbackRate;
+    // Só na 1ª carga real — trocar de qualidade também dispara loadedmetadata
+    // (o <video> recarrega do zero com o novo src) e tem o seu próprio
+    // resume de posição em setQuality(), não deve saltar de volta para o
+    // watchedSeconds antigo guardado no servidor.
+    if (!hasAppliedInitialSeekRef.current && initialWatchedSeconds > 0 && initialWatchedSeconds < e.currentTarget.duration) {
       e.currentTarget.currentTime = initialWatchedSeconds;
+      hasAppliedInitialSeekRef.current = true;
     }
+  }
+
+  function setQuality(quality: string) {
+    const video = videoRef.current;
+    const wasPlaying = Boolean(video && !video.paused);
+    const resumeAt = video?.currentTime ?? 0;
+    setSelectedQuality(quality);
+    setStoredQuality(quality);
+    setQualityOpen(false);
+    setMenuOpen(false);
+
+    requestAnimationFrame(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      const resume = () => {
+        v.currentTime = resumeAt;
+        if (wasPlaying) v.play();
+        v.removeEventListener("loadedmetadata", resume);
+      };
+      v.addEventListener("loadedmetadata", resume);
+    });
   }
 
   function handleTimeUpdate(e: React.SyntheticEvent<HTMLVideoElement>) {
@@ -270,6 +330,7 @@ export function LessonPlayer({
     if (!video) return;
     video.playbackRate = rate;
     setPlaybackRate(rate);
+    setStoredSpeed(rate);
     setSpeedOpen(false);
     setMenuOpen(false);
   }
@@ -401,7 +462,7 @@ export function LessonPlayer({
               <video
                 ref={videoRef}
                 className="h-full w-full"
-                src={contentUrl ?? undefined}
+                src={activeSrc ?? undefined}
                 playsInline
                 crossOrigin="anonymous"
                 onLoadedMetadata={handleLoadedMetadata}
@@ -515,19 +576,54 @@ export function LessonPlayer({
                           <span className="ml-auto text-slate-400">{playbackRate}x</span>
                         </button>
                         {speedOpen && (
-                          <div className="grid grid-cols-3 gap-1 px-3 pb-2">
-                            {PLAYBACK_RATES.map((rate) => (
-                              <button
-                                key={rate}
-                                onClick={() => setRate(rate)}
-                                className={`rounded px-2 py-1 text-xs ${
-                                  rate === playbackRate ? "bg-blue-600 text-white" : "bg-white/5 text-slate-300 hover:bg-white/10"
-                                }`}
-                              >
-                                {rate}x
-                              </button>
-                            ))}
+                          <div className="px-3 pb-2">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              {PLAYBACK_RATES.map((rate) => (
+                                <span key={rate} className={rate === playbackRate ? "font-semibold text-white" : ""}>
+                                  {rate}x
+                                </span>
+                              ))}
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={PLAYBACK_RATES.length - 1}
+                              step={1}
+                              value={Math.max(0, PLAYBACK_RATES.indexOf(playbackRate))}
+                              onChange={(e) => setRate(PLAYBACK_RATES[Number(e.target.value)])}
+                              className="mt-1 w-full accent-blue-500"
+                              aria-label="Velocidade de reprodução"
+                            />
                           </div>
+                        )}
+
+                        {hasQualityOptions && (
+                          <>
+                            <button
+                              onClick={() => setQualityOpen((v) => !v)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
+                            >
+                              <Video size={16} />
+                              Qualidade
+                              <span className="ml-auto text-slate-400">{selectedQuality}</span>
+                            </button>
+                            {qualityOpen && (
+                              <div className="pb-1">
+                                {sortedRenditions.map((r) => (
+                                  <button
+                                    key={r.quality}
+                                    onClick={() => setQuality(r.quality)}
+                                    className={`flex w-full items-center gap-2 py-1.5 pl-9 pr-3 text-left text-xs ${
+                                      r.quality === selectedQuality ? "text-blue-400" : "text-slate-300 hover:bg-white/10"
+                                    }`}
+                                  >
+                                    {r.quality}
+                                    {r.quality === selectedQuality && <Check size={13} className="ml-auto" />}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
 
                         <button

@@ -59,6 +59,7 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
     e.preventDefault();
     if (debounceRef.current) clearTimeout(debounceRef.current);
     updateParam("q", q);
+    (document.activeElement as HTMLElement | null)?.blur();
   }
 
   // fadeNavigate (não router.push direto): a próxima página carrega em fundo

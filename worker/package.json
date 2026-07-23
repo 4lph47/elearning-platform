@@ -1,0 +1,11 @@
+{
+  "name": "video-transcode-worker",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

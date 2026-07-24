@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import {
   Captions,
+  CaptionsOff,
   Check,
   Download,
   Gauge,
@@ -315,6 +316,12 @@ export function LessonPlayer({
   const FILMSTRIP_BOTTOM = 4;
   const filmstripScrollRef = useRef<HTMLDivElement>(null);
   const filmstripCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  // Preview on hover (desktop): 1 frame só, segue o rato, aparece por cima
+  // da barra — reaproveita o mesmo <video> escondido e a mesma seekAndDraw
+  // da filmstrip mobile, só que num único canvas.
+  const hoverCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [hoverPreview, setHoverPreview] = useState<{ time: number; x: number } | null>(null);
+  const lastHoverUpdateRef = useRef(0);
   const [filmstripTimes, setFilmstripTimes] = useState<number[] | null>(null);
   const [scrubTime, setScrubTime] = useState(0);
   // Quanto o play central sobe quando a barra expande — limitado à altura do
@@ -776,6 +783,37 @@ export function LessonPlayer({
       if (canvas) await seekAndDraw(thumbVideo, canvas, times[i]);
     }
   }
+
+  // Preview no hover da barra (desktop): 1 frame a seguir o rato, por cima
+  // da barra (ver JSX). Throttle simples (80ms) — mousemove dispara muito
+  // mais que o necessário pra um scrub visual.
+  function handleProgressMouseEnter() {
+    ensureThumbSource();
+  }
+
+  function handleProgressMouseMove(e: React.MouseEvent) {
+    const bar = progressBarRef.current;
+    if (!bar || duration <= 0) return;
+    const now = Date.now();
+    if (now - lastHoverUpdateRef.current < 80) return;
+    lastHoverUpdateRef.current = now;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    setHoverPreview({ time: ratio * duration, x: ratio * rect.width });
+  }
+
+  function handleProgressMouseLeave() {
+    setHoverPreview(null);
+  }
+
+  useEffect(() => {
+    if (!hoverPreview) return;
+    const thumbVideo = thumbVideoRef.current;
+    const canvas = hoverCanvasRef.current;
+    if (!thumbVideo || !canvas) return;
+    void seekAndDraw(thumbVideo, canvas, hoverPreview.time);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoverPreview?.time]);
 
   useEffect(() => {
     if (barExpanded) {
@@ -1261,6 +1299,18 @@ export function LessonPlayer({
                   controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
+                {captionsUrl && (
+                  <button type="button"
+                    onClick={toggleCaptions}
+                    aria-label={captionsOn ? "Desativar legendas" : "Ativar legendas"}
+                    aria-pressed={captionsOn}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm ${
+                      captionsOn ? "bg-blue-500" : "bg-black/40"
+                    }`}
+                  >
+                    {captionsOn ? <Captions size={18} /> : <CaptionsOff size={18} />}
+                  </button>
+                )}
                 <div ref={mobileMenuBtnRef} className="relative">
                   <button type="button"
                     onClick={toggleSettingsMenu}
@@ -1350,8 +1400,32 @@ export function LessonPlayer({
                   ref={progressBarRef}
                   onTouchStart={handleProgressTouchStart}
                   onTouchEnd={handleProgressTouchEnd}
+                  onMouseEnter={handleProgressMouseEnter}
+                  onMouseMove={handleProgressMouseMove}
+                  onMouseLeave={handleProgressMouseLeave}
                   className="group/progress absolute inset-x-0 bottom-2 h-10 px-3 lg:relative lg:inset-auto lg:bottom-auto lg:h-4 lg:px-0"
                 >
+                  {hoverPreview && (
+                    <div
+                      className="pointer-events-none absolute bottom-full z-30 mb-2 hidden -translate-x-1/2 flex-col items-center gap-1 lg:flex"
+                      style={{
+                        left: Math.min(
+                          Math.max(hoverPreview.x, 60),
+                          (progressBarRef.current?.clientWidth ?? hoverPreview.x + 60) - 60
+                        ),
+                      }}
+                    >
+                      <canvas
+                        ref={hoverCanvasRef}
+                        width={112}
+                        height={63}
+                        className="rounded border border-white/30 bg-black shadow-lg"
+                      />
+                      <span className="rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium text-white">
+                        {formatTime(hoverPreview.time)}
+                      </span>
+                    </div>
+                  )}
                   <svg
                     viewBox="0 0 1000 100"
                     preserveAspectRatio="none"

@@ -1429,7 +1429,7 @@ export function LessonPlayer({
               {likeBurst && (
                 <div
                   key={likeBurst.id}
-                  className="pointer-events-none absolute z-20 animate-like-swing"
+                  className="pointer-events-none absolute z-[25] animate-like-swing"
                   style={{ left: likeBurst.x, top: likeBurst.y }}
                 >
                   <ThumbsUp size={72} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />

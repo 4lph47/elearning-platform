@@ -2,9 +2,25 @@ import { z } from "zod";
 
 // javascript:/data: URLs stored here get rendered unescaped as <a href>/<img src>/
 // <video src>/<iframe src> for every student that opens the course — must be http(s).
+const HTTP_URL_REGEX = /^https?:\/\//i;
+
+// Único campo deste tipo que a pessoa mesmo digita como link (perfil de
+// instrutor) — os outros abaixo (trailer, thumbnail, vídeo, legendas) só
+// recebem o URL devolvido pelo upload de ficheiro (FileUploadInput), nunca
+// texto escrito à mão, por isso têm a sua própria mensagem de erro.
 const httpUrlField = z
   .string()
-  .refine((v) => v === "" || /^https?:\/\//i.test(v), "Link deve começar com http:// ou https://")
+  .refine((v) => v === "" || HTTP_URL_REGEX.test(v), "Link deve começar com http:// ou https://")
+  .optional()
+  .nullable();
+
+// Mesma validação de formato do httpUrlField (proteção contra javascript:/data:
+// acima), mas com mensagem própria — só devia falhar por corrupção/bug no
+// upload, nunca porque a pessoa "esqueceu-se do link", já que o campo nem
+// aceita texto escrito à mão.
+const uploadedFileUrlField = z
+  .string()
+  .refine((v) => v === "" || HTTP_URL_REGEX.test(v), "Ficheiro inválido — tenta enviar novamente")
   .optional()
   .nullable();
 
@@ -57,8 +73,8 @@ export const courseSchema = z.object({
   description: z.string().min(10, "Descrição deve ter pelo menos 10 caracteres"),
   category: z.string().min(2, "Categoria é obrigatória"),
   level: z.enum(["beginner", "intermediate", "advanced"]),
-  thumbnailUrl: httpUrlField,
-  trailerUrl: httpUrlField,
+  thumbnailUrl: uploadedFileUrlField,
+  trailerUrl: uploadedFileUrlField,
   published: z.boolean().optional().default(false),
   price: z.number().min(0, "Preço não pode ser negativo").optional().default(0),
   originalPrice: z.number().min(0, "Preço original não pode ser negativo").optional().nullable(),
@@ -80,9 +96,9 @@ export const lessonSchema = z.object({
   order: z.number().int().min(0),
   isFreePreview: z.boolean().optional().default(false),
   type: z.enum(["VIDEO", "TEXT"]).optional().default("VIDEO"),
-  contentUrl: httpUrlField,
-  thumbnailUrl: httpUrlField,
-  captionsUrl: httpUrlField,
+  contentUrl: uploadedFileUrlField,
+  thumbnailUrl: uploadedFileUrlField,
+  captionsUrl: uploadedFileUrlField,
   textContent: z.string().optional().nullable(),
   durationSeconds: z.number().int().min(0).optional().nullable(),
   description: z.string().optional().nullable(),

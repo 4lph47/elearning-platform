@@ -156,7 +156,6 @@ export function LessonPlayer({
   const menuPortalRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const thumbVideoRef = useRef<HTMLVideoElement>(null);
-  const thumbCanvasRef = useRef<HTMLCanvasElement>(null);
   const thumbHlsRef = useRef<Hls | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const mobileMenuBtnRef = useRef<HTMLDivElement>(null);
@@ -301,16 +300,30 @@ export function LessonPlayer({
   const heatmapRef = useRef<number[]>(seededHeatmapBaseline(lessonId));
   const lastHeatmapRenderRef = useRef(0);
   const [, setHeatmapVersion] = useState(0);
-  // Preview de scrub (mobile): thumbnail real gerado num <video>/<canvas>
-  // escondidos, dedicados só a isto — nunca mexe no <video> principal
-  // (evita interromper a reprodução em curso pra "roubar" um frame).
-  const [scrubPreview, setScrubPreview] = useState<{ time: number; x: number } | null>(null);
+  // Preview de scrub (mobile): filmstrip horizontal, gerado num <video>/
+  // <canvas> escondidos dedicados só a isto — nunca mexe no <video>
+  // principal (evita interromper a reprodução em curso pra "roubar" frames).
   const scrubDraggingRef = useRef(false);
-  const lastScrubUpdateRef = useRef(0);
   const progressDragRef = useRef<{ startY: number; revealed: boolean; alreadyExpanded: boolean } | null>(null);
   const barExpandedRef = useRef(false);
+  const [barExpanded, setBarExpandedState] = useState(false);
   const PROGRESS_LIFT_MAX = 100;
   const PROGRESS_REVEAL_DY = 60;
+  const FILMSTRIP_COUNT = 20;
+  const THUMB_W = 64;
+  const FILMSTRIP_HEIGHT = 88;
+  const FILMSTRIP_BOTTOM = 4;
+  const filmstripScrollRef = useRef<HTMLDivElement>(null);
+  const filmstripCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const [filmstripTimes, setFilmstripTimes] = useState<number[] | null>(null);
+  const [scrubTime, setScrubTime] = useState(0);
+  const lastScrubLabelRef = useRef(0);
+  const filmstripSeekTimerRef = useRef<number | null>(null);
+
+  function setBarExpanded(v: boolean) {
+    barExpandedRef.current = v;
+    setBarExpandedState(v);
+  }
 
   // Duplo-clique/duplo-tap: 1º clique adia o play/pause (setTimeout); se um
   // 2º chegar a tempo, cancela-se o adiado e interpreta-se como gesto duplo
@@ -669,22 +682,114 @@ export function LessonPlayer({
     }
   }
 
-  // O listener de touchmove da barra (mais abaixo) é nativo e só se liga uma
-  // vez (deps []) — usa esta função através de um closure fixo no momento do
-  // mount, por isso lê duration por uma ref (não pelo state diretamente),
-  // senão ficava presa ao valor do 1º render (0, antes dos metadados
-  // carregarem) e o preview nunca aparecia.
-  const durationRef = useRef(0);
-  useEffect(() => {
-    durationRef.current = duration;
-  }, [duration]);
+  // Escolhe o momento "mais importante" (pico do heatmap) dentro de cada
+  // fatia igual da timeline — dá FILMSTRIP_COUNT frames espalhados por todo
+  // o vídeo, cada um destacando o instante mais visto/repetido da sua fatia.
+  function pickImportantMoments(count: number, totalDuration: number): number[] {
+    const buckets = heatmapRef.current;
+    const segmentSize = buckets.length / count;
+    const times: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const start = Math.floor(i * segmentSize);
+      const end = Math.max(start + 1, Math.floor((i + 1) * segmentSize));
+      let bestIdx = start;
+      let bestVal = -Infinity;
+      for (let b = start; b < end && b < buckets.length; b++) {
+        if (buckets[b] > bestVal) {
+          bestVal = buckets[b];
+          bestIdx = b;
+        }
+      }
+      times.push(((bestIdx + 0.5) / buckets.length) * totalDuration);
+    }
+    return times;
+  }
 
-  function updateScrub(clientX: number) {
-    const bar = progressBarRef.current;
-    if (!bar || durationRef.current <= 0) return;
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    setScrubPreview({ time: ratio * durationRef.current, x: ratio * rect.width });
+  function seekAndDraw(video: HTMLVideoElement, canvas: HTMLCanvasElement, time: number): Promise<void> {
+    return new Promise((resolve) => {
+      function draw() {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          } catch {
+            // canvas tainted (CORS) ou frame ainda não disponível — ignora, mantém vazio
+          }
+        }
+        resolve();
+      }
+      if (video.readyState >= 1 && Math.abs(video.currentTime - time) > 0.3) {
+        const onSeeked = () => {
+          video.removeEventListener("seeked", onSeeked);
+          draw();
+        };
+        video.addEventListener("seeked", onSeeked);
+        video.currentTime = time;
+      } else {
+        draw();
+      }
+    });
+  }
+
+  // Gera a filmstrip inteira uma única vez ao expandir (não em cada scroll)
+  // — os frames são fixos, só a posição do scroll/marcador central é que é
+  // ao vivo.
+  async function buildFilmstrip(totalDuration: number) {
+    const thumbVideo = thumbVideoRef.current;
+    if (!thumbVideo || totalDuration <= 0) return;
+    ensureThumbSource();
+    const times = pickImportantMoments(FILMSTRIP_COUNT, totalDuration);
+    setFilmstripTimes(times);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    for (let i = 0; i < times.length; i++) {
+      const canvas = filmstripCanvasRefs.current[i];
+      if (canvas) await seekAndDraw(thumbVideo, canvas, times[i]);
+    }
+  }
+
+  useEffect(() => {
+    if (barExpanded) {
+      void buildFilmstrip(duration);
+    } else {
+      setFilmstripTimes(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barExpanded]);
+
+  // Ao abrir a filmstrip, centra o scroll no tempo atual do vídeo (não
+  // começa sempre do zero). scrollLeft mapeia 1:1 pro tempo porque os
+  // espaçadores de "50%" de cada lado (ver JSX) fazem centerX = scrollLeft.
+  useEffect(() => {
+    if (!filmstripTimes) return;
+    const el = filmstripScrollRef.current;
+    if (!el || duration <= 0) return;
+    const totalWidth = FILMSTRIP_COUNT * THUMB_W;
+    el.scrollLeft = (currentTime / duration) * totalWidth;
+    setScrubTime(currentTime);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filmstripTimes]);
+
+  // Scroll horizontal nativo = o gesto de "swipe esquerda/direita" (o browser
+  // já trata o touch, não precisa de handler de touch custom). O marcador
+  // central fica fixo; o tempo em cima dele reflete o que está por baixo
+  // dele (scrollLeft / largura total). Procura o tempo em tempo real
+  // (throttled) mas só faz seek de verdade ao vídeo depois do scroll
+  // assentar (debounce), pra não bombardear o HLS com seeks a cada frame.
+  function handleFilmstripScroll() {
+    const el = filmstripScrollRef.current;
+    if (!el || duration <= 0) return;
+    const totalWidth = FILMSTRIP_COUNT * THUMB_W;
+    const time = Math.min(duration, Math.max(0, (el.scrollLeft / totalWidth) * duration));
+    const now = Date.now();
+    if (now - lastScrubLabelRef.current > 50) {
+      lastScrubLabelRef.current = now;
+      setScrubTime(time);
+    }
+    if (filmstripSeekTimerRef.current) window.clearTimeout(filmstripSeekTimerRef.current);
+    filmstripSeekTimerRef.current = window.setTimeout(() => {
+      const video = videoRef.current;
+      if (video) video.currentTime = time;
+    }, 120);
   }
 
   // stopPropagation nos três handlers: a barra vive dentro do container que
@@ -701,8 +806,7 @@ export function LessonPlayer({
   // a descer ao largar o dedo. Só recolhe quando se toca fora dela (ver
   // useEffect de collapse mais abaixo, "clicar noutra coisa").
   function collapseBar() {
-    barExpandedRef.current = false;
-    setScrubPreview(null);
+    setBarExpanded(false);
     const bar = progressBarRef.current;
     if (bar) {
       bar.style.transition = "transform 150ms ease-out";
@@ -715,7 +819,6 @@ export function LessonPlayer({
 
   function handleProgressTouchStart(e: React.TouchEvent) {
     e.stopPropagation();
-    const startX = e.touches[0].clientX;
     progressDragRef.current = {
       startY: e.touches[0].clientY,
       revealed: barExpandedRef.current,
@@ -723,9 +826,6 @@ export function LessonPlayer({
     };
     scrubDraggingRef.current = true;
     ensureThumbSource();
-    // Já estava expandida (2º toque) — mostra logo o preview, não precisa
-    // de repetir o swipe up.
-    if (barExpandedRef.current) updateScrub(startX);
   }
 
   // touchmove tem de ser um listener NATIVO (não onTouchMove do React) com
@@ -744,31 +844,14 @@ export function LessonPlayer({
       e.stopPropagation();
       const touch = e.touches[0];
 
-      // Já expandida desde o touchstart — fica sempre no topo, só faz scrub
-      // horizontal, não recalcula o lift a partir de dy (senão "caía" pra
-      // baixo no início deste novo gesto antes de voltar a subir).
-      if (drag.alreadyExpanded) {
-        const now = Date.now();
-        if (now - lastScrubUpdateRef.current >= 120) {
-          lastScrubUpdateRef.current = now;
-          updateScrub(touch.clientX);
-        }
-        return;
-      }
+      // Já expandida desde o touchstart — fica sempre no topo, não recalcula
+      // o lift a partir de dy (senão "caía" pra baixo no início deste novo
+      // gesto antes de voltar a subir).
+      if (drag.alreadyExpanded) return;
 
       const dy = Math.max(0, drag.startY - touch.clientY);
       if (bar) bar.style.transform = dy > 0 ? `translateY(-${Math.min(PROGRESS_LIFT_MAX, dy)}px)` : "";
-
-      if (dy > PROGRESS_REVEAL_DY) {
-        drag.revealed = true;
-        const now = Date.now();
-        if (now - lastScrubUpdateRef.current < 120) return; // throttle: 1 seek/desenho a cada 120ms, não a cada pixel
-        lastScrubUpdateRef.current = now;
-        updateScrub(touch.clientX);
-      } else if (drag.revealed) {
-        drag.revealed = false;
-        setScrubPreview(null);
-      }
+      drag.revealed = dy > PROGRESS_REVEAL_DY;
     }
     bar.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => bar.removeEventListener("touchmove", onTouchMove);
@@ -781,11 +864,10 @@ export function LessonPlayer({
     e.stopPropagation();
     scrubDraggingRef.current = false;
     progressDragRef.current = null;
-    setScrubPreview(null);
 
     if (drag.revealed) {
       // Ficou (ou já estava) expandida — trava no topo, não recolhe sozinha.
-      barExpandedRef.current = true;
+      setBarExpanded(true);
       const bar = progressBarRef.current;
       if (bar) {
         bar.style.transition = "transform 150ms ease-out";
@@ -806,7 +888,8 @@ export function LessonPlayer({
     function handleOutside(e: Event) {
       if (!barExpandedRef.current) return;
       const target = e.target as Node;
-      if (progressBarRef.current && progressBarRef.current.contains(target)) return;
+      if (progressBarRef.current?.contains(target)) return;
+      if (filmstripScrollRef.current?.contains(target)) return;
       collapseBar();
     }
     document.addEventListener("touchstart", handleOutside);
@@ -1027,42 +1110,6 @@ export function LessonPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [youtubeId]);
 
-  // Redesenha o frame do thumbnail sempre que o tempo do scrub muda (já
-  // vem throttled a 120ms por handleProgressTouchMove). Só faz seek no
-  // <video> escondido se o frame atual estiver longe o suficiente do pedido
-  // (>0.3s) — arrastos pequenos dentro do mesmo frame não repetem o seek.
-  useEffect(() => {
-    if (!scrubPreview) return;
-    const thumbVideo = thumbVideoRef.current;
-    const canvas = thumbCanvasRef.current;
-    if (!thumbVideo || !canvas) return;
-    let cancelled = false;
-    function draw() {
-      if (cancelled || thumbVideo!.readyState < 2) return; // HAVE_CURRENT_DATA — antes disso não há frame pra desenhar
-      const ctx = canvas!.getContext("2d");
-      if (!ctx) return;
-      try {
-        ctx.drawImage(thumbVideo!, 0, 0, canvas!.width, canvas!.height);
-      } catch {
-        // canvas tainted (CORS) ou frame ainda não disponível — mantém o anterior
-      }
-    }
-    if (Math.abs(thumbVideo.currentTime - scrubPreview.time) > 0.3) {
-      const onSeeked = () => {
-        thumbVideo.removeEventListener("seeked", onSeeked);
-        if (!cancelled) draw();
-      };
-      thumbVideo.addEventListener("seeked", onSeeked);
-      thumbVideo.currentTime = scrubPreview.time;
-    } else {
-      draw();
-    }
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrubPreview?.time]);
-
   useEffect(() => {
     const thumbVideo = thumbVideoRef.current;
     if (thumbVideo) delete thumbVideo.dataset.ready;
@@ -1192,10 +1239,11 @@ export function LessonPlayer({
               </div>
 
               {/* Maximizar: no mobile fica no canto inferior direito, mas acima da barra
-                  (mesmo nível do tempo do vídeo), não sobre ela. */}
+                  (mesmo nível do tempo do vídeo), não sobre ela. Some quando a barra está
+                  expandida (a filmstrip ocupa esse canto). */}
               <div
                 className={`absolute bottom-7 right-2 z-30 text-white transition-opacity duration-150 lg:hidden ${
-                  controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
+                  controlsShown && !barExpanded ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
                 <button type="button"
@@ -1252,7 +1300,11 @@ export function LessonPlayer({
                   triggerCenterIcon(isPaused ? "play" : "pause", isPaused);
                 }}
                 aria-label={playing ? "Pausar" : "Reproduzir"}
-                className={`absolute left-1/2 top-1/2 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-opacity duration-150 lg:hidden ${
+                style={{
+                  transform: barExpanded ? "translate(-50%, calc(-50% - 110px))" : "translate(-50%, -50%)",
+                  transition: "transform 200ms ease-out, opacity 150ms",
+                }}
+                className={`absolute left-1/2 top-1/2 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm lg:hidden ${
                   controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
@@ -1298,30 +1350,54 @@ export function LessonPlayer({
                   />
                 </div>
 
-                {/* Preview de scrub (mobile): só aparece depois do swipe up na barra passar
-                    PROGRESS_REVEAL_DY (ver handleProgressTouchMove) — nesse ponto a barra já
-                    subiu o suficiente pra libertar este espaço por baixo dela. */}
-                {scrubPreview && (
-                  <div
-                    className="pointer-events-none absolute z-30 flex -translate-x-1/2 flex-col items-center gap-1 lg:hidden"
-                    style={{
-                      left: Math.min(
-                        Math.max(scrubPreview.x, 60),
-                        (progressBarRef.current?.clientWidth ?? scrubPreview.x + 60) - 60
-                      ),
-                      bottom: 8,
-                    }}
-                  >
-                    <canvas
-                      ref={thumbCanvasRef}
-                      width={112}
-                      height={63}
-                      className="rounded border border-white/30 bg-black shadow-lg"
-                    />
-                    <span className="rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium text-white">
-                      {formatTime(scrubPreview.time)}
-                    </span>
-                  </div>
+                {/* Filmstrip de scrub (mobile): só aparece enquanto a barra está expandida
+                    (swipe up, ver barExpanded). Ocupa toda a área livre por baixo da barra,
+                    com um marcador central fixo — arrastar horizontalmente (scroll nativo,
+                    trata do swipe esquerda/direita sozinho) muda qual frame fica por baixo
+                    do marcador, e isso é que decide o tempo (ver handleFilmstripScroll). */}
+                {barExpanded && filmstripTimes && (
+                  <>
+                    <div
+                      ref={filmstripScrollRef}
+                      onScroll={handleFilmstripScroll}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      className="absolute inset-x-0 z-30 flex overflow-x-auto lg:hidden [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      style={{ bottom: FILMSTRIP_BOTTOM, height: FILMSTRIP_HEIGHT }}
+                    >
+                      <div className="flex-shrink-0" style={{ width: "50%" }} />
+                      {filmstripTimes.map((t, i) => (
+                        <div key={i} className="h-full flex-shrink-0" style={{ width: THUMB_W }}>
+                          <canvas
+                            ref={(el) => {
+                              filmstripCanvasRefs.current[i] = el;
+                            }}
+                            width={THUMB_W}
+                            height={FILMSTRIP_HEIGHT}
+                            className="h-full w-full bg-black object-cover"
+                          />
+                        </div>
+                      ))}
+                      <div className="flex-shrink-0" style={{ width: "50%" }} />
+                    </div>
+
+                    {/* Marcador central: fixo, não se move — é a filmstrip que desliza por
+                        baixo dele. */}
+                    <div
+                      className="pointer-events-none absolute inset-x-0 z-30 flex justify-center lg:hidden"
+                      style={{ bottom: FILMSTRIP_BOTTOM, height: FILMSTRIP_HEIGHT }}
+                    >
+                      <div className="h-full w-0.5 bg-white shadow-[0_0_4px_rgba(0,0,0,0.8)]" />
+                    </div>
+
+                    <div
+                      className="pointer-events-none absolute inset-x-0 z-30 flex justify-center lg:hidden"
+                      style={{ bottom: FILMSTRIP_BOTTOM + FILMSTRIP_HEIGHT + 6 }}
+                    >
+                      <span className="rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium text-white">
+                        {formatTime(scrubTime)}
+                      </span>
+                    </div>
+                  </>
                 )}
 
                 <div className="absolute inset-x-0 bottom-7 flex items-center gap-3 px-3 text-white lg:static lg:inset-auto lg:bottom-auto lg:mt-2 lg:px-0">

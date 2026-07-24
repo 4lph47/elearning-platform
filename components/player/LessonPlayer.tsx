@@ -1125,7 +1125,7 @@ export function LessonPlayer({
                   onTouchStart={handleProgressTouchStart}
                   onTouchMove={handleProgressTouchMove}
                   onTouchEnd={handleProgressTouchEnd}
-                  className="group/progress absolute inset-x-0 bottom-1 h-4 px-3 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
+                  className="group/progress absolute inset-x-0 bottom-28 h-4 px-3 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
                 >
                   <svg
                     viewBox="0 0 1000 100"
@@ -1159,9 +1159,8 @@ export function LessonPlayer({
                   />
                 </div>
 
-                {/* Preview de scrub (mobile): thumbnail real do frame arrastado. Fica
-                    colado por cima da barra — a barra já está no limite de baixo do
-                    vídeo, não há espaço visível por baixo dela pra encaixar isto. */}
+                {/* Preview de scrub (mobile): thumbnail real do frame arrastado, no espaço
+                    reservado entre a barra (subida, bottom-28) e o limite de baixo do vídeo. */}
                 {scrubPreview && (
                   <div
                     className="pointer-events-none absolute z-30 flex -translate-x-1/2 flex-col items-center gap-1 lg:hidden"
@@ -1170,7 +1169,7 @@ export function LessonPlayer({
                         Math.max(scrubPreview.x, 60),
                         (progressBarRef.current?.clientWidth ?? scrubPreview.x + 60) - 60
                       ),
-                      bottom: 28,
+                      bottom: 12,
                     }}
                   >
                     <canvas

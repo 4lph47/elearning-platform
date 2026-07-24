@@ -570,7 +570,7 @@ export function LessonPlayer({
     const id = gestureIdRef.current;
     setLikeBurst({ x, y, id });
     onDoubleTapLike?.();
-    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 600);
+    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 400);
   }
 
   function triggerSeekFlash(dir: "back" | "fwd") {
@@ -1427,7 +1427,7 @@ export function LessonPlayer({
                   onMouseEnter={handleProgressMouseEnter}
                   onMouseMove={handleProgressMouseMove}
                   onMouseLeave={handleProgressMouseLeave}
-                  className="group/progress absolute inset-x-0 bottom-2 h-10 px-3 lg:relative lg:inset-auto lg:bottom-auto lg:h-4 lg:px-0"
+                  className="group/progress absolute inset-x-0 bottom-2 z-40 h-10 px-3 lg:relative lg:inset-auto lg:bottom-auto lg:h-4 lg:px-0"
                 >
                   {hoverPreview && (
                     <div

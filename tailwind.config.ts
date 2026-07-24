@@ -63,7 +63,7 @@ const config: Config = {
         "seek-flash": "seek-flash 500ms ease-out forwards",
         "corner-card-in": "corner-card-in 220ms ease-out",
         "center-pop": "center-pop 700ms ease-out forwards",
-        "like-swing": "like-swing 600ms linear forwards",
+        "like-swing": "like-swing 400ms linear forwards",
       },
     },
   },

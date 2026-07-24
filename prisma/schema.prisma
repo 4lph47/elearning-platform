@@ -47,6 +47,8 @@ model User {
   passwordHash   String?
   role           Role            @default(STUDENT)
   bio            String?
+  expertise      String?
+  yearsExperience Int?
   websiteUrl     String?
   twitterUrl     String?
   linkedinUrl    String?

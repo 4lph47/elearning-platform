@@ -55,6 +55,7 @@ export async function Footer() {
         { label: "Criar conta", href: "/register" },
         { label: "A minha conta", href: "/account" },
         { label: "Privacidade", href: "/privacidade" },
+        { label: "Termos e Serviços", href: "/termos" },
       ],
     },
   ];

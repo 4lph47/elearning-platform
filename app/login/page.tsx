@@ -4,8 +4,9 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { GraduationCap, Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { AuthLayout } from "@/components/auth/AuthLayout";
 
 export default function LoginPage() {
   return (
@@ -67,161 +68,144 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-16 dark:bg-black">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-blue-900/20 blur-3xl dark:bg-blue-900/30" />
-      </div>
-
-      <div className="relative w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <Link
-            href="/"
-            className="mx-auto flex w-fit items-center gap-2 text-lg font-bold text-slate-900 dark:text-white"
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
-              <GraduationCap size={22} />
-            </span>
-            E-Learn
+    <AuthLayout
+      title="Bem-vindo de volta"
+      subtitle="Entra na tua conta para continuar a aprender"
+      footer={
+        <>
+          Ainda não tens conta?{" "}
+          <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+            Regista-te
           </Link>
-          <h1 className="mt-5 text-2xl font-bold text-slate-900 dark:text-white">Bem-vindo de volta</h1>
-          <p className="mt-1.5 hidden text-sm text-slate-500 dark:text-slate-400 sm:block">Entra na tua conta para continuar a aprender</p>
+        </>
+      }
+    >
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl })}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <GoogleIcon /> Continuar com Google
+          </button>
+          <button
+            type="button"
+            onClick={() => signIn("github", { callbackUrl })}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <GitHubIcon /> Continuar com GitHub
+          </button>
+          <button
+            type="button"
+            onClick={() => signIn("azure-ad", { callbackUrl })}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <MicrosoftIcon /> Continuar com Microsoft
+          </button>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => signIn("google", { callbackUrl })}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            >
-              <GoogleIcon /> Continuar com Google
-            </button>
-            <button
-              type="button"
-              onClick={() => signIn("github", { callbackUrl })}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            >
-              <GitHubIcon /> Continuar com GitHub
-            </button>
-            <button
-              type="button"
-              onClick={() => signIn("azure-ad", { callbackUrl })}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            >
-              <MicrosoftIcon /> Continuar com Microsoft
-            </button>
-          </div>
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+          <span className="text-xs text-slate-400 dark:text-slate-500">ou</span>
+          <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+        </div>
 
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-            <span className="text-xs text-slate-400 dark:text-slate-500">ou</span>
-            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-          </div>
-
-          {magicLinkMode ? (
-            magicLinkSent ? (
-              <p className="text-center text-sm text-slate-600 dark:text-slate-300">
-                Enviámos um link de acesso para <strong>{email}</strong>. Verifica a tua caixa de entrada.
-              </p>
-            ) : (
-              <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="magic-email" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                    <input
-                      id="magic-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                    />
-                  </div>
-                </div>
-                {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
-                <Button type="submit" variant="accent" className="w-full" disabled={loading}>
-                  {loading ? "A enviar..." : "Enviar link de acesso"}
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => { setMagicLinkMode(false); setError(null); }}
-                  className="w-full text-center text-sm text-slate-500 hover:underline dark:text-slate-400"
-                >
-                  Voltar ao login com password
-                </button>
-              </form>
-            )
+        {magicLinkMode ? (
+          magicLinkSent ? (
+            <p className="text-center text-sm text-slate-600 dark:text-slate-300">
+              Enviámos um link de acesso para <strong>{email}</strong>. Verifica a tua caixa de entrada.
+            </p>
           ) : (
-            <>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                    <input
-                      id="email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                    />
-                  </div>
+            <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="magic-email" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                  <input
+                    id="magic-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                  />
                 </div>
-                <div>
-                  <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                    <input
-                      id="password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                    />
-                  </div>
-                </div>
-                {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
-                <Button type="submit" variant="accent" className="w-full" disabled={loading}>
-                  {loading ? "A entrar..." : (
-                    <>
-                      Entrar <ArrowRight size={16} />
-                    </>
-                  )}
-                </Button>
-              </form>
+              </div>
+              {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+              <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+                {loading ? "A enviar..." : "Enviar link de acesso"}
+              </Button>
               <button
                 type="button"
-                onClick={() => { setMagicLinkMode(true); setError(null); }}
-                className="mt-3 w-full text-center text-sm text-blue-600 hover:underline dark:text-blue-400"
+                onClick={() => { setMagicLinkMode(false); setError(null); }}
+                className="w-full text-center text-sm text-slate-500 hover:underline dark:text-slate-400"
               >
-                Entrar sem password (link mágico)
+                Voltar ao login com password
               </button>
-            </>
-          )}
-
-          <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
-            Ainda não tens conta?{" "}
-            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
-              Regista-te
-            </Link>
-          </p>
-        </div>
-
-        <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
-          Demo: instrutor@example.com / aluno@example.com — password: password123
-        </p>
+            </form>
+          )
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                  <input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                  />
+                </div>
+              </div>
+              {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+              <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+                {loading ? "A entrar..." : (
+                  <>
+                    Entrar <ArrowRight size={16} />
+                  </>
+                )}
+              </Button>
+            </form>
+            <button
+              type="button"
+              onClick={() => { setMagicLinkMode(true); setError(null); }}
+              className="mt-3 w-full text-center text-sm text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Entrar sem password (link mágico)
+            </button>
+          </>
+        )}
       </div>
-    </div>
+
+      <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
+        Demo: instrutor@example.com / aluno@example.com — password: password123
+      </p>
+    </AuthLayout>
   );
 }
 

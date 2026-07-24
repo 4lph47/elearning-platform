@@ -8,12 +8,42 @@ const httpUrlField = z
   .optional()
   .nullable();
 
-export const registerSchema = z.object({
-  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "A password deve ter pelo menos 6 caracteres"),
-  wantsToTeach: z.boolean().optional().default(false),
-});
+export const registerSchema = z
+  .object({
+    name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+    email: z.string().email("Email inválido"),
+    password: z.string().min(6, "A password deve ter pelo menos 6 caracteres"),
+    wantsToTeach: z.boolean().optional().default(false),
+    acceptedTerms: z.literal(true, { message: "Tens de aceitar os Termos e Serviços" }),
+    bio: z.string().max(600, "Bio deve ter no máximo 600 caracteres").optional().nullable(),
+    expertise: z.string().max(120, "Área de especialização deve ter no máximo 120 caracteres").optional().nullable(),
+    yearsExperience: z.number().int().min(0, "Não pode ser negativo").max(80, "Valor inválido").optional().nullable(),
+    linkedinUrl: httpUrlField,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.wantsToTeach) return;
+    if (!data.bio || data.bio.trim().length < 50) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["bio"],
+        message: "Conta-nos a tua experiência com pelo menos 50 caracteres",
+      });
+    }
+    if (!data.expertise || data.expertise.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expertise"],
+        message: "Indica a tua área de especialização",
+      });
+    }
+    if (data.yearsExperience === null || data.yearsExperience === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["yearsExperience"],
+        message: "Indica os teus anos de experiência",
+      });
+    }
+  });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({

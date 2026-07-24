@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { name, email, password, wantsToTeach } = parsed.data;
+  const { name, email, password, wantsToTeach, bio, expertise, yearsExperience, linkedinUrl } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -35,6 +35,14 @@ export async function POST(request: Request) {
       email,
       passwordHash,
       role: wantsToTeach ? "INSTRUCTOR" : "STUDENT",
+      ...(wantsToTeach
+        ? {
+            bio: bio?.trim() || null,
+            expertise: expertise?.trim() || null,
+            yearsExperience: yearsExperience ?? null,
+            linkedinUrl: linkedinUrl?.trim() || null,
+          }
+        : {}),
     },
   });
 

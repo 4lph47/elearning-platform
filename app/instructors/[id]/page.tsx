@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { Star, Users, BookOpen, MessageSquare, Globe, Link2, Award } from "lucide-react";
+import { Star, Users, BookOpen, MessageSquare, Globe, Link2, Award, Briefcase, Clock } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SOCIAL_PLATFORMS } from "@/lib/socialPlatforms";
@@ -34,6 +34,8 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       name: true,
       role: true,
       bio: true,
+      expertise: true,
+      yearsExperience: true,
       image: true,
       websiteUrl: true,
       twitterUrl: true,
@@ -154,6 +156,21 @@ export default async function InstructorProfilePage({ params }: { params: Promis
             )}
             <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
             <h1 className="mt-1 text-3xl font-bold text-white sm:text-5xl">{instructor.name}</h1>
+
+            {(instructor.expertise || instructor.yearsExperience !== null) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {instructor.expertise && (
+                  <span className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white">
+                    <Briefcase size={13} /> {instructor.expertise}
+                  </span>
+                )}
+                {instructor.yearsExperience !== null && instructor.yearsExperience !== undefined && (
+                  <span className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white">
+                    <Clock size={13} /> {instructor.yearsExperience} ano{instructor.yearsExperience !== 1 ? "s" : ""} de experiência
+                  </span>
+                )}
+              </div>
+            )}
 
             {instructor.bio && (
               <p className="mt-3 max-w-2xl whitespace-pre-wrap text-white/85">{instructor.bio}</p>

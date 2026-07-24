@@ -685,15 +685,25 @@ export function LessonPlayer({
     thumbVideo.dataset.ready = "1";
     if (usingHls && hlsMasterUrl) {
       if (Hls.isSupported()) {
-        const hls = new Hls();
+        // startLevel 0 + prende sempre na rendition mais pequena — um
+        // thumbnail de 64x88 não precisa de 1080p, e sem isto o hls.js
+        // escolhia por estimativa de largura de banda (podia ir alto),
+        // carregando segmentos maiores que só atrasavam o preview.
+        const hls = new Hls({ startLevel: 0 });
         thumbHlsRef.current = hls;
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          hls.currentLevel = 0;
+        });
         hls.loadSource(hlsMasterUrl);
         hls.attachMedia(thumbVideo);
       } else if (thumbVideo.canPlayType("application/vnd.apple.mpegurl")) {
         thumbVideo.src = hlsMasterUrl;
       }
-    } else if (activeSrc) {
-      thumbVideo.src = activeSrc;
+    } else {
+      // Mesma lógica pro caminho legacy (mp4 plano): a rendition mais
+      // pequena disponível, não a que o utilizador escolheu pra ver o vídeo.
+      const smallest = sortedRenditions.length > 0 ? sortedRenditions[sortedRenditions.length - 1].url : activeSrc;
+      if (smallest) thumbVideo.src = smallest;
     }
   }
 
@@ -782,7 +792,15 @@ export function LessonPlayer({
     const times = pickImportantMoments(FILMSTRIP_COUNT, totalDuration);
     setFilmstripTimes(times);
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    for (let i = 0; i < times.length; i++) {
+
+    // Desenha primeiro os frames perto do tempo atual (onde o marcador central
+    // já abre, ver o useEffect de centrar o scroll) — são os que aparecem
+    // logo à vista; os das pontas (fora do ecrã) preenchem a seguir.
+    const centerIndex =
+      totalDuration > 0 ? Math.round((currentTime / totalDuration) * (times.length - 1)) : 0;
+    const order = times.map((_, i) => i).sort((a, b) => Math.abs(a - centerIndex) - Math.abs(b - centerIndex));
+
+    for (const i of order) {
       const canvas = filmstripCanvasRefs.current[i];
       if (canvas) await seekAndDraw(thumbVideo, canvas, times[i]);
     }

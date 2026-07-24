@@ -22,7 +22,7 @@
 // Ver README.md deste diretório para deploy (agora precisa de expor porta —
 // deixou de ser só um poller em fundo).
 
-const { execFile } = require("node:child_process");
+const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
 const fs = require("node:fs/promises");
 const fsSync = require("node:fs");
@@ -165,12 +165,52 @@ async function probeDuration(filePath) {
   return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
 }
 
+// Corre o ffmpeg via spawn (não execFile) — só assim dá pra ler o stdout
+// enquanto o processo ainda está a correr. "-progress pipe:1" faz o ffmpeg
+// escrever linhas "chave=valor" (out_time=HH:MM:SS.ms entre elas) ali a
+// cada fração de segundo; sem isto só saberíamos que um rung acabou
+// DEPOIS de acabar (execFile só resolve a promise no fim), sem nada a
+// meio. stderr fica ao critério do "-loglevel error" (só erros reais,
+// nada de verboso) — guarda-se pra compor a mensagem de erro se o
+// processo sair com falha.
+function runFfmpeg(args, durationSeconds, onProgress) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("ffmpeg", args);
+    const stderrChunks = [];
+    let stdoutBuffer = "";
+    proc.stdout.on("data", (chunk) => {
+      stdoutBuffer += chunk.toString();
+      const lines = stdoutBuffer.split("\n");
+      stdoutBuffer = lines.pop() ?? ""; // última linha pode estar incompleta, guarda pro próximo chunk
+      if (!onProgress || !(durationSeconds > 0)) return;
+      for (const line of lines) {
+        const match = line.match(/^out_time=(\d+):(\d+):(\d+(?:\.\d+)?)/);
+        if (!match) continue;
+        const seconds = Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+        onProgress(Math.min(1, seconds / durationSeconds));
+      }
+    });
+    proc.stderr.on("data", (chunk) => stderrChunks.push(chunk));
+    proc.on("error", reject);
+    proc.on("close", (code, signal) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      const stderr = Buffer.concat(stderrChunks).toString().trim();
+      const err = new Error(stderr || `ffmpeg saiu com código ${code}`);
+      err.signal = signal;
+      reject(err);
+    });
+  });
+}
+
 // HLS segmentado — TODOS os rungs recodificam agora, incluindo o mais
 // próximo da fonte (antes ficava só remuxado, "-c copy", do mesmo tamanho
 // do original). CRF mais baixo (20, quase sem perda visível) no rung de
 // topo, CRF 23 (ainda alta qualidade) nos restantes — troca CPU extra no
 // upload por espaço a sério poupado no Storage, mesmo na melhor qualidade.
-async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
+async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf, durationSeconds, onProgress) {
   await fs.mkdir(outDir, { recursive: true });
   const playlistPath = path.join(outDir, "index.m3u8");
   const segmentPattern = path.join(outDir, "seg%03d.ts");
@@ -222,8 +262,7 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
     // genuinamente momentâneas, não vale gastar tempo a repetir muito.
     await withRetries(
       () =>
-        execFileAsync(
-          "ffmpeg",
+        runFfmpeg(
           [
             "-y",
             "-loglevel",
@@ -237,13 +276,12 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
             "vod",
             "-hls_segment_filename",
             segmentPattern,
+            "-progress",
+            "pipe:1",
             playlistPath,
           ],
-          // Node's execFile default maxBuffer é só 1MB — ffmpeg é verboso a
-          // sério no stderr (progresso, frame a frame), qualquer vídeo com mais
-          // que uns segundos estoura isso e o processo é morto a meio (ficheiro
-          // de saída fica truncado/inválido). 100MB dá margem generosa.
-          { maxBuffer: 100 * 1024 * 1024 }
+          durationSeconds,
+          onProgress
         ),
       2,
       `ffmpeg ${path.basename(outDir)}`
@@ -365,7 +403,12 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
     const isTopRung = i === rungs.length - 1;
     const crf = isTopRung ? 20 : 23;
 
-    await transcodeRenditionHls(sourcePath, outDir, rung.height, crf);
+    await transcodeRenditionHls(sourcePath, outDir, rung.height, crf, durationSeconds, (fraction) => {
+      // i rungs já concluídos (saltados ou processados nesta run) antes
+      // deste + fração já codificada deste — dá granularidade de 1% em vez
+      // de só "mais um rung inteiro pronto".
+      if (options && options.onRungProgress) options.onRungProgress(i + fraction);
+    });
 
     const width = scaledEvenWidth(sourceWidth, sourceHeight, rung.height);
     const height = rung.height;
@@ -381,7 +424,7 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
       await saveTranscodeProgress(workDir, { renditions, variants: variantsSoFar, masterPlaylistUrl });
     }
     const isLast = i === rungs.length - 1;
-    if (onRendition) await onRendition(rendition, masterPlaylistUrl, isLast);
+    if (onRendition) await onRendition(rendition, masterPlaylistUrl, isLast, renditions.length);
 
     await fs.rm(outDir, { recursive: true, force: true }).catch(() => {});
     console.log(`  -> ${rung.label} pronto (${(totalBytes / 1024 / 1024).toFixed(1)}MB)`);
@@ -591,12 +634,13 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
         assetId,
         sourcePath,
         workDir,
-        () => {
+        (rendition, masterPlaylistUrlSoFar, isLast, doneCount) => {
           // Um rung novo (não vindo do resume) acabou de ficar pronto —
-          // avança o contador que o cliente lê via /upload-finalize-status.
+          // completed passa a refletir a contagem exata (não soma +1 a
+          // cima do que "onRungProgress" possa já ter deixado, que é
+          // fracionário — ver abaixo).
           const job = finalizeJobs.get(assetId);
-          console.log(`  -> [finalize] ${assetId} onRendition: job antes de incrementar = ${JSON.stringify(job)}`);
-          if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed: job.completed + 1 });
+          if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed: doneCount });
         },
         {
           resume: progress,
@@ -604,6 +648,14 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
           onPlan: (total) => {
             const job = finalizeJobs.get(assetId);
             if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, total });
+          },
+          // Progresso DENTRO do rung atual (ver runFfmpeg/-progress pipe:1)
+          // — completed fica fracionário durante a codificação (ex.: 1.42 =
+          // 1 rung pronto + 42% do 2º), dando granularidade de 1% ao
+          // cliente sem mudar o formato da resposta (só um número).
+          onRungProgress: (completed) => {
+            const job = finalizeJobs.get(assetId);
+            if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed });
           },
         }
       );
@@ -685,7 +737,6 @@ async function handleUploadFinalizeStatusRequest(req, res) {
   }
 
   const job = finalizeJobs.get(assetId);
-  console.log(`  -> [finalize] status pedido para ${assetId}: ${job ? JSON.stringify(job) : "SEM JOB no mapa"}`);
   if (!job) {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ state: "unknown" }));

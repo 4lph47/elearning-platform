@@ -25,6 +25,8 @@ const profileSchema = z
   .object({
     name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100, "Nome deve ter no máximo 100 caracteres").optional(),
     image: z.string().max(500, "Link da imagem deve ter no máximo 500 caracteres").optional().nullable(),
+    bannerUrl: z.string().max(500, "Link do banner deve ter no máximo 500 caracteres").optional().nullable(),
+    bannerType: z.enum(["IMAGE", "VIDEO"]).optional().nullable(),
     bio: z.string().max(600, "Bio deve ter no máximo 600 caracteres").optional().nullable(),
     expertise: z.string().max(120, "Área de especialização deve ter no máximo 120 caracteres").optional().nullable(),
     yearsExperience: z.number().int().min(0, "Não pode ser negativo").max(80, "Valor inválido").optional().nullable(),
@@ -62,6 +64,8 @@ export async function PATCH(request: Request) {
   const data = parsed.data as {
     name?: string;
     image?: string | null;
+    bannerUrl?: string | null;
+    bannerType?: "IMAGE" | "VIDEO" | null;
     bio?: string | null;
     expertise?: string | null;
     yearsExperience?: number | null;
@@ -74,6 +78,9 @@ export async function PATCH(request: Request) {
     data: {
       ...(data.name !== undefined ? { name: data.name.trim() } : {}),
       ...(data.image !== undefined ? { image: data.image?.trim() || null } : {}),
+      // Sem banner, não há tipo — os dois andam sempre a par, nunca um sem o outro.
+      bannerUrl: data.bannerUrl?.trim() || null,
+      bannerType: data.bannerUrl?.trim() ? data.bannerType ?? null : null,
       bio: data.bio?.trim() || null,
       expertise: data.expertise?.trim() || null,
       yearsExperience: data.yearsExperience ?? null,
@@ -92,6 +99,8 @@ export async function PATCH(request: Request) {
   return NextResponse.json({
     name: updated.name,
     image: updated.image,
+    bannerUrl: updated.bannerUrl,
+    bannerType: updated.bannerType,
     bio: updated.bio,
     expertise: updated.expertise,
     yearsExperience: updated.yearsExperience,

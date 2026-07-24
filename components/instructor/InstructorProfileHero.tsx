@@ -19,8 +19,11 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Image as ImageIcon,
+  Film,
 } from "lucide-react";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
+import { InstructorHeroGradient } from "@/components/instructor/InstructorHeroGradient";
 import { SOCIAL_PLATFORMS, matchesPlatformDomain, type SocialPlatformKey } from "@/lib/socialPlatforms";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
@@ -42,6 +45,8 @@ interface CertificationInput {
   url: string;
 }
 
+type BannerType = "IMAGE" | "VIDEO";
+
 interface Stats {
   avgRating: number | null;
   totalReviews: number;
@@ -52,6 +57,8 @@ interface Stats {
 interface ProfileDraft {
   name: string;
   image: string | null;
+  bannerUrl: string | null;
+  bannerType: BannerType | null;
   bio: string;
   expertise: string;
   yearsExperience: string;
@@ -65,6 +72,8 @@ export function InstructorProfileHero({
   profileId,
   initialName,
   initialImage,
+  initialBannerUrl,
+  initialBannerType,
   initialBio,
   initialExpertise,
   initialYearsExperience,
@@ -76,6 +85,8 @@ export function InstructorProfileHero({
   profileId: string;
   initialName: string;
   initialImage: string | null;
+  initialBannerUrl: string | null;
+  initialBannerType: BannerType | null;
   initialBio: string;
   initialExpertise: string;
   initialYearsExperience: number | null;
@@ -97,6 +108,8 @@ export function InstructorProfileHero({
 
   const [name, setName] = useState(draft?.value.name ?? initialName);
   const [image, setImage] = useState(draft?.value.image ?? initialImage);
+  const [bannerUrl, setBannerUrl] = useState(draft?.value.bannerUrl ?? initialBannerUrl);
+  const [bannerType, setBannerType] = useState<BannerType | null>(draft?.value.bannerType ?? initialBannerType);
   const [bio, setBio] = useState(draft?.value.bio ?? initialBio);
   const [expertise, setExpertise] = useState(draft?.value.expertise ?? initialExpertise);
   const [yearsExperience, setYearsExperience] = useState(
@@ -119,9 +132,20 @@ export function InstructorProfileHero({
     }
     if (!editing) return;
     setDirty(true);
-    saveDraft<ProfileDraft>(draftKey, { name, image, bio, expertise, yearsExperience, values, activeKeys, certifications });
+    saveDraft<ProfileDraft>(draftKey, {
+      name,
+      image,
+      bannerUrl,
+      bannerType,
+      bio,
+      expertise,
+      yearsExperience,
+      values,
+      activeKeys,
+      certifications,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, image, bio, expertise, yearsExperience, values, activeKeys, certifications]);
+  }, [name, image, bannerUrl, bannerType, bio, expertise, yearsExperience, values, activeKeys, certifications]);
   useUnsavedChangesGuard(dirty);
 
   function discardDraft() {
@@ -138,6 +162,8 @@ export function InstructorProfileHero({
   function cancelEditing() {
     setName(initialName);
     setImage(initialImage);
+    setBannerUrl(initialBannerUrl);
+    setBannerType(initialBannerType);
     setBio(initialBio);
     setExpertise(initialExpertise);
     setYearsExperience(initialYearsExperience !== null ? String(initialYearsExperience) : "");
@@ -186,6 +212,8 @@ export function InstructorProfileHero({
       body: JSON.stringify({
         name: name.trim(),
         image,
+        bannerUrl,
+        bannerType,
         bio,
         expertise,
         yearsExperience: yearsExperience.trim() === "" ? null : Number(yearsExperience),
@@ -224,7 +252,7 @@ export function InstructorProfileHero({
   const fieldClass =
     "rounded-md border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-white placeholder-white/50 focus:border-white/50 focus:outline-none";
 
-  return (
+  const content = (
     <div className="relative">
       {isOwner && draft && (
         <CornerCardStack>
@@ -280,6 +308,52 @@ export function InstructorProfileHero({
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Guardar
           </button>
+        </div>
+      )}
+
+      {showInputs && (
+        <div className="mb-4 max-w-md rounded-lg border border-white/25 bg-white/10 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Banner do perfil</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 flex items-center gap-1.5 text-xs text-white/70">
+                <ImageIcon size={12} /> Imagem
+              </p>
+              <FileUploadInput
+                kind="IMAGE"
+                currentUrl={bannerType === "IMAGE" ? bannerUrl : null}
+                onUploaded={(result) => {
+                  setBannerUrl(result.url);
+                  setBannerType("IMAGE");
+                }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 flex items-center gap-1.5 text-xs text-white/70">
+                <Film size={12} /> Vídeo
+              </p>
+              <FileUploadInput
+                kind="TRAILER"
+                currentUrl={bannerType === "VIDEO" ? bannerUrl : null}
+                onUploaded={(result) => {
+                  setBannerUrl(result.url);
+                  setBannerType("VIDEO");
+                }}
+              />
+            </div>
+          </div>
+          {bannerUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                setBannerUrl(null);
+                setBannerType(null);
+              }}
+              className="mt-2 text-xs font-medium text-white/80 hover:text-white"
+            >
+              Remover banner
+            </button>
+          )}
         </div>
       )}
 
@@ -491,5 +565,42 @@ export function InstructorProfileHero({
         </span>
       </div>
     </div>
+  );
+
+  // Com banner (imagem ou vídeo), este é que fica de fundo — o gradiente
+  // "color coded" (cores tiradas da foto de perfil) passa a exclusivo de
+  // quem não definiu banner, só para não deixar a tela lisa/sem cor
+  // nenhuma. Duas camadas de desvanecimento por cima do banner (vertical +
+  // horizontal), mesma técnica do HeroCarousel da home — só assim o texto
+  // branco por cima continua legível independentemente do que a imagem/vídeo
+  // tiver.
+  if (bannerUrl) {
+    return (
+      <div className="relative -mt-16 overflow-hidden pb-10 pt-[7.5rem] sm:pt-36">
+        {bannerType === "VIDEO" ? (
+          <video
+            key={bannerUrl}
+            src={bannerUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-8">{content}</div>
+      </div>
+    );
+  }
+
+  return (
+    <InstructorHeroGradient>
+      <div className="mx-auto max-w-5xl px-4 sm:px-8">{content}</div>
+    </InstructorHeroGradient>
   );
 }

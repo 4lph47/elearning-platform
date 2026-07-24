@@ -49,6 +49,8 @@ model User {
   bio            String?
   expertise      String?
   yearsExperience Int?
+  bannerUrl      String?
+  bannerType     String?
   websiteUrl     String?
   twitterUrl     String?
   linkedinUrl    String?

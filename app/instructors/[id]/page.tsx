@@ -8,7 +8,6 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { InstructorCourseGrid } from "@/components/instructor/InstructorCourseGrid";
 import { InstructorProfileHero } from "@/components/instructor/InstructorProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
-import { InstructorHeroGradient } from "@/components/instructor/InstructorHeroGradient";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +26,8 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       expertise: true,
       yearsExperience: true,
       image: true,
+      bannerUrl: true,
+      bannerType: true,
       websiteUrl: true,
       twitterUrl: true,
       linkedinUrl: true,
@@ -125,26 +126,20 @@ export default async function InstructorProfilePage({ params }: { params: Promis
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <InstructorAccentProvider imageUrl={instructor.image}>
-        {/* Gradiente "color coded" (cores da própria foto de perfil, ver
-            InstructorAccentContext) — começa atrás do avatar e esmorece só
-            depois de cobrir bio + redes sociais + certificações + stats,
-            antes da grelha de cursos (que fica fora, em fundo normal). */}
-        <InstructorHeroGradient>
-          <div className="mx-auto max-w-5xl px-4 sm:px-8">
-            <InstructorProfileHero
-              isOwner={isOwner}
-              profileId={instructor.id}
-              initialName={instructor.name}
-              initialImage={instructor.image}
-              initialBio={instructor.bio ?? ""}
-              initialExpertise={instructor.expertise ?? ""}
-              initialYearsExperience={instructor.yearsExperience}
-              initialValues={socialValues}
-              initialCertifications={instructor.certifications.map((c) => ({ name: c.name, url: c.url }))}
-              stats={{ avgRating, totalReviews, totalStudents, courseCount: courses.length }}
-            />
-          </div>
-        </InstructorHeroGradient>
+        <InstructorProfileHero
+          isOwner={isOwner}
+          profileId={instructor.id}
+          initialName={instructor.name}
+          initialImage={instructor.image}
+          initialBannerUrl={instructor.bannerUrl}
+          initialBannerType={instructor.bannerType === "VIDEO" ? "VIDEO" : instructor.bannerUrl ? "IMAGE" : null}
+          initialBio={instructor.bio ?? ""}
+          initialExpertise={instructor.expertise ?? ""}
+          initialYearsExperience={instructor.yearsExperience}
+          initialValues={socialValues}
+          initialCertifications={instructor.certifications.map((c) => ({ name: c.name, url: c.url }))}
+          stats={{ avgRating, totalReviews, totalStudents, courseCount: courses.length }}
+        />
 
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
           {isOwner && (

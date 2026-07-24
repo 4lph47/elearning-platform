@@ -307,7 +307,8 @@ export function LessonPlayer({
   const [scrubPreview, setScrubPreview] = useState<{ time: number; x: number } | null>(null);
   const scrubDraggingRef = useRef(false);
   const lastScrubUpdateRef = useRef(0);
-  const progressDragRef = useRef<{ startY: number; revealed: boolean } | null>(null);
+  const progressDragRef = useRef<{ startY: number; revealed: boolean; alreadyExpanded: boolean } | null>(null);
+  const barExpandedRef = useRef(false);
   const PROGRESS_LIFT_MAX = 100;
   const PROGRESS_REVEAL_DY = 60;
 
@@ -696,11 +697,35 @@ export function LessonPlayer({
   // engasgava) — só depois de arrastar o suficiente pra cima (
   // PROGRESS_REVEAL_DY) é que o preview aparece, no espaço que a barra foi
   // libertando por baixo dela ao subir.
+  // Uma vez expandida (swipe up completo), a barra fica em cima — não volta
+  // a descer ao largar o dedo. Só recolhe quando se toca fora dela (ver
+  // useEffect de collapse mais abaixo, "clicar noutra coisa").
+  function collapseBar() {
+    barExpandedRef.current = false;
+    setScrubPreview(null);
+    const bar = progressBarRef.current;
+    if (bar) {
+      bar.style.transition = "transform 150ms ease-out";
+      bar.style.transform = "";
+      window.setTimeout(() => {
+        if (progressBarRef.current === bar) bar.style.transition = "";
+      }, 150);
+    }
+  }
+
   function handleProgressTouchStart(e: React.TouchEvent) {
     e.stopPropagation();
-    progressDragRef.current = { startY: e.touches[0].clientY, revealed: false };
+    const startX = e.touches[0].clientX;
+    progressDragRef.current = {
+      startY: e.touches[0].clientY,
+      revealed: barExpandedRef.current,
+      alreadyExpanded: barExpandedRef.current,
+    };
     scrubDraggingRef.current = true;
     ensureThumbSource();
+    // Já estava expandida (2º toque) — mostra logo o preview, não precisa
+    // de repetir o swipe up.
+    if (barExpandedRef.current) updateScrub(startX);
   }
 
   // touchmove tem de ser um listener NATIVO (não onTouchMove do React) com
@@ -718,6 +743,19 @@ export function LessonPlayer({
       e.preventDefault();
       e.stopPropagation();
       const touch = e.touches[0];
+
+      // Já expandida desde o touchstart — fica sempre no topo, só faz scrub
+      // horizontal, não recalcula o lift a partir de dy (senão "caía" pra
+      // baixo no início deste novo gesto antes de voltar a subir).
+      if (drag.alreadyExpanded) {
+        const now = Date.now();
+        if (now - lastScrubUpdateRef.current >= 120) {
+          lastScrubUpdateRef.current = now;
+          updateScrub(touch.clientX);
+        }
+        return;
+      }
+
       const dy = Math.max(0, drag.startY - touch.clientY);
       if (bar) bar.style.transform = dy > 0 ? `translateY(-${Math.min(PROGRESS_LIFT_MAX, dy)}px)` : "";
 
@@ -744,15 +782,41 @@ export function LessonPlayer({
     scrubDraggingRef.current = false;
     progressDragRef.current = null;
     setScrubPreview(null);
-    const bar = progressBarRef.current;
-    if (bar) {
-      bar.style.transition = "transform 150ms ease-out";
-      bar.style.transform = "";
-      window.setTimeout(() => {
-        if (progressBarRef.current === bar) bar.style.transition = "";
-      }, 150);
+
+    if (drag.revealed) {
+      // Ficou (ou já estava) expandida — trava no topo, não recolhe sozinha.
+      barExpandedRef.current = true;
+      const bar = progressBarRef.current;
+      if (bar) {
+        bar.style.transition = "transform 150ms ease-out";
+        bar.style.transform = `translateY(-${PROGRESS_LIFT_MAX}px)`;
+        window.setTimeout(() => {
+          if (progressBarRef.current === bar) bar.style.transition = "";
+        }, 150);
+      }
+      return;
     }
+    collapseBar();
   }
+
+  // "Clicar noutra coisa" recolhe a barra expandida — qualquer toque/clique
+  // fora dela conta (vídeo, botões, etc.), tal como os outros menus deste
+  // player já fazem (ver useEffect do menuOpen/contextMenuPos).
+  useEffect(() => {
+    function handleOutside(e: Event) {
+      if (!barExpandedRef.current) return;
+      const target = e.target as Node;
+      if (progressBarRef.current && progressBarRef.current.contains(target)) return;
+      collapseBar();
+    }
+    document.addEventListener("touchstart", handleOutside);
+    document.addEventListener("mousedown", handleOutside);
+    return () => {
+      document.removeEventListener("touchstart", handleOutside);
+      document.removeEventListener("mousedown", handleOutside);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setRate(rate: number) {
     const video = videoRef.current;

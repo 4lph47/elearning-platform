@@ -627,7 +627,10 @@ export function LessonPlayer({
   // ficam sempre ativos (não só quando maximizado), senão nunca havia gesto
   // pra ENTRAR em fullscreen. Só em ecrã pequeno — desktop não maximiza por
   // gesto.
-  const dragStateRef = useRef<{ startX: number; startY: number; dy: number; dragging: boolean } | null>(null);
+  type DragMode = "maximize" | "minimize" | "rotate";
+  const dragStateRef = useRef<{ startX: number; startY: number; dy: number; dragging: boolean; mode: DragMode | null } | null>(
+    null
+  );
   const [isDraggingVideo, setIsDraggingVideo] = useState(false);
 
   const DRAG_ACTIVATE_PX = 12;
@@ -637,7 +640,7 @@ export function LessonPlayer({
   function handleFullscreenTouchStart(e: React.TouchEvent) {
     if (window.innerWidth >= 1024) return;
     const t = e.touches[0];
-    dragStateRef.current = { startX: t.clientX, startY: t.clientY, dy: 0, dragging: false };
+    dragStateRef.current = { startX: t.clientX, startY: t.clientY, dy: 0, dragging: false, mode: null };
   }
 
   // touchmove tem de ser um listener NATIVO (não onTouchMove do React) com
@@ -663,22 +666,39 @@ export function LessonPlayer({
         // com um tap simples (toggle play) ou um swipe horizontal (troca
         // de aula) que passem por cima do vídeo.
         if (Math.abs(dy) < DRAG_ACTIVATE_PX || Math.abs(dx) > Math.abs(dy)) return;
+        const isFsNow = Boolean(document.fullscreenElement);
+        if (!isFsNow && dy < 0) start.mode = "maximize";
+        else if (isFsNow && dy > 0) start.mode = "minimize";
+        else if (isFsNow && dy < 0) start.mode = "rotate";
+        else return; // arrastar pra baixo já no tamanho mínimo — nada a fazer
+
         start.dragging = true;
         container!.style.transition = "none";
         setIsDraggingVideo(true);
+
+        // Minimizar SAI do Fullscreen API logo aqui, no início do gesto —
+        // tal como maximizar só ENTRA no fim (handleFullscreenTouchEnd), o
+        // arrasto ao vivo acontece sempre num elemento NORMAL, nunca dentro
+        // do "top layer" do browser (onde o transform em tempo real não
+        // seguia o dedo tão bem — é a raiz de minimizar parecer menos fluido
+        // que maximizar). Se soltar antes do ponto de compromisso, volta a
+        // entrar em fullscreen no fim (ver handleFullscreenTouchEnd).
+        if (start.mode === "minimize") {
+          document.exitFullscreen().catch(() => {});
+        }
       }
 
+      if (start.mode === "rotate") return; // sem feedback visual, só o gesto de rodar no fim
       e.preventDefault();
       start.dy = dy;
-      const isFs = Boolean(document.fullscreenElement);
       let scale = 1;
       let translateY = 0;
-      if (!isFs && dy < 0) {
+      if (start.mode === "maximize") {
         scale = 1 + (Math.min(-dy, DRAG_MAX_PX) / DRAG_MAX_PX) * 0.6;
-      } else if (isFs && dy > 0) {
-        // minimizar: encolhe E desloca-se com o dedo (não fica parado a
-        // encolher no sítio) — sensação de arrastar o vídeo pra baixo a
-        // sério, tipo mini-player.
+      } else if (start.mode === "minimize") {
+        // encolhe E desloca-se com o dedo (não fica parado a encolher no
+        // sítio) — sensação de arrastar o vídeo pra baixo a sério, tipo
+        // mini-player.
         scale = 1 - (Math.min(dy, DRAG_MAX_PX) / DRAG_MAX_PX) * 0.4;
         translateY = Math.min(dy, DRAG_MAX_PX);
       }
@@ -703,12 +723,13 @@ export function LessonPlayer({
     }
     setIsDraggingVideo(false);
 
-    const isFs = Boolean(document.fullscreenElement);
-    if (!isFs && start.dy <= -DRAG_COMMIT_PX) {
-      containerRef.current?.requestFullscreen().catch(() => {});
-    } else if (isFs && start.dy >= DRAG_COMMIT_PX) {
-      document.exitFullscreen().catch(() => {});
-    } else if (isFs && start.dy <= -DRAG_COMMIT_PX && window.innerHeight > window.innerWidth) {
+    if (start.mode === "maximize") {
+      if (start.dy <= -DRAG_COMMIT_PX) containerRef.current?.requestFullscreen().catch(() => {});
+    } else if (start.mode === "minimize") {
+      // Já saiu do fullscreen no início do gesto (ver onTouchMove). Se não
+      // arrastou o suficiente para confirmar, cancela — volta a entrar.
+      if (start.dy < DRAG_COMMIT_PX) containerRef.current?.requestFullscreen().catch(() => {});
+    } else if (start.mode === "rotate" && start.dy <= -DRAG_COMMIT_PX && window.innerHeight > window.innerWidth) {
       // já maximizado, continuou a arrastar pra cima com o ecrã em pé — roda pra paisagem.
       const orientation = screen.orientation as unknown as { lock?: (type: string) => Promise<void> } | undefined;
       orientation?.lock?.("landscape").catch(() => {});
@@ -1125,7 +1146,14 @@ export function LessonPlayer({
                           </button>
                         )}
                         </div>,
-                        document.body
+                        // Em ecrã inteiro de verdade (Fullscreen API), o
+                        // browser só desenha o próprio elemento fullscreen —
+                        // um portal em document.body (fora dele) fica
+                        // invisível, mesmo com z-index altíssimo. Portala
+                        // pro container quando maximizado; document.body nos
+                        // outros casos (onde escapar do overflow-hidden do
+                        // vídeo é que interessava).
+                        isFullscreen && containerRef.current ? containerRef.current : document.body
                       )}
                   </div>
                 </div>

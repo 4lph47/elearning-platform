@@ -51,7 +51,7 @@ export function InstructorCourseGrid({
         {courses.length > 0 && (
           <div
             ref={searchWrapRef}
-            className="relative order-1 w-full sm:order-2 sm:max-w-xs"
+            className="relative order-1 w-full sm:order-2 sm:max-w-xl"
             style={{ "--instructor-accent": `rgb(${mid})` } as React.CSSProperties}
           >
             <input

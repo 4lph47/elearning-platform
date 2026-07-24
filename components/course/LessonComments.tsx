@@ -73,6 +73,25 @@ function CommentRow({
   const [showReplies, setShowReplies] = useState(false);
   const [posting, setPosting] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const replyBoxRef = useRef<HTMLFormElement>(null);
+  const replyToggleRef = useRef<HTMLButtonElement>(null);
+
+  // Clique fora da caixa de resposta fecha-a sozinha — não precisa de
+  // clicar em "Responder" outra vez pra tirá-la da frente. O próprio botão
+  // "Responder" fica de fora da deteção (senão o próprio clique nele pra
+  // fechar a caixa disparava o "clique fora" primeiro e reabria-a logo a
+  // seguir, via mousedown antes do click).
+  useEffect(() => {
+    if (!replying) return;
+    function onOutsideClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (replyBoxRef.current?.contains(target)) return;
+      if (replyToggleRef.current?.contains(target)) return;
+      setReplying(false);
+    }
+    document.addEventListener("mousedown", onOutsideClick);
+    return () => document.removeEventListener("mousedown", onOutsideClick);
+  }, [replying]);
 
   async function toggleLike() {
     if (!currentUserId) return;
@@ -138,6 +157,7 @@ function CommentRow({
           </button>
           {currentUserId && (
             <button
+              ref={replyToggleRef}
               onClick={() => {
                 setReplying((v) => !v);
                 if (!replying && isReply) setReplyText(`@${comment.user.name} `);
@@ -155,7 +175,7 @@ function CommentRow({
         </div>
 
         {replying && (
-          <form onSubmit={submitReply} className="mt-2 flex gap-2">
+          <form ref={replyBoxRef} onSubmit={submitReply} className="mt-2 flex gap-2">
             <input
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}

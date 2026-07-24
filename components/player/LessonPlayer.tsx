@@ -685,26 +685,39 @@ export function LessonPlayer({
     ensureThumbSource();
   }
 
-  function handleProgressTouchMove(e: React.TouchEvent) {
-    const drag = progressDragRef.current;
-    if (!drag || !scrubDraggingRef.current) return;
-    e.stopPropagation();
-    const touch = e.touches[0];
-    const dy = Math.max(0, drag.startY - touch.clientY);
+  // touchmove tem de ser um listener NATIVO (não onTouchMove do React) com
+  // { passive: false } — mesmo motivo do gesto de fullscreen mais abaixo: só
+  // assim preventDefault() consegue mesmo travar o scroll vertical da
+  // página a meio do gesto (onTouchMove do React é passivo por default, e
+  // sem isto o scroll da página "rouba" o arrasto — a barra parecia não
+  // subir e o preview nunca chegava a revelar-se, era o scroll a ganhar).
+  useEffect(() => {
     const bar = progressBarRef.current;
-    if (bar) bar.style.transform = dy > 0 ? `translateY(-${Math.min(PROGRESS_LIFT_MAX, dy)}px)` : "";
+    if (!bar) return;
+    function onTouchMove(e: TouchEvent) {
+      const drag = progressDragRef.current;
+      if (!drag || !scrubDraggingRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const touch = e.touches[0];
+      const dy = Math.max(0, drag.startY - touch.clientY);
+      if (bar) bar.style.transform = dy > 0 ? `translateY(-${Math.min(PROGRESS_LIFT_MAX, dy)}px)` : "";
 
-    if (dy > PROGRESS_REVEAL_DY) {
-      drag.revealed = true;
-      const now = Date.now();
-      if (now - lastScrubUpdateRef.current < 120) return; // throttle: 1 seek/desenho a cada 120ms, não a cada pixel
-      lastScrubUpdateRef.current = now;
-      updateScrub(touch.clientX);
-    } else if (drag.revealed) {
-      drag.revealed = false;
-      setScrubPreview(null);
+      if (dy > PROGRESS_REVEAL_DY) {
+        drag.revealed = true;
+        const now = Date.now();
+        if (now - lastScrubUpdateRef.current < 120) return; // throttle: 1 seek/desenho a cada 120ms, não a cada pixel
+        lastScrubUpdateRef.current = now;
+        updateScrub(touch.clientX);
+      } else if (drag.revealed) {
+        drag.revealed = false;
+        setScrubPreview(null);
+      }
     }
-  }
+    bar.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => bar.removeEventListener("touchmove", onTouchMove);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleProgressTouchEnd(e: React.TouchEvent) {
     const drag = progressDragRef.current;
@@ -1073,7 +1086,7 @@ export function LessonPlayer({
 
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-                  <Loader2 size={112} strokeWidth={1.25} className="animate-spin text-white" />
+                  <Loader2 size={112} strokeWidth={0.75} className="animate-spin text-white" />
                 </div>
               )}
 
@@ -1168,9 +1181,8 @@ export function LessonPlayer({
                 <div
                   ref={progressBarRef}
                   onTouchStart={handleProgressTouchStart}
-                  onTouchMove={handleProgressTouchMove}
                   onTouchEnd={handleProgressTouchEnd}
-                  className="group/progress absolute inset-x-0 bottom-2 h-4 px-3 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
+                  className="group/progress absolute inset-x-0 bottom-2 h-10 px-3 lg:relative lg:inset-auto lg:bottom-auto lg:h-4 lg:px-0"
                 >
                   <svg
                     viewBox="0 0 1000 100"

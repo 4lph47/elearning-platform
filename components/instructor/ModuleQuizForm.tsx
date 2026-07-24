@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
+import { Toggle } from "@/components/ui/Toggle";
 import { QuizQuestionsEditor, newQuestion, type QuestionData } from "@/components/instructor/QuizQuestionsEditor";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 
@@ -102,27 +103,30 @@ export function ModuleQuizForm({
           <Input id="quiz-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Quiz do módulo" />
         </div>
 
-        <div>
-          <Label htmlFor="quiz-time">Tempo limite em minutos (vazio = sem limite)</Label>
-          <Input
-            id="quiz-time"
-            type="number"
-            min={1}
-            value={timeLimitMinutes}
-            onChange={(e) => setTimeLimitMinutes(e.target.value)}
-            placeholder="Sem limite"
-          />
-        </div>
-
-        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <input
-            type="checkbox"
+        <div className="space-y-2">
+          <Toggle
+            id="quiz-countdown-toggle"
             checked={showCountdown}
-            onChange={(e) => setShowCountdown(e.target.checked)}
-            className="rounded border-slate-300"
+            onChange={(checked) => {
+              setShowCountdown(checked);
+              if (!checked) setTimeLimitMinutes("");
+            }}
+            label="Tempo limite com countdown"
           />
-          Mostrar countdown ao aluno (se houver tempo limite)
-        </label>
+          {showCountdown && (
+            <div>
+              <Label htmlFor="quiz-time">Tempo limite em minutos</Label>
+              <Input
+                id="quiz-time"
+                type="number"
+                min={1}
+                value={timeLimitMinutes}
+                onChange={(e) => setTimeLimitMinutes(e.target.value)}
+                placeholder="Ex.: 10"
+              />
+            </div>
+          )}
+        </div>
 
         <QuizQuestionsEditor questions={questions} onChange={setQuestions} />
 

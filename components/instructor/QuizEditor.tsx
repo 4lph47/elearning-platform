@@ -6,6 +6,7 @@ import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
+import { Toggle } from "@/components/ui/Toggle";
 import { QuizQuestionsEditor, newQuestion, type QuestionData } from "@/components/instructor/QuizQuestionsEditor";
 import type { QuizScope } from "@/lib/quiz";
 
@@ -132,8 +133,8 @@ export function QuizEditor({
         <Input id={`quiz-title-${parentId}`} value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
 
-      <div className={scope === "COURSE" ? "grid gap-3 sm:grid-cols-2" : ""}>
-        {scope === "COURSE" && (
+      {scope === "COURSE" && (
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor={`quiz-attempts-${parentId}`}>Limite de tentativas (vazio = ilimitado)</Label>
             <Input
@@ -146,19 +147,17 @@ export function QuizEditor({
             />
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Só o teste final do curso pode limitar tentativas.</p>
           </div>
-        )}
-        <div>
-          <Label htmlFor={`quiz-time-${parentId}`}>Tempo limite em minutos (vazio = sem limite)</Label>
-          <Input
-            id={`quiz-time-${parentId}`}
-            type="number"
-            min={1}
-            value={timeLimitMinutes}
-            onChange={(e) => setTimeLimitMinutes(e.target.value)}
-            placeholder="Sem limite"
-          />
-        </div>
-        {scope === "COURSE" && (
+          <div>
+            <Label htmlFor={`quiz-time-${parentId}`}>Tempo limite em minutos (vazio = sem limite)</Label>
+            <Input
+              id={`quiz-time-${parentId}`}
+              type="number"
+              min={1}
+              value={timeLimitMinutes}
+              onChange={(e) => setTimeLimitMinutes(e.target.value)}
+              placeholder="Sem limite"
+            />
+          </div>
           <div>
             <Label htmlFor={`quiz-retry-${parentId}`}>Espera entre tentativas em horas (vazio = sem espera)</Label>
             <Input
@@ -170,23 +169,38 @@ export function QuizEditor({
               placeholder="Sem espera"
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {scope === "COURSE" ? (
         <p className="text-xs text-slate-400 dark:text-slate-500">
           O teste final mostra sempre o ecrã de consentimento e o countdown ao aluno.
         </p>
       ) : (
-        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-          <input
-            type="checkbox"
+        <div className="space-y-2">
+          <Toggle
+            id={`quiz-countdown-toggle-${parentId}`}
             checked={showCountdown}
-            onChange={(e) => setShowCountdown(e.target.checked)}
-            className="rounded border-slate-300"
+            onChange={(checked) => {
+              setShowCountdown(checked);
+              if (!checked) setTimeLimitMinutes("");
+            }}
+            label="Tempo limite com countdown"
           />
-          Mostrar countdown ao aluno (se houver tempo limite)
-        </label>
+          {showCountdown && (
+            <div>
+              <Label htmlFor={`quiz-time-${parentId}`}>Tempo limite em minutos</Label>
+              <Input
+                id={`quiz-time-${parentId}`}
+                type="number"
+                min={1}
+                value={timeLimitMinutes}
+                onChange={(e) => setTimeLimitMinutes(e.target.value)}
+                placeholder="Ex.: 10"
+              />
+            </div>
+          )}
+        </div>
       )}
 
       <QuizQuestionsEditor questions={questions} onChange={setQuestions} />

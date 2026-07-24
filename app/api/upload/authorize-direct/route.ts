@@ -35,7 +35,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { mimeType, sizeBytes } = body as { fileName?: string; mimeType?: string; sizeBytes?: number };
+  const { mimeType, sizeBytes, assetId: clientFingerprint } = body as {
+    fileName?: string;
+    mimeType?: string;
+    sizeBytes?: number;
+    assetId?: string;
+  };
   if (typeof mimeType !== "string" || typeof sizeBytes !== "number") {
     return NextResponse.json({ error: "Dados de envio inválidos" }, { status: 400 });
   }
@@ -44,7 +49,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const assetId = crypto.randomUUID();
+  // O fingerprint (nome+tamanho+data de modificação do ficheiro) que o
+  // cliente manda não é segredo — dois instrutores diferentes a enviar um
+  // ficheiro com o mesmo nome/tamanho/data batiam no mesmo assetId no
+  // worker e podiam ver/retomar o parcial um do outro. Namespacing com o
+  // id da PRÓPRIA sessão (nunca um id vindo do pedido) resolve isto: só dá
+  // pra chegar a este assetId final autenticado como este utilizador.
+  const isValidFingerprint = typeof clientFingerprint === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(clientFingerprint);
+  const assetId = isValidFingerprint
+    ? crypto.createHash("sha256").update(`${session.user.id}:${clientFingerprint}`).digest("hex")
+    : crypto.randomUUID();
   const expiresAt = Date.now() + TOKEN_TTL_MS;
   const payload = `${assetId}.${expiresAt}`;
   const signature = crypto.createHmac("sha256", workerSecret).update(payload).digest("hex");

@@ -111,11 +111,27 @@ interface WorkerAuth {
   token: string;
 }
 
+// Deriva um assetId sempre igual pro mesmo ficheiro (nome+tamanho+data de
+// modificação) — é o que permite reconhecer "é o mesmo vídeo" mesmo que a
+// pessoa o volte a escolher do zero (novo handleChange, sem nenhum estado
+// em memória sobrevivente de uma tentativa anterior, incluindo depois de
+// um refresh à página). O worker guarda o parcial em disco por assetId (ver
+// uploadWorkDir em worker/index.js) — mesmo assetId encontra o mesmo
+// ficheiro parcial e resincroniza sozinho a partir de onde ficou.
+async function fingerprintAssetId(file: File): Promise<string> {
+  const raw = `${file.name}:${file.size}:${file.lastModified}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 async function authorizeWorkerUpload(file: File): Promise<WorkerAuth> {
+  const assetId = await fingerprintAssetId(file);
   const authRes = await fetch("/api/upload/authorize-direct", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size }),
+    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size, assetId }),
   });
   const auth = await authRes.json().catch(() => ({}));
   if (!authRes.ok) throw new UploadError(auth.error ?? "Erro ao preparar envio", authRes.status >= 500);
@@ -227,29 +243,32 @@ function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef): Pro
   });
 }
 
-const CHUNK_RETRY_ATTEMPTS = 3;
-const FINALIZE_RETRY_ATTEMPTS = 2;
+// Atraso entre tentativas — cresce por tentativa mas nunca passa de 15s,
+// pra não martelar o worker sem sentido num vídeo que demore a recuperar.
+const RETRY_BACKOFF_MS = 1500;
+const RETRY_BACKOFF_MAX_MS = 15000;
 
-async function withUploadRetries<T>(
-  fn: () => Promise<T>,
-  attempts: number,
-  onRetry: (attempt: number, maxAttempts: number) => void
-): Promise<T> {
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
+// Mesmo vídeo, uma única "tentativa" do ponto de vista da pessoa a usar —
+// por dentro, falhas de rede/servidor (proxy a resetar a ligação, worker a
+// reiniciar, o que for) não gastam um número limitado de tentativas: repete
+// para sempre, sempre resincronizando com o worker antes de cada bloco (ver
+// getReceivedBytes) pra saber sozinho onde ficou, sem precisar de escolher
+// o ficheiro outra vez nem de um teto que acaba por desistir a meio de um
+// vídeo grande numa ligação instável. Só para mesmo por erro de validação
+// (não vale repetir) ou cancelamento (ficheiro novo escolhido a meio).
+async function withUploadRetries<T>(fn: () => Promise<T>, onRetry: () => void): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
     try {
       return await fn();
     } catch (err) {
       if (err instanceof UploadAbortedError) throw err;
-      lastErr = err;
       const retryable = err instanceof UploadError ? err.retryable : true;
-      if (!retryable || attempt === attempts) throw err;
-      console.warn(`[upload] tentativa ${attempt} falhou, a repetir:`, err);
-      onRetry(attempt + 1, attempts);
-      await new Promise((r) => setTimeout(r, 1500 * attempt));
+      if (!retryable) throw err;
+      console.warn(`[upload] falhou, a repetir a partir de onde ficou:`, err);
+      onRetry();
+      await new Promise((r) => setTimeout(r, Math.min(RETRY_BACKOFF_MS * attempt, RETRY_BACKOFF_MAX_MS)));
     }
   }
-  throw lastErr;
 }
 
 // Autoriza uma vez só (mesmo token/assetId reaproveitado em todos os blocos
@@ -263,28 +282,24 @@ async function uploadToWorker(
   xhrRef: XhrRef,
   onProgress: (percent: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void,
-  onRetry: (attempt: number, maxAttempts: number) => void
+  onRetry: () => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
 
   let offset = 0;
   while (offset < file.size) {
-    offset = await withUploadRetries(
-      async () => {
-        const actualOffset = await getReceivedBytes(auth);
-        const blob = file.slice(actualOffset, actualOffset + CHUNK_BYTES);
-        if (actualOffset > 0) console.log(`[upload] a continuar a partir de ${actualOffset}/${file.size} bytes`);
-        return postChunk(auth, blob, actualOffset, xhrRef, (bytesSentInBlock) =>
-          onProgress(Math.round(((actualOffset + bytesSentInBlock) / file.size) * 100))
-        );
-      },
-      CHUNK_RETRY_ATTEMPTS,
-      onRetry
-    );
+    offset = await withUploadRetries(async () => {
+      const actualOffset = await getReceivedBytes(auth);
+      const blob = file.slice(actualOffset, actualOffset + CHUNK_BYTES);
+      if (actualOffset > 0) console.log(`[upload] a continuar a partir de ${actualOffset}/${file.size} bytes`);
+      return postChunk(auth, blob, actualOffset, xhrRef, (bytesSentInBlock) =>
+        onProgress(Math.round(((actualOffset + bytesSentInBlock) / file.size) * 100))
+      );
+    }, onRetry);
   }
 
   onPhaseChange("compressing");
-  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef), FINALIZE_RETRY_ATTEMPTS, onRetry);
+  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef), onRetry);
   return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
@@ -313,7 +328,7 @@ export function FileUploadInput({
   const [progress, setProgress] = useState(0);
   const [indeterminate, setIndeterminate] = useState(false);
   const [compressing, setCompressing] = useState(false);
-  const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -345,7 +360,7 @@ export function FileUploadInput({
     setUploading(true);
     setProgress(0);
     setCompressing(false);
-    setRetryInfo(null);
+    setRetrying(false);
     setError(null);
     setUploadedName(null);
 
@@ -354,18 +369,26 @@ export function FileUploadInput({
         const data = await uploadToWorker(
           file,
           xhrRef,
-          (percent) => isCurrent() && setProgress(percent),
-          (phase) => isCurrent() && setCompressing(phase === "compressing"),
-          (attempt, max) => {
+          (percent) => {
+            if (!isCurrent()) return;
+            setProgress(percent);
+            setRetrying(false);
+          },
+          (phase) => {
+            if (!isCurrent()) return;
+            setCompressing(phase === "compressing");
+            setRetrying(false);
+          },
+          () => {
             if (!isCurrent()) return;
             setCompressing(false);
-            setRetryInfo({ attempt, max });
+            setRetrying(true);
           }
         );
         if (!isCurrent()) return;
         setUploading(false);
         setCompressing(false);
-        setRetryInfo(null);
+        setRetrying(false);
         setUploadedName(data.name);
         onUploaded(data);
         return;
@@ -404,7 +427,7 @@ export function FileUploadInput({
       setUploading(false);
       setIndeterminate(false);
       setCompressing(false);
-      setRetryInfo(null);
+      setRetrying(false);
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
   }
@@ -430,8 +453,8 @@ export function FileUploadInput({
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {retryInfo
-              ? `Falhou, a tentar de novo (${retryInfo.attempt}/${retryInfo.max})...`
+            {retrying
+              ? "Ligação instável, a continuar a partir de onde ficou..."
               : compressing
                 ? "A comprimir vídeo..."
                 : indeterminate

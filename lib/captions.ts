@@ -83,7 +83,14 @@ const MODEL_ID = "Xenova/whisper-base";
 export async function transcribeFileToVtt(file: File, onProgress?: (phase: CaptionsPhase) => void): Promise<string> {
   onProgress?.("loading-model");
   const { pipeline } = await import(/* webpackIgnore: true */ TRANSFORMERS_CDN_URL);
-  const transcriber = await pipeline("automatic-speech-recognition", MODEL_ID);
+  // dtype explícito: por omissão a lib escolhe pesos quantizados (q4) pro
+  // decoder deste modelo, e o ficheiro q4 atualmente servido pro
+  // Xenova/whisper-base no CDN vem sem o scale tensor que o próprio grafo
+  // ONNX exige ("Can't create a session... Missing required scale:
+  // model.decoder.embed_tokens.weight_merged_0_scale") — sessão nunca
+  // chega a criar-se. fp32 ignora essa escolha automática e usa os pesos
+  // completos, que carregam sempre.
+  const transcriber = await pipeline("automatic-speech-recognition", MODEL_ID, { dtype: "fp32" });
 
   onProgress?.("decoding-audio");
   const audio = await decodeAudioFromFile(file);

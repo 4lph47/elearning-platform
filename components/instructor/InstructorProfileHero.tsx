@@ -321,6 +321,7 @@ export function InstructorProfileHero({
               </p>
               <FileUploadInput
                 kind="IMAGE"
+                compactMobile
                 currentUrl={bannerType === "IMAGE" ? bannerUrl : null}
                 onUploaded={(result) => {
                   setBannerUrl(result.url);
@@ -334,6 +335,7 @@ export function InstructorProfileHero({
               </p>
               <FileUploadInput
                 kind="TRAILER"
+                compactMobile
                 currentUrl={bannerType === "VIDEO" ? bannerUrl : null}
                 onUploaded={(result) => {
                   setBannerUrl(result.url);

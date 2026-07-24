@@ -316,6 +316,7 @@ export function FileUploadInput({
   currentName,
   onUploaded,
   onFileSelected,
+  compactMobile,
 }: {
   kind: Kind;
   // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
@@ -328,6 +329,12 @@ export function FileUploadInput({
   // pela geração de legendas automáticas (lib/captions.ts), que corre em
   // paralelo ao upload, direto no browser, sobre o MESMO ficheiro original.
   onFileSelected?: (file: File) => void;
+  // Em espaços apertados no mobile (ex.: painel de banner com dois
+  // uploaders lado a lado), o nome do ficheiro que o próprio browser
+  // desenha ao lado do botão nativo não cabe — encolhe o input ao tamanho
+  // do botão só até ao breakpoint sm, cortando esse texto pelo overflow
+  // (o botão em si, sendo um pseudo-elemento, continua sempre visível).
+  compactMobile?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -444,7 +451,9 @@ export function FileUploadInput({
         type="file"
         accept={ACCEPT[kind]}
         onChange={handleChange}
-        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15"
+        className={`block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15 ${
+          compactMobile ? "max-w-[132px] overflow-hidden sm:max-w-none sm:overflow-visible" : ""
+        }`}
       />
       {uploading && (
         <div className="mt-2">

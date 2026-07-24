@@ -9,10 +9,20 @@ export const runtime = "nodejs";
 // Vídeo: em vez de subir bruto pro Supabase Storage (trava em 50MB por
 // objeto no plano Free) e só comprimir depois, o browser envia diretamente
 // pro worker (Railway, sem esse limite) — este endpoint só assina um token
-// de curta duração autorizando esse envio, o worker valida-o sozinho (mesmo
-// segredo partilhado que já protege /api/worker/jobs/*, ver
+// autorizando esse envio, o worker valida-o sozinho (mesmo segredo
+// partilhado que já protege /api/worker/jobs/*, ver
 // worker/index.js:verifyUploadToken). Nada do vídeo passa por aqui.
-const TOKEN_TTL_MS = 30 * 60 * 1000;
+//
+// O MESMO token cobre o envio inteiro E a compressão a seguir (o cliente
+// faz poll de /upload-finalize-status até acabar, ver FileUploadInput.tsx),
+// sem re-autorizar a meio — por isso o teto tem de ser folgado o
+// suficiente pra um vídeo longo (~1h) comprimir inteiro num container sem
+// GPU. Um teto curto (era 30min) expirava a meio da compressão e todo
+// pedido a seguir passava a levar 401 pra sempre, sem forma de recuperar
+// (visto nos logs do worker: "[token] expirado"). Risco de token de
+// validade longa é baixo aqui — está preso a um assetId/sessão específicos
+// (ver isValidFingerprint abaixo), não é uma credencial de uso geral.
+const TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);

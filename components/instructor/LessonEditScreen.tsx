@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { CornerCard, CornerCardStack, CornerCardButtonNeutral, CornerCardButtonPrimary } from "@/components/ui/CornerCard";
+import {
+  CornerCard,
+  CornerCardStack,
+  CornerCardButtonNeutral,
+  CornerCardButtonPrimary,
+  CornerCardIssueList,
+  focusField,
+  type CornerCardIssue,
+} from "@/components/ui/CornerCard";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
@@ -17,6 +25,19 @@ import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
 import { transcribeFileToVtt, uploadCaptionsVtt, type CaptionsPhase } from "@/lib/captions";
 import { captureFirstFrame, uploadThumbnailBlob } from "@/lib/videoThumbnail";
 import type { LessonData } from "@/components/instructor/LessonRow";
+
+// Nomes de campo do lessonSchema (lib/validations.ts) nem sempre batem certo
+// com os ids do DOM aqui em baixo (ex.: "title" -> id="lesson-title") — este
+// mapa traduz um pro outro pro clique num item de "Falta preencher" (ver
+// focusField em components/ui/CornerCard.tsx) saltar pro sítio certo.
+const LESSON_FIELD_ID: Record<string, string> = {
+  title: "lesson-title",
+  description: "lesson-description",
+  textContent: "lesson-text",
+};
+function focusLessonField(field: string) {
+  focusField(LESSON_FIELD_ID[field] ?? field);
+}
 
 interface LessonDraft {
   title: string;
@@ -83,7 +104,7 @@ export function LessonEditScreen({
     draft?.value.contributorIds ?? lesson?.contributors?.map((c) => c.id) ?? []
   );
   const [saving, setSaving] = useState(false);
-  const [saveIssues, setSaveIssues] = useState<string[] | null>(null);
+  const [saveIssues, setSaveIssues] = useState<CornerCardIssue[] | null>(null);
 
   const [dirty, setDirty] = useState(false);
   const skipDirtyRef = useRef(true);
@@ -205,11 +226,11 @@ export function LessonEditScreen({
     setSaveIssues(null);
 
     if (type === "VIDEO" && !contentUrl) {
-      setSaveIssues(["Envia o vídeo desta aula antes de guardar"]);
+      setSaveIssues([{ message: "Envia o vídeo desta aula antes de guardar", field: "contentUrl" }]);
       return;
     }
     if (type === "TEXT" && !textContent.trim()) {
-      setSaveIssues(["Escreve o conteúdo desta aula antes de guardar"]);
+      setSaveIssues([{ message: "Escreve o conteúdo desta aula antes de guardar", field: "textContent" }]);
       return;
     }
 
@@ -239,7 +260,7 @@ export function LessonEditScreen({
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setSaveIssues(data.issues ?? [data.error ?? "Erro ao guardar aula"]);
+      setSaveIssues(data.issues ?? [{ message: data.error ?? "Erro ao guardar aula" }]);
       return;
     }
 
@@ -299,11 +320,7 @@ export function LessonEditScreen({
                 <X size={14} />
               </button>
             </div>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
-              {saveIssues.map((issue, i) => (
-                <li key={i}>{issue}</li>
-              ))}
-            </ul>
+            <CornerCardIssueList issues={saveIssues} onIssueClick={focusLessonField} />
           </CornerCard>
         )}
       </CornerCardStack>
@@ -403,7 +420,7 @@ export function LessonEditScreen({
         <div className="mt-4 space-y-4 lg:mt-0 lg:flex-1">
           <CollapsibleCard title="Conteúdo">
             {type === "VIDEO" ? (
-              <div className="space-y-2">
+              <div id="contentUrl" className="space-y-2">
                 <Label>Vídeo da aula (obrigatório)</Label>
                 <FileUploadInput
                   kind="VIDEO"

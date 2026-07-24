@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { lessonSchema, validateLessonContent, zodIssueMessages } from "@/lib/validations";
+import { lessonSchema, validateLessonContent, zodIssueDetails } from "@/lib/validations";
 import { getOwnedLesson } from "@/lib/instructor-guard";
 import { deleteQuiz } from "@/lib/quiz";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
@@ -21,14 +21,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
   const parsed = lessonSchema.partial().safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0].message, issues: zodIssueMessages(parsed.error) },
+      { error: parsed.error.issues[0].message, issues: zodIssueDetails(parsed.error) },
       { status: 400 }
     );
   }
   if ("type" in parsed.data || "contentUrl" in parsed.data || "textContent" in parsed.data) {
     const contentError = validateLessonContent({ type: lesson.type, contentUrl: lesson.contentUrl, textContent: lesson.textContent, ...parsed.data });
     if (contentError) {
-      return NextResponse.json({ error: contentError, issues: [contentError] }, { status: 400 });
+      const field = (parsed.data.type ?? lesson.type) === "TEXT" ? "textContent" : "contentUrl";
+      return NextResponse.json({ error: contentError, issues: [{ message: contentError, field }] }, { status: 400 });
     }
   }
 

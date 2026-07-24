@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { courseSchema, zodIssueMessages } from "@/lib/validations";
+import { courseSchema, zodIssueDetails } from "@/lib/validations";
 import { slugify } from "@/lib/slug";
 
 export async function POST(request: Request) {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const parsed = courseSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0].message, issues: zodIssueMessages(parsed.error) },
+      { error: parsed.error.issues[0].message, issues: zodIssueDetails(parsed.error) },
       { status: 400 }
     );
   }

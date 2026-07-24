@@ -14,7 +14,15 @@ import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
-import { CornerCard, CornerCardStack, CornerCardButtonNeutral, CornerCardButtonPrimary } from "@/components/ui/CornerCard";
+import {
+  CornerCard,
+  CornerCardStack,
+  CornerCardButtonNeutral,
+  CornerCardButtonPrimary,
+  CornerCardIssueList,
+  focusField,
+  type CornerCardIssue,
+} from "@/components/ui/CornerCard";
 
 interface CourseData {
   id: string;
@@ -142,7 +150,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [collaborators, setCollaborators] = useState(draft?.value.collaborators ?? course.collaborators);
   const [newCollaboratorEmail, setNewCollaboratorEmail] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saveIssues, setSaveIssues] = useState<string[] | null>(null);
+  const [saveIssues, setSaveIssues] = useState<CornerCardIssue[] | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -239,7 +247,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     setSaving(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setSaveIssues(data.issues ?? [data.error ?? "Erro ao guardar"]);
+      setSaveIssues(data.issues ?? [{ message: data.error ?? "Erro ao guardar" }]);
       return;
     }
     setDirty(false);
@@ -300,11 +308,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
                 <X size={14} />
               </button>
             </div>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
-              {saveIssues.map((issue, i) => (
-                <li key={i}>{issue}</li>
-              ))}
-            </ul>
+            <CornerCardIssueList issues={saveIssues} onIssueClick={focusField} />
           </CornerCard>
         )}
       </CornerCardStack>
@@ -390,7 +394,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         </CollapsibleCard>
 
         <CollapsibleCard title="Marketing">
-          <div>
+          <div id="trailerUrl">
             <Label>Trailer do curso</Label>
             <FileUploadInput
               kind="TRAILER"

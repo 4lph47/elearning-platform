@@ -42,3 +42,89 @@ export function CornerCardButtonPrimary({ className = "", ...props }: ButtonHTML
     />
   );
 }
+
+export interface CornerCardIssue {
+  message: string;
+  field?: string;
+}
+
+const FIELD_HIGHLIGHT_CLASSES = ["ring-2", "ring-red-500", "ring-offset-2", "dark:ring-offset-neutral-900", "rounded-md"];
+const FIELD_HIGHLIGHT_MS = 2500;
+let fieldHighlightTimeout: ReturnType<typeof setTimeout> | null = null;
+let fieldHighlightEl: HTMLElement | null = null;
+
+function clearFieldHighlight() {
+  if (fieldHighlightEl) fieldHighlightEl.classList.remove(...FIELD_HIGHLIGHT_CLASSES);
+  fieldHighlightEl = null;
+  if (fieldHighlightTimeout) {
+    clearTimeout(fieldHighlightTimeout);
+    fieldHighlightTimeout = null;
+  }
+}
+
+function revealAndHighlight(el: HTMLElement) {
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+    el.focus({ preventScroll: true });
+  }
+  el.classList.add(...FIELD_HIGHLIGHT_CLASSES);
+  fieldHighlightEl = el;
+  fieldHighlightTimeout = setTimeout(clearFieldHighlight, FIELD_HIGHLIGHT_MS);
+}
+
+// Chamado ao clicar num item da lista de "Falta preencher" — leva o campo em
+// causa pro centro do ecrã, foca-o e desenha um contorno vermelho à volta
+// por uns segundos, pra ser óbvio qual campo é mesmo sem depender só do
+// focus (nem todo o alvo é um input focável, ex.: o card do upload de vídeo).
+// Se o campo estiver dentro dum CollapsibleCard fechado (ver
+// components/ui/CollapsibleCard.tsx — conteúdo fica montado mas escondido),
+// expande-o primeiro e só salta depois de o layout assentar.
+export function focusField(id: string) {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  clearFieldHighlight();
+  const toggle = el
+    .closest("[data-collapsible-root]")
+    ?.querySelector('[data-collapsible-toggle][aria-expanded="false"]');
+  if (toggle instanceof HTMLElement) {
+    toggle.click();
+    requestAnimationFrame(() => requestAnimationFrame(() => revealAndHighlight(el)));
+  } else {
+    revealAndHighlight(el);
+  }
+}
+
+// Lista usada dentro do CornerCard "Falta preencher" — cada item vira botão
+// clicável quando vem com o campo associado (ver focusField acima); sem
+// campo (ex.: erro genérico do servidor), fica só texto.
+export function CornerCardIssueList({
+  issues,
+  onIssueClick,
+}: {
+  issues: (string | CornerCardIssue)[];
+  onIssueClick?: (field: string) => void;
+}) {
+  return (
+    <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
+      {issues.map((issue, i) => {
+        const message = typeof issue === "string" ? issue : issue.message;
+        const field = typeof issue === "string" ? undefined : issue.field;
+        if (!field || !onIssueClick) {
+          return <li key={i}>{message}</li>;
+        }
+        return (
+          <li key={i}>
+            <button
+              type="button"
+              onClick={() => onIssueClick(field)}
+              className="text-left underline decoration-dotted underline-offset-2 hover:text-slate-900 dark:hover:text-white"
+            >
+              {message}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

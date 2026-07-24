@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { revalidateTag } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { lessonSchema, validateLessonContent, zodIssueMessages } from "@/lib/validations";
+import { lessonSchema, validateLessonContent, zodIssueDetails } from "@/lib/validations";
 import { getOwnedModule } from "@/lib/instructor-guard";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
 import { needsTranscode, requeueTranscode, isProcessedHlsUrl } from "@/lib/videoTranscode";
@@ -20,13 +20,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
   const parsed = lessonSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0].message, issues: zodIssueMessages(parsed.error) },
+      { error: parsed.error.issues[0].message, issues: zodIssueDetails(parsed.error) },
       { status: 400 }
     );
   }
   const contentError = validateLessonContent(parsed.data);
   if (contentError) {
-    return NextResponse.json({ error: contentError, issues: [contentError] }, { status: 400 });
+    const field = parsed.data.type === "TEXT" ? "textContent" : "contentUrl";
+    return NextResponse.json({ error: contentError, issues: [{ message: contentError, field }] }, { status: 400 });
   }
 
   const authorIds = new Set([courseModule.course.instructorId, ...courseModule.course.collaborators.map((c) => c.id)]);

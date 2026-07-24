@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { CornerCard, CornerCardStack } from "@/components/ui/CornerCard";
+import { CornerCard, CornerCardStack, CornerCardIssueList, focusField, type CornerCardIssue } from "@/components/ui/CornerCard";
 
 export default function NewCoursePage() {
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function NewCoursePage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
-  const [saveIssues, setSaveIssues] = useState<string[] | null>(null);
+  const [saveIssues, setSaveIssues] = useState<CornerCardIssue[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,7 +30,7 @@ export default function NewCoursePage() {
     setLoading(false);
 
     if (!res.ok) {
-      setSaveIssues(data.issues ?? [data.error ?? "Erro ao criar curso"]);
+      setSaveIssues(data.issues ?? [{ message: data.error ?? "Erro ao criar curso" }]);
       return;
     }
 
@@ -89,11 +89,7 @@ export default function NewCoursePage() {
         {saveIssues && (
           <CornerCard>
             <p className="font-medium text-slate-900 dark:text-white">Falta preencher</p>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-slate-600 dark:text-slate-300">
-              {saveIssues.map((issue, i) => (
-                <li key={i}>{issue}</li>
-              ))}
-            </ul>
+            <CornerCardIssueList issues={saveIssues} onIssueClick={focusField} />
           </CornerCard>
         )}
       </CornerCardStack>

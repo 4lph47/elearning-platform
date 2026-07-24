@@ -171,6 +171,13 @@ export function zodIssueMessages(error: z.ZodError): string[] {
   return error.issues.map((i) => i.message);
 }
 
+// Mesma coisa, mas com o campo (1º segmento do path) associado a cada
+// mensagem — é o que permite o popup "falta preencher" clicar num item e
+// saltar direto pro campo em causa (ver focusField em components/ui/CornerCard.tsx).
+export function zodIssueDetails(error: z.ZodError): { message: string; field?: string }[] {
+  return error.issues.map((i) => ({ message: i.message, field: i.path.length > 0 ? String(i.path[0]) : undefined }));
+}
+
 export function validateUpload(
   kind: "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE" | "CAPTIONS",
   mimeType: string,

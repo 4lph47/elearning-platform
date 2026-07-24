@@ -308,7 +308,11 @@ export function LessonPlayer({
   const progressDragRef = useRef<{ startY: number; revealed: boolean; alreadyExpanded: boolean } | null>(null);
   const barExpandedRef = useRef(false);
   const [barExpanded, setBarExpandedState] = useState(false);
-  const PROGRESS_LIFT_MAX = 84; // barra fica em bottom-2(8) + 84 = 92px, igual ao topo da filmstrip (FILMSTRIP_BOTTOM + FILMSTRIP_HEIGHT) — encostadas.
+  // A linha visível do slider fica ~8px acima do fundo da própria row (a
+  // row é h-10/40px pra dar área de toque maior, mas o <input> encosta em
+  // bottom-0 dela com só h-4/16px, e a track fica centrada nesse h-4 — daí
+  // o -8 extra, senão a caixa invisível encostava mas a linha visível não).
+  const PROGRESS_LIFT_MAX = 76; // bottom-2(8) + 76 = 84px = topo da filmstrip(92) - 8 (offset da linha dentro da row).
   const PROGRESS_REVEAL_DY = 60;
   const FILMSTRIP_COUNT = 20;
   const THUMB_W = 64;

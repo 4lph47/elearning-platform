@@ -109,6 +109,15 @@ export function InstructorCourseGrid({
     window.scrollTo({ top: targetY, behavior: "smooth" });
   }
 
+  function handleFilterToggle() {
+    setPanelOpen((v) => !v);
+    if (typeof window === "undefined" || window.innerWidth >= 640) return;
+    const el = searchWrapRef.current;
+    if (!el) return;
+    const targetY = window.scrollY + el.getBoundingClientRect().top - HEADER_HEIGHT - SCROLL_GAP;
+    window.scrollTo({ top: targetY, behavior: "smooth" });
+  }
+
   return (
     <div>
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -135,7 +144,7 @@ export function InstructorCourseGrid({
             <div ref={panelRef} className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => setPanelOpen((v) => !v)}
+                onClick={handleFilterToggle}
                 className={`flex h-full shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                   activeFilters.length > 0
                     ? "border-slate-400 bg-slate-200 text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"

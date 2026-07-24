@@ -307,6 +307,9 @@ export function LessonPlayer({
   const [scrubPreview, setScrubPreview] = useState<{ time: number; x: number } | null>(null);
   const scrubDraggingRef = useRef(false);
   const lastScrubUpdateRef = useRef(0);
+  const progressDragRef = useRef<{ startY: number; revealed: boolean } | null>(null);
+  const PROGRESS_LIFT_MAX = 100;
+  const PROGRESS_REVEAL_DY = 60;
 
   // Duplo-clique/duplo-tap: 1º clique adia o play/pause (setTimeout); se um
   // 2º chegar a tempo, cancela-se o adiado e interpreta-se como gesto duplo
@@ -669,27 +672,55 @@ export function LessonPlayer({
   // também escuta touchstart/touchend pro gesto de arrastar pra
   // maximizar/minimizar o vídeo (ver handleFullscreenTouchStart/End) — sem
   // isto, arrastar na barra também dispararia esse gesto ao mesmo tempo.
+  //
+  // A barra em si sobe ao vivo com o dedo (mutação direta do DOM via
+  // progressBarRef, não estado — um re-render React por pixel arrastado
+  // engasgava) — só depois de arrastar o suficiente pra cima (
+  // PROGRESS_REVEAL_DY) é que o preview aparece, no espaço que a barra foi
+  // libertando por baixo dela ao subir.
   function handleProgressTouchStart(e: React.TouchEvent) {
     e.stopPropagation();
+    progressDragRef.current = { startY: e.touches[0].clientY, revealed: false };
     scrubDraggingRef.current = true;
     ensureThumbSource();
-    updateScrub(e.touches[0].clientX);
   }
 
   function handleProgressTouchMove(e: React.TouchEvent) {
-    if (!scrubDraggingRef.current) return;
+    const drag = progressDragRef.current;
+    if (!drag || !scrubDraggingRef.current) return;
     e.stopPropagation();
-    const now = Date.now();
-    if (now - lastScrubUpdateRef.current < 120) return; // throttle: 1 seek/desenho a cada 120ms, não a cada pixel
-    lastScrubUpdateRef.current = now;
-    updateScrub(e.touches[0].clientX);
+    const touch = e.touches[0];
+    const dy = Math.max(0, drag.startY - touch.clientY);
+    const bar = progressBarRef.current;
+    if (bar) bar.style.transform = dy > 0 ? `translateY(-${Math.min(PROGRESS_LIFT_MAX, dy)}px)` : "";
+
+    if (dy > PROGRESS_REVEAL_DY) {
+      drag.revealed = true;
+      const now = Date.now();
+      if (now - lastScrubUpdateRef.current < 120) return; // throttle: 1 seek/desenho a cada 120ms, não a cada pixel
+      lastScrubUpdateRef.current = now;
+      updateScrub(touch.clientX);
+    } else if (drag.revealed) {
+      drag.revealed = false;
+      setScrubPreview(null);
+    }
   }
 
   function handleProgressTouchEnd(e: React.TouchEvent) {
-    if (!scrubDraggingRef.current) return;
+    const drag = progressDragRef.current;
+    if (!drag) return;
     e.stopPropagation();
     scrubDraggingRef.current = false;
+    progressDragRef.current = null;
     setScrubPreview(null);
+    const bar = progressBarRef.current;
+    if (bar) {
+      bar.style.transition = "transform 150ms ease-out";
+      bar.style.transform = "";
+      window.setTimeout(() => {
+        if (progressBarRef.current === bar) bar.style.transition = "";
+      }, 150);
+    }
   }
 
   function setRate(rate: number) {
@@ -912,8 +943,14 @@ export function LessonPlayer({
     if (!thumbVideo || !canvas) return;
     let cancelled = false;
     function draw() {
+      if (cancelled || thumbVideo!.readyState < 2) return; // HAVE_CURRENT_DATA — antes disso não há frame pra desenhar
       const ctx = canvas!.getContext("2d");
-      if (ctx && !cancelled) ctx.drawImage(thumbVideo!, 0, 0, canvas!.width, canvas!.height);
+      if (!ctx) return;
+      try {
+        ctx.drawImage(thumbVideo!, 0, 0, canvas!.width, canvas!.height);
+      } catch {
+        // canvas tainted (CORS) ou frame ainda não disponível — mantém o anterior
+      }
     }
     if (Math.abs(thumbVideo.currentTime - scrubPreview.time) > 0.3) {
       const onSeeked = () => {
@@ -1032,7 +1069,7 @@ export function LessonPlayer({
                 )}
               </video>
 
-              <video ref={thumbVideoRef} muted playsInline preload="none" className="hidden" aria-hidden="true" />
+              <video ref={thumbVideoRef} muted playsInline preload="auto" crossOrigin="anonymous" className="hidden" aria-hidden="true" />
 
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
@@ -1040,12 +1077,28 @@ export function LessonPlayer({
                 </div>
               )}
 
-              {/* Settings + maximizar: no mobile sobem pro canto superior direito (fora da
-                  barra de baixo); no desktop continuam na barra de controlos (ver mais abaixo,
-                  escondidos aqui via lg:hidden). Desaparecem com fadeout junto dos outros
-                  controlos ao dar play (controlsShown). */}
+              {/* Settings: no mobile sobe pro canto superior direito (fora da barra de
+                  baixo); no desktop continua na barra de controlos (ver mais abaixo, escondido
+                  aqui via lg:hidden). Some com fadeout junto dos outros controlos ao dar play. */}
               <div
                 className={`absolute right-2 top-2 z-30 flex items-center gap-2 text-white transition-opacity duration-150 lg:hidden ${
+                  controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <div ref={mobileMenuBtnRef} className="relative">
+                  <button type="button"
+                    onClick={toggleSettingsMenu}
+                    aria-label="Definições"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  >
+                    <Settings size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Maximizar: no mobile fica sozinho no canto inferior direito. */}
+              <div
+                className={`absolute bottom-2 right-2 z-30 text-white transition-opacity duration-150 lg:hidden ${
                   controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
@@ -1056,15 +1109,6 @@ export function LessonPlayer({
                 >
                   {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
                 </button>
-                <div ref={mobileMenuBtnRef} className="relative">
-                  <button type="button"
-                    onClick={toggleSettingsMenu}
-                    aria-label="Definições"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
-                  >
-                    <Settings size={18} />
-                  </button>
-                </div>
               </div>
 
               {likeBurst && (
@@ -1125,7 +1169,7 @@ export function LessonPlayer({
                   onTouchStart={handleProgressTouchStart}
                   onTouchMove={handleProgressTouchMove}
                   onTouchEnd={handleProgressTouchEnd}
-                  className="group/progress absolute inset-x-0 bottom-28 h-4 px-3 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
+                  className="group/progress absolute inset-x-0 bottom-2 h-4 pl-3 pr-12 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
                 >
                   <svg
                     viewBox="0 0 1000 100"
@@ -1159,8 +1203,9 @@ export function LessonPlayer({
                   />
                 </div>
 
-                {/* Preview de scrub (mobile): thumbnail real do frame arrastado, no espaço
-                    reservado entre a barra (subida, bottom-28) e o limite de baixo do vídeo. */}
+                {/* Preview de scrub (mobile): só aparece depois do swipe up na barra passar
+                    PROGRESS_REVEAL_DY (ver handleProgressTouchMove) — nesse ponto a barra já
+                    subiu o suficiente pra libertar este espaço por baixo dela. */}
                 {scrubPreview && (
                   <div
                     className="pointer-events-none absolute z-30 flex -translate-x-1/2 flex-col items-center gap-1 lg:hidden"
@@ -1169,7 +1214,7 @@ export function LessonPlayer({
                         Math.max(scrubPreview.x, 60),
                         (progressBarRef.current?.clientWidth ?? scrubPreview.x + 60) - 60
                       ),
-                      bottom: 12,
+                      bottom: 8,
                     }}
                   >
                     <canvas

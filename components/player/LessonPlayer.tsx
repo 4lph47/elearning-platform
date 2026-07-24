@@ -927,7 +927,7 @@ export function LessonPlayer({
 
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-                  <Loader2 size={56} className="animate-spin text-white" />
+                  <Loader2 size={80} className="animate-spin text-white" />
                 </div>
               )}
 
@@ -937,7 +937,7 @@ export function LessonPlayer({
                   className="pointer-events-none absolute z-20 animate-like-swing"
                   style={{ left: likeBurst.x, top: likeBurst.y }}
                 >
-                  <ThumbsUp size={72} className="-scale-x-100 fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                  <ThumbsUp size={72} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
                 </div>
               )}
 

@@ -31,10 +31,9 @@ const config: Config = {
           "75%": { opacity: "1", transform: "translate(-50%, -50%) scale(1)" },
           "100%": { opacity: "0", transform: "translate(-50%, -50%) scale(1)" },
         },
-        // Ícone de like virado ao contrário (scaleX(-1), mantido em TODOS os
-        // passos — senão desmirrorava a meio da animação): cai de 30º até
-        // ficar reto (0º), passa por baixo até -15º, e sobe de novo até
-        // assentar reto — efeito de balanço/pêndulo. Cada troço tem a SUA
+        // Ícone de like: cai de 30º até ficar reto (0º), passa por baixo até
+        // -15º, e sobe de novo até assentar reto — efeito de balanço/pêndulo.
+        // Cada troço tem a SUA
         // própria curva (não a mesma ease-in-out repetida em cada troço, que
         // ficava com um travão-e-arranca mecânico em cada paragem
         // intermédia): sai a acelerar (ease-out), cai a acelerar por baixo

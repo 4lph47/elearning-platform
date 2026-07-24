@@ -39,9 +39,13 @@ export async function upsertQuiz(scope: "LESSON" | "COURSE", parentId: string, d
   const questions = questionsCreateData(data.questions);
   const shared = {
     title: data.title,
-    // Só o quiz final do curso pode limitar tentativas — quizzes de aula/módulo são sempre ilimitados.
+    // Só o quiz final do curso pode limitar tentativas e exigir espera entre repetições.
     maxAttempts: scope === "COURSE" ? data.maxAttempts ?? null : null,
+    retryAfterHours: scope === "COURSE" ? data.retryAfterHours ?? null : null,
     timeLimitMinutes: data.timeLimitMinutes ?? null,
+    // O quiz final mostra sempre o countdown (não é opcional); só aula/módulo
+    // seguem o toggle do instrutor.
+    showCountdown: scope === "COURSE" ? true : data.showCountdown ?? false,
   };
 
   if (scope === "LESSON") {
@@ -83,7 +87,9 @@ export async function createModuleQuiz(moduleId: string, order: number, data: Qu
       scope: "MODULE",
       title: data.title,
       maxAttempts: null,
+      retryAfterHours: null,
       timeLimitMinutes: data.timeLimitMinutes ?? null,
+      showCountdown: data.showCountdown ?? false,
       order,
       moduleId,
       questions: { create: questionsCreateData(data.questions) },
@@ -102,6 +108,7 @@ export async function updateQuizById(quizId: string, data: QuizInput) {
     data: {
       title: data.title,
       timeLimitMinutes: data.timeLimitMinutes ?? null,
+      showCountdown: data.showCountdown ?? false,
       questions: { deleteMany: {}, create: questionsCreateData(data.questions) },
     },
     include: includeQuestions,

@@ -12,6 +12,7 @@ export interface ModuleQuizFormData {
   id: string;
   title: string;
   timeLimitMinutes: number | null;
+  showCountdown: boolean;
   questions: QuestionData[];
 }
 
@@ -35,6 +36,7 @@ export function ModuleQuizForm({
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(
     quiz?.timeLimitMinutes != null ? String(quiz.timeLimitMinutes) : ""
   );
+  const [showCountdown, setShowCountdown] = useState(quiz?.showCountdown ?? false);
   const [questions, setQuestions] = useState<QuestionData[]>(quiz?.questions ?? [newQuestion(0)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export function ModuleQuizForm({
     const payload = {
       title,
       timeLimitMinutes: timeLimitMinutes.trim() ? Number(timeLimitMinutes) : null,
+      showCountdown,
       questions: questions.map((q, qi) => ({
         text: q.text,
         order: qi,
@@ -110,6 +113,16 @@ export function ModuleQuizForm({
             placeholder="Sem limite"
           />
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input
+            type="checkbox"
+            checked={showCountdown}
+            onChange={(e) => setShowCountdown(e.target.checked)}
+            className="rounded border-slate-300"
+          />
+          Mostrar countdown ao aluno (se houver tempo limite)
+        </label>
 
         <QuizQuestionsEditor questions={questions} onChange={setQuestions} />
 

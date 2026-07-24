@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { textBoxFromElement } from "@/components/course/CardTransitionContext";
 import { useTextFly } from "@/components/course/TextFlyContext";
@@ -23,21 +23,39 @@ function formatClock(totalSeconds: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function formatCooldown(totalSeconds: number) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export function QuizPlayer({
   quizId,
   title,
   questions,
+  scope = "LESSON",
   maxAttempts,
   timeLimitMinutes,
+  showCountdown = false,
+  retryAfterHours,
+  nextAvailableAt,
   attemptsUsed = 0,
 }: {
   quizId: string;
   title: string;
   questions: QuizQuestion[];
+  scope?: "LESSON" | "MODULE" | "COURSE";
   maxAttempts?: number | null;
   timeLimitMinutes?: number | null;
+  showCountdown?: boolean;
+  retryAfterHours?: number | null;
+  nextAvailableAt?: string | null;
   attemptsUsed?: number;
 }) {
+  const isFinal = scope === "COURSE";
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ scorePercent: number; correctOptionByQuestion: Record<string, string> } | null>(
     null
@@ -45,11 +63,33 @@ export function QuizPlayer({
   const [attemptsSoFar, setAttemptsSoFar] = useState(attemptsUsed);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consented, setConsented] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(
+    nextAvailableAt ? new Date(nextAvailableAt).getTime() : null
+  );
+  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(
     timeLimitMinutes ? timeLimitMinutes * 60 : null
   );
   const answersRef = useRef(answers);
   answersRef.current = answers;
+
+  useEffect(() => {
+    if (cooldownUntil === null) {
+      setCooldownSecondsLeft(null);
+      return;
+    }
+    const tick = () => {
+      const secs = Math.ceil((cooldownUntil - Date.now()) / 1000);
+      setCooldownSecondsLeft(secs > 0 ? secs : 0);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownUntil]);
+
+  const cooldownActive = Boolean(cooldownSecondsLeft && cooldownSecondsLeft > 0);
+  const showClock = isFinal || showCountdown;
 
   // Recebe o título a voar de um link de quiz clicado (currículo/progresso) —
   // mesmo padrão de LessonTitleHeading.tsx.
@@ -66,9 +106,10 @@ export function QuizPlayer({
 
   const outOfAttempts = maxAttempts != null && attemptsSoFar >= maxAttempts;
   const allAnswered = questions.every((q) => answers[q.id]);
+  const waitingForConsent = isFinal && !consented && !result;
 
   useEffect(() => {
-    if (secondsLeft === null || result || outOfAttempts) return;
+    if (secondsLeft === null || result || outOfAttempts || waitingForConsent) return;
     if (secondsLeft <= 0) {
       submit(answersRef.current);
       return;
@@ -76,7 +117,7 @@ export function QuizPlayer({
     const timer = setTimeout(() => setSecondsLeft((s) => (s !== null ? s - 1 : s)), 1000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft, result, outOfAttempts]);
+  }, [secondsLeft, result, outOfAttempts, waitingForConsent]);
 
   async function submit(finalAnswers: Record<string, string>) {
     setLoading(true);
@@ -92,10 +133,12 @@ export function QuizPlayer({
 
     if (!res.ok) {
       setError(data.error ?? "Erro ao submeter quiz");
+      if (data.nextAvailableAt) setCooldownUntil(new Date(data.nextAvailableAt).getTime());
       return;
     }
     setResult(data);
     setAttemptsSoFar((n) => n + 1);
+    if (retryAfterHours) setCooldownUntil(Date.now() + retryAfterHours * 60 * 60 * 1000);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -107,6 +150,7 @@ export function QuizPlayer({
   function retry() {
     setResult(null);
     setAnswers({});
+    setConsented(false);
     setSecondsLeft(timeLimitMinutes ? timeLimitMinutes * 60 : null);
   }
 
@@ -127,7 +171,60 @@ export function QuizPlayer({
     );
   }
 
-  const canRetry = !result ? false : maxAttempts == null || attemptsSoFar < maxAttempts;
+  if (cooldownActive && !result) {
+    return (
+      <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+        <div className="mt-3 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <Hourglass size={16} />
+          <p>
+            Tens de esperar mais <strong>{formatCooldown(cooldownSecondsLeft ?? 0)}</strong> antes de poderes repetir
+            este quiz.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const canRetry = !result ? false : (maxAttempts == null || attemptsSoFar < maxAttempts) && !cooldownActive;
+
+  if (waitingForConsent) {
+    return (
+      <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
+        <h2
+          ref={titleRef}
+          style={{ visibility: titleHidden ? "hidden" : "visible" }}
+          className="text-lg font-semibold text-slate-900 dark:text-white"
+        >
+          {title}
+        </h2>
+        <div className="mt-3 space-y-2 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          <p className="font-medium">Este é o teste final do curso.</p>
+          <ul className="list-disc space-y-1 pl-4">
+            {timeLimitMinutes != null && (
+              <li>
+                Tens um tempo limite de <strong>{timeLimitMinutes} minutos</strong> para o completar. Ao esgotar-se,
+                as respostas atuais são submetidas automaticamente.
+              </li>
+            )}
+            {retryAfterHours != null && (
+              <li>
+                Só poderás voltar a repetir o teste <strong>{retryAfterHours} horas</strong> depois de o submeteres.
+              </li>
+            )}
+            {maxAttempts != null && (
+              <li>
+                Tens no máximo <strong>{maxAttempts}</strong> tentativa{maxAttempts !== 1 ? "s" : ""}.
+              </li>
+            )}
+          </ul>
+        </div>
+        <Button type="button" variant="accent" className="mt-4" onClick={() => setConsented(true)}>
+          Começar teste
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full rounded-xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
@@ -139,7 +236,7 @@ export function QuizPlayer({
         >
           {title}
         </h2>
-        {secondsLeft !== null && !result && (
+        {showClock && secondsLeft !== null && !result && (
           <span
             className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
               secondsLeft <= 30
@@ -220,6 +317,11 @@ export function QuizPlayer({
           <Button type="button" variant="outline-dark" onClick={retry}>
             Tentar novamente
           </Button>
+        ) : cooldownActive ? (
+          <p className="flex items-center gap-1.5 text-xs text-slate-500">
+            <Hourglass size={12} />
+            Podes repetir daqui a {formatCooldown(cooldownSecondsLeft ?? 0)}.
+          </p>
         ) : (
           maxAttempts != null && <p className="text-xs text-slate-500">Sem mais tentativas disponíveis.</p>
         )}

@@ -418,6 +418,13 @@ model Quiz {
   order            Int       @default(0)
   maxAttempts      Int?
   timeLimitMinutes Int?
+  // Só usado em scope COURSE — horas de espera obrigatória antes de poder
+  // repetir o quiz final (após esgotar tentativas ou voltar a tentar).
+  retryAfterHours  Int?
+  // Só usado em scope LESSON/MODULE — o quiz final (COURSE) mostra sempre o
+  // countdown quando tem timeLimitMinutes; nos outros é opcional, ao critério
+  // do instrutor.
+  showCountdown    Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
   lessonId String? @unique

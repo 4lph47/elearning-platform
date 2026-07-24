@@ -14,6 +14,8 @@ export interface QuizData {
   title: string;
   maxAttempts?: number | null;
   timeLimitMinutes?: number | null;
+  retryAfterHours?: number | null;
+  showCountdown?: boolean;
   questions: QuestionData[];
 }
 
@@ -44,6 +46,10 @@ export function QuizEditor({
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(
     existingQuiz?.timeLimitMinutes != null ? String(existingQuiz.timeLimitMinutes) : ""
   );
+  const [retryAfterHours, setRetryAfterHours] = useState(
+    existingQuiz?.retryAfterHours != null ? String(existingQuiz.retryAfterHours) : ""
+  );
+  const [showCountdown, setShowCountdown] = useState(existingQuiz?.showCountdown ?? false);
   const [questions, setQuestions] = useState<QuestionData[]>(existingQuiz?.questions ?? [newQuestion(0)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +62,8 @@ export function QuizEditor({
       title,
       maxAttempts: maxAttempts.trim() ? Number(maxAttempts) : null,
       timeLimitMinutes: timeLimitMinutes.trim() ? Number(timeLimitMinutes) : null,
+      retryAfterHours: retryAfterHours.trim() ? Number(retryAfterHours) : null,
+      showCountdown,
       questions: questions.map((q, qi) => ({
         text: q.text,
         order: qi,
@@ -150,7 +158,36 @@ export function QuizEditor({
             placeholder="Sem limite"
           />
         </div>
+        {scope === "COURSE" && (
+          <div>
+            <Label htmlFor={`quiz-retry-${parentId}`}>Espera entre tentativas em horas (vazio = sem espera)</Label>
+            <Input
+              id={`quiz-retry-${parentId}`}
+              type="number"
+              min={1}
+              value={retryAfterHours}
+              onChange={(e) => setRetryAfterHours(e.target.value)}
+              placeholder="Sem espera"
+            />
+          </div>
+        )}
       </div>
+
+      {scope === "COURSE" ? (
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          O teste final mostra sempre o ecrã de consentimento e o countdown ao aluno.
+        </p>
+      ) : (
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input
+            type="checkbox"
+            checked={showCountdown}
+            onChange={(e) => setShowCountdown(e.target.checked)}
+            className="rounded border-slate-300"
+          />
+          Mostrar countdown ao aluno (se houver tempo limite)
+        </label>
+      )}
 
       <QuizQuestionsEditor questions={questions} onChange={setQuestions} />
 

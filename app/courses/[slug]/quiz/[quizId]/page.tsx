@@ -39,7 +39,7 @@ export default async function CourseQuizPage({
 
   if (!quiz || !allQuizIds.includes(quiz.id)) notFound();
 
-  const [enrollment, attemptsUsed, progressRows, doneQuizAttempts] = await Promise.all([
+  const [enrollment, attemptsUsed, progressRows, doneQuizAttempts, lastAttempt] = await Promise.all([
     prisma.enrollment.findUnique({
       where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
     }),
@@ -53,6 +53,12 @@ export default async function CourseQuizPage({
           select: { quizId: true },
         })
       : Promise.resolve([]),
+    quiz.retryAfterHours != null
+      ? prisma.quizAttempt.findFirst({
+          where: { quizId: quiz.id, userId: session.user.id },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve(null),
   ]);
 
   const isEnrolled = Boolean(enrollment);
@@ -131,8 +137,16 @@ export default async function CourseQuizPage({
         <QuizPlayer
           quizId={quiz.id}
           title={quiz.title}
+          scope={quiz.scope}
           maxAttempts={quiz.maxAttempts}
           timeLimitMinutes={quiz.timeLimitMinutes}
+          showCountdown={quiz.showCountdown}
+          retryAfterHours={quiz.retryAfterHours}
+          nextAvailableAt={
+            lastAttempt && quiz.retryAfterHours != null
+              ? new Date(lastAttempt.createdAt.getTime() + quiz.retryAfterHours * 60 * 60 * 1000).toISOString()
+              : null
+          }
           attemptsUsed={attemptsUsed}
           questions={quiz.questions.map((q) => ({
             id: q.id,

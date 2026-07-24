@@ -104,6 +104,8 @@ export const quizSchema = z.object({
   title: z.string().min(2, "Título do quiz é obrigatório"),
   maxAttempts: z.number().int().min(1, "Tem de ser pelo menos 1").optional().nullable(),
   timeLimitMinutes: z.number().int().min(1, "Tem de ser pelo menos 1 minuto").optional().nullable(),
+  retryAfterHours: z.number().int().min(1, "Tem de ser pelo menos 1 hora").optional().nullable(),
+  showCountdown: z.boolean().optional(),
   questions: z
     .array(
       z.object({

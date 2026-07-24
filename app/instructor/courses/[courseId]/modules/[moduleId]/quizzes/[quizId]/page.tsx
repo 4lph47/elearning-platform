@@ -33,6 +33,7 @@ export default async function EditModuleQuizPage({
         id: quiz.id,
         title: quiz.title,
         timeLimitMinutes: quiz.timeLimitMinutes,
+        showCountdown: quiz.showCountdown,
         questions,
       }}
     />

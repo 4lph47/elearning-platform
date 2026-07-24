@@ -48,6 +48,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ qui
     }
   }
 
+  if (quiz.retryAfterHours !== null) {
+    const lastAttempt = await prisma.quizAttempt.findFirst({
+      where: { quizId: quiz.id, userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+    });
+    if (lastAttempt) {
+      const nextAvailableAt = new Date(lastAttempt.createdAt.getTime() + quiz.retryAfterHours * 60 * 60 * 1000);
+      if (nextAvailableAt.getTime() > Date.now()) {
+        return NextResponse.json(
+          { error: "Ainda estás no período de espera para repetir este quiz", nextAvailableAt },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   let correctCount = 0;
   const correctOptionByQuestion: Record<string, string> = {};
   for (const question of quiz.questions) {

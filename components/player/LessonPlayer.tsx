@@ -8,6 +8,7 @@ import {
   Download,
   Gauge,
   Link2,
+  Loader2,
   Maximize,
   Minimize,
   Pause,
@@ -175,6 +176,16 @@ export function LessonPlayer({
   const [hlsLevels, setHlsLevels] = useState<{ index: number; height: number; bitrate: number }[]>([]);
   const [hlsCurrentLevel, setHlsCurrentLevel] = useState(-1);
 
+  // Mostra um indicador de carregamento em vez de deixar o vídeo parecer
+  // parado/preso enquanto a 1ª frame ainda não chegou (troca de fonte —
+  // upload novo, mudança de qualidade, etc.). Falso assim que o browser tem
+  // dados suficientes pra desenhar algo (onLoadedData), nunca num
+  // temporizador fixo — reflete o tempo real de carregamento.
+  const [videoReady, setVideoReady] = useState(false);
+  useEffect(() => {
+    setVideoReady(false);
+  }, [hlsMasterUrl, activeSrc, usingHls]);
+
   useEffect(() => {
     if (!usingHls || !hlsMasterUrl) return;
     const video = videoRef.current;
@@ -205,7 +216,11 @@ export function LessonPlayer({
     // exatamente esse excesso que causava pausas a meio da reprodução em
     // aparelhos mais fracos. Escolha manual de qualidade continua a
     // funcionar na mesma (isto só limita o automático).
-    const hls = new Hls({ capLevelToPlayerSize: true });
+    // startLevel: 0 — força o 1º carregamento a começar pela rendition mais
+    // pequena (mais rápida a chegar), em vez do hls.js adivinhar às cegas
+    // sem nenhuma amostra de largura de banda ainda. Só afeta a escolha
+    // inicial; o automático (ABR) continua livre depois disso.
+    const hls = new Hls({ capLevelToPlayerSize: true, startLevel: 0 });
     hlsRef.current = hls;
     hls.loadSource(hlsMasterUrl);
     hls.attachMedia(video);
@@ -820,8 +835,15 @@ export function LessonPlayer({
                   setMuted(e.currentTarget.muted);
                   setVolume(e.currentTarget.volume);
                 }}
+                onLoadedData={() => setVideoReady(true)}
                 onClick={handleVideoClick}
               />
+
+              {!videoReady && (usingHls || activeSrc) && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+                  <Loader2 size={32} className="animate-spin text-white" />
+                </div>
+              )}
 
               {likeBurst && (
                 <div

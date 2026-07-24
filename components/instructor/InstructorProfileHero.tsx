@@ -283,7 +283,7 @@ export function InstructorProfileHero({
       )}
 
       {isOwner && editing && (
-        <div className="absolute right-0 top-0 flex items-center gap-2">
+        <div className="absolute -top-12 right-0 flex flex-wrap items-center justify-end gap-2 sm:top-0">
           {error && <span className="text-xs font-medium text-red-200">{error}</span>}
           <button
             type="button"
@@ -576,7 +576,7 @@ export function InstructorProfileHero({
   // tiver.
   if (bannerUrl) {
     return (
-      <div className="relative -mt-16 overflow-hidden pb-10 pt-[7.5rem] sm:pt-36">
+      <div className="relative -mt-16 overflow-hidden pb-6 pt-[7.5rem] sm:pt-36">
         {bannerType === "VIDEO" ? (
           <video
             key={bannerUrl}

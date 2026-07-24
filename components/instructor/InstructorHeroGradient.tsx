@@ -23,7 +23,7 @@ export function InstructorHeroGradient({ children }: { children: ReactNode }) {
     // este gradiente aparecer "através" dele. Padding-top ganha os 64px do
     // header de volta, senão o avatar ficava escondido atrás dele.
     <div
-      className="-mt-16 pb-10 pt-[7.5rem] transition-[background-image] duration-700 sm:pt-36"
+      className="-mt-16 pb-6 pt-[7.5rem] transition-[background-image] duration-700 sm:pt-36"
       style={{ backgroundImage: `linear-gradient(to bottom, rgb(${top}) 0%, rgb(${mid}) 55%, rgba(${mid}, 0) 100%)` }}
     >
       {children}

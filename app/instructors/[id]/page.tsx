@@ -141,9 +141,9 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           stats={{ avgRating, totalReviews, totalStudents, courseCount: courses.length }}
         />
 
-        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-8">
+        <div className="mx-auto max-w-5xl px-4 pb-10 pt-4 sm:px-8">
           {isOwner && (
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-3 flex flex-wrap gap-2">
               <FadeLink
                 href="/instructor"
                 className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"

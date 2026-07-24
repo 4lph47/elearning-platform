@@ -21,7 +21,7 @@ import { QuizEditor } from "@/components/instructor/QuizEditor";
 import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
-import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
+import { saveDraft, loadDraft, clearDraft, sanitizeUploadedUrl } from "@/lib/formDraft";
 import { transcribeFileToVtt, uploadCaptionsVtt, type CaptionsPhase } from "@/lib/captions";
 import { captureFirstFrame, uploadThumbnailBlob } from "@/lib/videoThumbnail";
 import type { LessonData } from "@/components/instructor/LessonRow";
@@ -83,17 +83,19 @@ export function LessonEditScreen({
   const [description, setDescription] = useState(draft?.value.description ?? lesson?.description ?? "");
   const [isFreePreview, setIsFreePreview] = useState(draft?.value.isFreePreview ?? lesson?.isFreePreview ?? false);
   const [type, setType] = useState<"VIDEO" | "TEXT">(draft?.value.type ?? lesson?.type ?? initialType ?? "VIDEO");
-  const [contentUrl, setContentUrl] = useState<string | null>(draft?.value.contentUrl ?? lesson?.contentUrl ?? null);
+  const [contentUrl, setContentUrl] = useState<string | null>(
+    sanitizeUploadedUrl(draft?.value.contentUrl ?? lesson?.contentUrl)
+  );
   const [contentName, setContentName] = useState<string | null>(draft?.value.contentName ?? null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
-    draft?.value.thumbnailUrl ?? lesson?.thumbnailUrl ?? null
+    sanitizeUploadedUrl(draft?.value.thumbnailUrl ?? lesson?.thumbnailUrl)
   );
   const [thumbnailName, setThumbnailName] = useState<string | null>(draft?.value.thumbnailName ?? null);
   // true só enquanto o thumbnail atual veio do frame capturado automaticamente
   // (não de uma escolha manual) — decide se um novo vídeo pode substituí-lo.
   const [thumbnailIsAuto, setThumbnailIsAuto] = useState(false);
   const [captionsUrl, setCaptionsUrl] = useState<string | null>(
-    draft?.value.captionsUrl ?? lesson?.captionsUrl ?? null
+    sanitizeUploadedUrl(draft?.value.captionsUrl ?? lesson?.captionsUrl)
   );
   // Não é persistido em rascunho (é derivado de um File em memória, que não
   // sobrevive a um refresh) — só reflete o progresso da geração em curso
@@ -461,36 +463,6 @@ export function LessonEditScreen({
                     />
                   </div>
                 )}
-
-                <div>
-                  <Label>Thumbnail da aula (opcional)</Label>
-                  <p className="mb-1.5 text-xs text-slate-400 dark:text-slate-500">
-                    O thumbnail da primeira aula do curso é o que aparece nos cards (página principal, catálogo, etc.).
-                  </p>
-                  <FileUploadInput
-                    kind="IMAGE"
-                    currentUrl={thumbnailUrl}
-                    currentName={thumbnailName}
-                    onUploaded={(r) => {
-                      setThumbnailUrl(r.url);
-                      setThumbnailName(r.name);
-                      setThumbnailIsAuto(false);
-                    }}
-                  />
-                  {thumbnailIsAuto && (
-                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                      Gerado automaticamente a partir do vídeo.
-                    </p>
-                  )}
-                  {thumbnailUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumbnailUrl}
-                      alt="Pré-visualização do thumbnail"
-                      className="mt-2 aspect-video w-full rounded-md object-cover"
-                    />
-                  )}
-                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -515,6 +487,39 @@ export function LessonEditScreen({
               </div>
             )}
           </CollapsibleCard>
+          {type === "VIDEO" && (
+            <CollapsibleCard title="Thumbnail">
+              <div id="thumbnailUrl">
+                <Label>Thumbnail da aula (opcional)</Label>
+                <p className="mb-1.5 text-xs text-slate-400 dark:text-slate-500">
+                  O thumbnail da primeira aula do curso é o que aparece nos cards (página principal, catálogo, etc.).
+                </p>
+                <FileUploadInput
+                  kind="IMAGE"
+                  currentUrl={thumbnailUrl}
+                  currentName={thumbnailName}
+                  onUploaded={(r) => {
+                    setThumbnailUrl(r.url);
+                    setThumbnailName(r.name);
+                    setThumbnailIsAuto(false);
+                  }}
+                />
+                {thumbnailIsAuto && (
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                    Gerado automaticamente a partir do vídeo.
+                  </p>
+                )}
+                {thumbnailUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumbnailUrl}
+                    alt="Pré-visualização do thumbnail"
+                    className="mt-2 aspect-video w-full rounded-md object-cover"
+                  />
+                )}
+              </div>
+            </CollapsibleCard>
+          )}
           {isEditing && type === "VIDEO" && (
             <CollapsibleCard title="Quiz da aula">
               <QuizEditor scope="LESSON" parentId={lesson!.id} label="Quiz da aula" existingQuiz={lesson?.quiz} />

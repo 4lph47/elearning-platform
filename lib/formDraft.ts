@@ -31,3 +31,14 @@ export function clearDraft(key: string) {
   if (typeof window === "undefined") return;
   localStorage.removeItem(key);
 }
+
+// Campos de URL vindos de upload de ficheiro (trailer, thumbnail, vídeo,
+// legendas) só devem conter o que o upload devolveu, nunca texto à mão —
+// um rascunho antigo (doutra versão do código, ou duma tentativa de upload
+// que falhou a meio) podia ter deixado lá algo que não bate com esse
+// formato, e isso só apareceria mais tarde como "Ficheiro inválido" ao
+// guardar. Sanear ao restaurar o rascunho evita esse erro tardio e confuso.
+export function sanitizeUploadedUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : null;
+}

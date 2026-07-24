@@ -13,7 +13,7 @@ import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
-import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
+import { saveDraft, loadDraft, clearDraft, sanitizeUploadedUrl } from "@/lib/formDraft";
 import {
   CornerCard,
   CornerCardStack,
@@ -137,7 +137,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [originalPrice, setOriginalPrice] = useState(
     draft?.value.originalPrice ?? (course.originalPrice != null ? String(course.originalPrice) : "")
   );
-  const [trailerUrl, setTrailerUrl] = useState(draft?.value.trailerUrl ?? course.trailerUrl);
+  const [trailerUrl, setTrailerUrl] = useState(sanitizeUploadedUrl(draft?.value.trailerUrl ?? course.trailerUrl));
   const [trailerName, setTrailerName] = useState<string | null>(draft?.value.trailerName ?? null);
   const outcomes = useEditableList(draft?.value.learningOutcomes ?? course.learningOutcomes);
   const requirements = useEditableList(draft?.value.requirements ?? course.requirements);

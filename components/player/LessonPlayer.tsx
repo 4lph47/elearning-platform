@@ -1073,7 +1073,7 @@ export function LessonPlayer({
 
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-                  <Loader2 size={80} className="animate-spin text-white" />
+                  <Loader2 size={112} strokeWidth={1.25} className="animate-spin text-white" />
                 </div>
               )}
 
@@ -1229,7 +1229,7 @@ export function LessonPlayer({
                   </div>
                 )}
 
-                <div className="mt-2 flex items-center gap-3 text-white">
+                <div className="absolute inset-x-0 bottom-7 flex items-center gap-3 px-3 text-white lg:static lg:inset-auto lg:bottom-auto lg:mt-2 lg:px-0">
                   <button type="button" onClick={togglePlay} aria-label={playing ? "Pausar" : "Reproduzir"} className="hidden hover:text-blue-400 lg:block">
                     {playing ? <Pause size={22} /> : <Play size={22} />}
                   </button>

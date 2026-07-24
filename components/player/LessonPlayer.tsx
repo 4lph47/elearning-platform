@@ -647,8 +647,10 @@ export function LessonPlayer({
       // video.paused já reflete o estado NOVO aqui (play()/pause() aplicam-no
       // sincronamente, mesmo antes da reprodução em si começar/parar de
       // verdade) — não é preciso adivinhar antes de chamar togglePlay().
+      // Ícone mostra a ação que ACABOU de acontecer (pausou → ícone de
+      // pause; deu play → ícone de play), não a próxima ação possível.
       const isPaused = videoRef.current?.paused ?? true;
-      triggerCenterIcon(isPaused ? "play" : "pause", isPaused);
+      triggerCenterIcon(isPaused ? "pause" : "play", isPaused);
       lastClickRef.current = null;
       clickTimerRef.current = null;
     }, DOUBLE_CLICK_MS);
@@ -1403,7 +1405,7 @@ export function LessonPlayer({
                 onClick={() => {
                   togglePlay();
                   const isPaused = videoRef.current?.paused ?? true;
-                  triggerCenterIcon(isPaused ? "play" : "pause", isPaused);
+                  triggerCenterIcon(isPaused ? "pause" : "play", isPaused);
                 }}
                 aria-label={playing ? "Pausar" : "Reproduzir"}
                 style={{

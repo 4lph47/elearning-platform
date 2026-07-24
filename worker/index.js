@@ -346,6 +346,7 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
     // Fonte mais pequena que o degrau mínimo (480p) — só gera nessa mesma altura.
     rungs = [{ label: `${sourceHeight}p`, height: sourceHeight }];
   }
+  if (options && options.onPlan) options.onPlan(rungs.length);
 
   const doneLabels = new Set((resume && resume.renditions ? resume.renditions : []).map((r) => r.quality));
   const variantsSoFar = resume && resume.variants ? [...resume.variants] : [];
@@ -575,21 +576,36 @@ async function handleUploadChunkRequest(req, res) {
 const finalizeJobs = new Map();
 
 function startFinalizeJob(assetId, workDir, sourcePath) {
-  finalizeJobs.set(assetId, { state: "processing" });
+  finalizeJobs.set(assetId, { state: "processing", completed: 0, total: null });
   (async () => {
     try {
       const progress = await loadTranscodeProgress(workDir);
-      if (progress.renditions.length > 0) {
-        console.log(
-          `  -> ${assetId} a retomar compressão (${progress.renditions.length} rendition(s) já prontas de uma tentativa anterior)`
-        );
+      const alreadyDone = progress.renditions.length;
+      finalizeJobs.set(assetId, { state: "processing", completed: alreadyDone, total: null });
+      if (alreadyDone > 0) {
+        console.log(`  -> ${assetId} a retomar compressão (${alreadyDone} rendition(s) já prontas de uma tentativa anterior)`);
       } else {
         console.log(`  -> ${assetId} recebido por completo, a comprimir`);
       }
-      const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null, {
-        resume: progress,
-        persistProgress: true,
-      });
+      const { renditions, masterPlaylistUrl } = await transcodeToHls(
+        assetId,
+        sourcePath,
+        workDir,
+        () => {
+          // Um rung novo (não vindo do resume) acabou de ficar pronto —
+          // avança o contador que o cliente lê via /upload-finalize-status.
+          const job = finalizeJobs.get(assetId);
+          if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed: job.completed + 1 });
+        },
+        {
+          resume: progress,
+          persistProgress: true,
+          onPlan: (total) => {
+            const job = finalizeJobs.get(assetId);
+            if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, total });
+          },
+        }
+      );
       if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
       console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
       finalizeJobs.set(assetId, { state: "done", hlsMasterUrl: masterPlaylistUrl, renditions });
@@ -684,7 +700,7 @@ async function handleUploadFinalizeStatusRequest(req, res) {
     return;
   }
   res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ state: "processing" }));
+  res.end(JSON.stringify({ state: "processing", completed: job.completed, total: job.total }));
 }
 
 const server = http.createServer((req, res) => {

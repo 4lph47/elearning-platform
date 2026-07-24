@@ -210,7 +210,7 @@ function postChunk(
 }
 
 type FinalizeStatus =
-  | { state: "processing" }
+  | { state: "processing"; completed: number; total: number | null }
   | { state: "done"; hlsMasterUrl: string }
   | { state: "error"; error: string }
   | { state: "unknown" };
@@ -291,7 +291,13 @@ const FINALIZE_POLL_MS = 4000;
 // meio da compressão não tinha nenhum pedido em curso pra o xhrRef.abort()
 // cortar (só há pedidos de vez em quando, entre esperas), e o poll
 // continuava sozinho em fundo até acabar por conta própria.
-async function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef, isCurrent: () => boolean): Promise<string> {
+async function postFinalize(
+  auth: WorkerAuth,
+  totalBytes: number,
+  xhrRef: XhrRef,
+  isCurrent: () => boolean,
+  onProgress: (completed: number, total: number | null) => void
+): Promise<string> {
   await postFinalizeStart(auth, totalBytes, xhrRef);
   for (;;) {
     await new Promise((r) => setTimeout(r, FINALIZE_POLL_MS));
@@ -300,6 +306,7 @@ async function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef
     if (status.state === "done") return status.hlsMasterUrl;
     if (status.state === "error") throw new UploadError(status.error, true);
     if (status.state === "unknown") await postFinalizeStart(auth, totalBytes, xhrRef);
+    else onProgress(status.completed, status.total);
   }
 }
 
@@ -342,7 +349,8 @@ async function uploadToWorker(
   xhrRef: XhrRef,
   onProgress: (percent: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void,
-  isCurrent: () => boolean
+  isCurrent: () => boolean,
+  onCompressionProgress: (completed: number, total: number | null) => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
   const noop = () => {};
@@ -360,7 +368,10 @@ async function uploadToWorker(
   }
 
   onPhaseChange("compressing");
-  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef, isCurrent), noop);
+  const url = await withUploadRetries(
+    () => postFinalize(auth, file.size, xhrRef, isCurrent, onCompressionProgress),
+    noop
+  );
   return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
@@ -401,6 +412,7 @@ export function FileUploadInput({
   const [progress, setProgress] = useState(0);
   const [indeterminate, setIndeterminate] = useState(false);
   const [compressing, setCompressing] = useState(false);
+  const [compressionPercent, setCompressionPercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -433,6 +445,7 @@ export function FileUploadInput({
     setUploading(true);
     setProgress(0);
     setCompressing(false);
+    setCompressionPercent(null);
     setError(null);
     setUploadedName(null);
 
@@ -449,7 +462,11 @@ export function FileUploadInput({
             if (!isCurrent()) return;
             setCompressing(phase === "compressing");
           },
-          isCurrent
+          isCurrent,
+          (completed, total) => {
+            if (!isCurrent()) return;
+            setCompressionPercent(total ? Math.round((completed / total) * 100) : null);
+          }
         );
         if (!isCurrent()) return;
         setUploading(false);
@@ -492,6 +509,7 @@ export function FileUploadInput({
       setUploading(false);
       setIndeterminate(false);
       setCompressing(false);
+      setCompressionPercent(null);
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
   }
@@ -509,18 +527,20 @@ export function FileUploadInput({
       {uploading && (
         <div className="mt-2">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-            {indeterminate || compressing ? (
+            {indeterminate || (compressing && compressionPercent === null) ? (
               <div className="h-full w-full animate-pulse rounded-full bg-blue-600" />
             ) : (
               <div
                 className="h-full rounded-full bg-blue-600 transition-[width] duration-150"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${compressing ? compressionPercent : progress}%` }}
               />
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {compressing
-              ? "A comprimir vídeo..."
+              ? compressionPercent !== null
+                ? `A comprimir vídeo (${compressionPercent}%)...`
+                : "A comprimir vídeo..."
               : indeterminate
                 ? "A enviar..."
                 : `A enviar (${progress}%)`}

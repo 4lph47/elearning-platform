@@ -209,9 +209,19 @@ function postChunk(
   });
 }
 
-// Dispara a compressão sobre o que já foi recebido — pedido sem corpo, só
-// fica aberto durante a compressão em si (não durante o envio do vídeo).
-function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef): Promise<string> {
+type FinalizeStatus =
+  | { state: "processing" }
+  | { state: "done"; hlsMasterUrl: string }
+  | { state: "error"; error: string }
+  | { state: "unknown" };
+
+// Só DISPARA a compressão em fundo no worker — não fica à espera dela
+// acabar. Um vídeo de ~1h pode levar bem mais que o teto de pedido HTTP da
+// própria Railway (15min) só num rung; manter isto aberto até ao fim batia
+// nesse teto sempre no mesmo ponto, nunca chegando a terminar (ver
+// worker/index.js:startFinalizeJob). O progresso acompanha-se à parte, via
+// getFinalizeStatus.
+function postFinalizeStart(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhrRef.current = xhr;
@@ -219,28 +229,78 @@ function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef): Pro
     xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
     xhr.setRequestHeader("X-Total-Bytes", String(totalBytes));
     xhr.onload = () => {
-      console.log(`[upload] resposta da finalização: status=${xhr.status} body=`, xhr.responseText.slice(0, 500));
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText) as { hlsMasterUrl: string };
-          resolve(data.hlsMasterUrl);
-        } catch {
-          reject(new UploadError("Resposta inválida do worker", true));
-        }
-      } else {
-        let message = "Erro ao comprimir vídeo";
-        try {
-          message = JSON.parse(xhr.responseText).error ?? message;
-        } catch {
-          // resposta não-JSON — mensagem genérica já chega
-        }
-        reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401 || xhr.status === 409));
+        resolve();
+        return;
       }
+      let message = "Erro ao comprimir vídeo";
+      try {
+        message = JSON.parse(xhr.responseText).error ?? message;
+      } catch {
+        // resposta não-JSON — mensagem genérica já chega
+      }
+      reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401 || xhr.status === 409));
     };
-    xhr.onerror = () => reject(new UploadError("Falha de rede ao comprimir vídeo", true));
+    xhr.onerror = () => reject(new UploadError("Falha de rede ao iniciar compressão", true));
     xhr.onabort = () => reject(new UploadAbortedError());
     xhr.send();
   });
+}
+
+// Pedido curto — só consulta o estado, nunca fica à espera da compressão.
+function getFinalizeStatus(auth: WorkerAuth, xhrRef: XhrRef): Promise<FinalizeStatus> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open("GET", `${auth.uploadUrl}/upload-finalize-status`);
+    xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
+    xhr.onload = () => {
+      // 404 == "unknown" (nunca disparou finalize, ou o worker reiniciou a
+      // meio e perdeu o estado em memória) — não é erro, o chamador reage
+      // repetindo o POST de finalize.
+      if (xhr.status === 404) {
+        resolve({ state: "unknown" });
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as FinalizeStatus);
+        } catch {
+          reject(new UploadError("Resposta inválida do worker", true));
+        }
+        return;
+      }
+      let message = "Erro ao verificar compressão";
+      try {
+        message = JSON.parse(xhr.responseText).error ?? message;
+      } catch {
+        // resposta não-JSON — mensagem genérica já chega
+      }
+      reject(new UploadError(message, xhr.status >= 500 || xhr.status === 401));
+    };
+    xhr.onerror = () => reject(new UploadError("Falha de rede ao verificar compressão", true));
+    xhr.onabort = () => reject(new UploadAbortedError());
+    xhr.send();
+  });
+}
+
+const FINALIZE_POLL_MS = 4000;
+
+// Dispara a compressão e depois faz poll do estado até acabar (done/error).
+// isCurrent() é checado entre polls — sem isto, escolher um ficheiro novo a
+// meio da compressão não tinha nenhum pedido em curso pra o xhrRef.abort()
+// cortar (só há pedidos de vez em quando, entre esperas), e o poll
+// continuava sozinho em fundo até acabar por conta própria.
+async function postFinalize(auth: WorkerAuth, totalBytes: number, xhrRef: XhrRef, isCurrent: () => boolean): Promise<string> {
+  await postFinalizeStart(auth, totalBytes, xhrRef);
+  for (;;) {
+    await new Promise((r) => setTimeout(r, FINALIZE_POLL_MS));
+    if (!isCurrent()) throw new UploadAbortedError();
+    const status = await getFinalizeStatus(auth, xhrRef);
+    if (status.state === "done") return status.hlsMasterUrl;
+    if (status.state === "error") throw new UploadError(status.error, true);
+    if (status.state === "unknown") await postFinalizeStart(auth, totalBytes, xhrRef);
+  }
 }
 
 // Atraso entre tentativas — cresce por tentativa mas nunca passa de 15s,
@@ -281,7 +341,8 @@ async function uploadToWorker(
   file: File,
   xhrRef: XhrRef,
   onProgress: (percent: number) => void,
-  onPhaseChange: (phase: "uploading" | "compressing") => void
+  onPhaseChange: (phase: "uploading" | "compressing") => void,
+  isCurrent: () => boolean
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
   const noop = () => {};
@@ -299,7 +360,7 @@ async function uploadToWorker(
   }
 
   onPhaseChange("compressing");
-  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef), noop);
+  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef, isCurrent), noop);
   return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
@@ -387,7 +448,8 @@ export function FileUploadInput({
           (phase) => {
             if (!isCurrent()) return;
             setCompressing(phase === "compressing");
-          }
+          },
+          isCurrent
         );
         if (!isCurrent()) return;
         setUploading(false);

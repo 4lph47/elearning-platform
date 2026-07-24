@@ -563,11 +563,53 @@ async function handleUploadChunkRequest(req, res) {
   }
 }
 
+// Estado das compressões em curso/concluídas, por assetId — em memória, não
+// em disco: sobrevive a retries do MESMO processo, mas não a um restart do
+// worker (nesse caso volta a "unknown", ver handleUploadFinalizeStatusRequest,
+// e o cliente reabre a compressão do zero — que por sua vez retoma do
+// checkpoint em disco, progress.json, a partir do rung onde ficou). Entradas
+// concluídas ficam cacheadas indefinidamente (não só até o workDir ser
+// limpo) pra um POST ou GET tardio (resposta anterior perdida em trânsito)
+// continuar a encontrar o resultado em vez de um 404/400 que faria o
+// cliente desistir por engano.
+const finalizeJobs = new Map();
+
+function startFinalizeJob(assetId, workDir, sourcePath) {
+  finalizeJobs.set(assetId, { state: "processing" });
+  (async () => {
+    try {
+      const progress = await loadTranscodeProgress(workDir);
+      if (progress.renditions.length > 0) {
+        console.log(
+          `  -> ${assetId} a retomar compressão (${progress.renditions.length} rendition(s) já prontas de uma tentativa anterior)`
+        );
+      } else {
+        console.log(`  -> ${assetId} recebido por completo, a comprimir`);
+      }
+      const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null, {
+        resume: progress,
+        persistProgress: true,
+      });
+      if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
+      console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
+      finalizeJobs.set(assetId, { state: "done", hlsMasterUrl: masterPlaylistUrl, renditions });
+      // só limpa o work dir em caso de sucesso — numa falha o ficheiro fonte
+      // fica pra um retry poder recomeçar a comprimir sem reenviar nada.
+      await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    } catch (err) {
+      console.error(`Finalização do upload ${assetId} falhou:`, err);
+      finalizeJobs.set(assetId, { state: "error", error: err && err.message ? err.message : "Falha ao comprimir vídeo" });
+    }
+  })();
+}
+
 // POST /upload-finalize — chamado depois de todos os blocos enviados, sem
-// corpo. Dispara a compressão sobre o ficheiro já recebido por completo.
-// Numa falha (OOM, etc.) o ficheiro fonte NÃO é apagado — um retry só desta
-// chamada recomeça a comprimir sem reenviar nada, já que os bytes já lá
-// estão todos.
+// corpo. Só DISPARA a compressão em fundo e responde já (202) — não fica à
+// espera dela acabar. Um vídeo de ~1h pode levar bem mais que o teto de
+// pedido HTTP da própria Railway (15min, ver server.requestTimeout mais
+// abaixo) só num rung; manter o pedido aberto até ao fim batia nesse teto
+// sempre no mesmo ponto, nunca chegando a terminar por mais retries que
+// desse. O cliente acompanha o progresso via GET /upload-finalize-status.
 async function handleUploadFinalizeRequest(req, res) {
   const assetId = authenticateRequest(req);
   if (!assetId) {
@@ -576,49 +618,73 @@ async function handleUploadFinalizeRequest(req, res) {
     return;
   }
 
+  const existing = finalizeJobs.get(assetId);
+  if (existing && existing.state === "processing") {
+    res.writeHead(202, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ state: "processing" }));
+    return;
+  }
+  if (existing && existing.state === "done") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ state: "done", hlsMasterUrl: existing.hlsMasterUrl, renditions: existing.renditions }));
+    return;
+  }
+
+  // Sem job em curso (1ª chamada, ou uma tentativa anterior falhou/o
+  // processo reiniciou) — valida os bytes recebidos e arranca uma nova.
   const workDir = uploadWorkDir(assetId);
   const sourcePath = path.join(workDir, "source");
   const totalHeader = req.headers["x-total-bytes"];
   const expectedTotal = Number(totalHeader);
 
-  try {
-    const actualBytes = await getReceivedBytes(assetId);
-    if (actualBytes === 0) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Nenhum byte recebido para este upload" }));
-      return;
-    }
-    if (typeof totalHeader === "string" && Number.isFinite(expectedTotal) && expectedTotal !== actualBytes) {
-      res.writeHead(409, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Upload incompleto", receivedBytes: actualBytes }));
-      return;
-    }
-    const progress = await loadTranscodeProgress(workDir);
-    if (progress.renditions.length > 0) {
-      console.log(
-        `  -> ${assetId} a retomar compressão (${progress.renditions.length} rendition(s) já prontas de uma tentativa anterior)`
-      );
-    } else {
-      console.log(`  -> ${assetId} recebido por completo (${actualBytes} bytes), a comprimir`);
-    }
-    const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null, {
-      resume: progress,
-      persistProgress: true,
-    });
-    if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
-    console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ hlsMasterUrl: masterPlaylistUrl, renditions }));
-    // só limpa em caso de sucesso — numa falha o ficheiro fonte fica pra um
-    // retry só de finalize poder recomeçar a comprimir sem reenviar nada.
-    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
-  } catch (err) {
-    console.error(`Finalização do upload ${assetId} falhou:`, err);
-    if (!res.headersSent) {
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err && err.message ? err.message : "Falha ao comprimir vídeo" }));
-    }
+  const actualBytes = await getReceivedBytes(assetId);
+  if (actualBytes === 0) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Nenhum byte recebido para este upload" }));
+    return;
   }
+  if (typeof totalHeader === "string" && Number.isFinite(expectedTotal) && expectedTotal !== actualBytes) {
+    res.writeHead(409, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Upload incompleto", receivedBytes: actualBytes }));
+    return;
+  }
+
+  startFinalizeJob(assetId, workDir, sourcePath);
+  res.writeHead(202, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ state: "processing" }));
+}
+
+// GET /upload-finalize-status — o cliente faz poll nisto depois de disparar
+// a finalização, em vez de segurar um único pedido HTTP durante a
+// compressão toda. "unknown" (404) cobre tanto "nunca chamou finalize" como
+// "o worker reiniciou a meio" — a resposta é a mesma nos dois casos, e cabe
+// ao cliente decidir repetir o POST de finalize para (re)arrancar.
+async function handleUploadFinalizeStatusRequest(req, res) {
+  const assetId = authenticateRequest(req);
+  if (!assetId) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Token de upload inválido ou expirado" }));
+    return;
+  }
+
+  const job = finalizeJobs.get(assetId);
+  if (!job) {
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ state: "unknown" }));
+    return;
+  }
+  if (job.state === "done") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ state: "done", hlsMasterUrl: job.hlsMasterUrl, renditions: job.renditions }));
+    return;
+  }
+  if (job.state === "error") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ state: "error", error: job.error }));
+    return;
+  }
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ state: "processing" }));
 }
 
 const server = http.createServer((req, res) => {
@@ -655,6 +721,17 @@ const server = http.createServer((req, res) => {
     setCorsHeaders(res);
     handleUploadStatusRequest(req, res).catch((err) => {
       console.error("Erro não tratado no /upload-status:", err);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Erro interno" }));
+      }
+    });
+    return;
+  }
+  if (req.method === "GET" && req.url === "/upload-finalize-status") {
+    setCorsHeaders(res);
+    handleUploadFinalizeStatusRequest(req, res).catch((err) => {
+      console.error("Erro não tratado no /upload-finalize-status:", err);
       if (!res.headersSent) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Erro interno" }));
@@ -711,11 +788,12 @@ async function loop() {
 // Node's http.Server tem um requestTimeout DEFAULT de 5 minutos (desde o
 // Node 18) — mata sozinho qualquer pedido que ainda esteja aberto passado
 // esse tempo, nada a ver com o limite da própria Railway (15min de teto na
-// plataforma). /upload-chunk agora é sempre curto (bloco de tamanho fixo),
-// mas /upload-finalize fica aberto durante a compressão toda, que pode
-// passar de 5min em vídeos grandes — batia neste teto do Node e a ligação
-// morria a meio, aparecendo como "falha de rede" no browser mesmo sem nada
-// de errado ter acontecido. Sobe isto pro mesmo teto da Railway.
+// plataforma). Nenhum pedido devia mesmo chegar perto disso agora que
+// /upload-chunk é sempre curto (bloco de tamanho fixo) e /upload-finalize só
+// dispara a compressão em fundo e responde já (ver startFinalizeJob — antes
+// ficava aberto durante a compressão toda, que em vídeos grandes passava
+// facilmente do teto da própria Railway e nunca chegava a terminar). Sobe-se
+// mesmo assim pro teto da Railway, de segurança.
 server.requestTimeout = 15 * 60 * 1000;
 server.headersTimeout = 60 * 1000;
 // server.timeout (mecanismo mais antigo, timeout de inatividade do socket)

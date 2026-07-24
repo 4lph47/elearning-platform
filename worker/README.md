@@ -33,20 +33,24 @@ um poller em fundo.
    de 50MB por OBJETO do Supabase Free, porque o Storage nem entra em jogo
    nesta parte (o teto é por objeto final, não pelo tamanho dos blocos).
 3. Depois do último bloco, o browser chama `POST /upload-finalize` (sem
-   corpo). O worker corre `ffprobe`, e para cada qualidade — do MENOR pro
-   MAIOR — gera uma variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz
-   upscale) e SÓ ENTÃO sobe pro Supabase Storage (já comprimido). Cada rung
-   concluído fica gravado num checkpoint (`progress.json` no work dir) —
-   um vídeo longo pode levar minutos a comprimir, e se o pedido de
-   `/upload-finalize` cair a meio (aparece como "erro de rede" do lado do
-   browser, mesmo sem nada de errado na compressão em si), o cliente repete
-   a chamada (retry infinito, ver `FileUploadInput.tsx`) e o worker retoma a
-   partir do rung onde ficou, sem recomeçar a escada toda.
-4. Quando a escada toda estiver pronta, responde ao pedido de finalização
-   com o URL do master playlist. O browser guarda-o como `contentUrl` da
-   aula — ao gravar a aula, a app já regista isto como `hlsMasterUrl`
-   diretamente (ver `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila
-   nenhuma.
+   corpo). O worker só DISPARA a compressão em fundo e responde já (202) —
+   não fica à espera dela acabar (ver `startFinalizeJob` em `index.js`). Um
+   pedido HTTP aberto durante a compressão toda batia no teto de 15min da
+   própria Railway em vídeos longos, sempre no mesmo ponto, nunca chegando a
+   terminar por mais retries que desse — daí devolver logo e deixar o
+   cliente acompanhar à parte.
+4. O browser faz poll a `GET /upload-finalize-status` até o estado ser
+   `done` (traz o URL do master playlist) ou `error`. Por baixo, o worker
+   corre `ffprobe`, e para cada qualidade — do MENOR pro MAIOR — gera uma
+   variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz upscale) e SÓ
+   ENTÃO sobe pro Supabase Storage (já comprimido). Cada rung concluído fica
+   gravado num checkpoint (`progress.json` no work dir) — se o worker
+   reiniciar a meio (estado em memória perde-se, `/upload-finalize-status`
+   passa a devolver `unknown`), o cliente repete o `POST /upload-finalize`
+   e o worker retoma a partir do rung onde ficou, sem recomeçar a escada
+   toda. O browser guarda o URL final como `contentUrl` da aula — ao gravar
+   a aula, a app já regista isto como `hlsMasterUrl` diretamente (ver
+   `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila nenhuma.
 
 **Caminho de recurso — fila assíncrona** (só entra em jogo se alguém colar
 um URL de vídeo à mão em vez de fazer upload):

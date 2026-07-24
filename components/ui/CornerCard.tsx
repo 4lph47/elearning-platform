@@ -63,7 +63,7 @@ function clearFieldHighlight() {
 }
 
 function revealAndHighlight(el: HTMLElement) {
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
     el.focus({ preventScroll: true });
   }

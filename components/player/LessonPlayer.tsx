@@ -352,10 +352,11 @@ export function LessonPlayer({
   const [likeBurst, setLikeBurst] = useState<{ x: number; y: number; id: number } | null>(null);
   const [seekFlash, setSeekFlash] = useState<{ dir: "back" | "fwd"; id: number } | null>(null);
   const [centerIcon, setCenterIcon] = useState<{ type: "play" | "pause"; id: number } | null>(null);
-  // Clique simples (toggle play/pause) força os controlos a aparecer por um
-  // instante, mesmo em ecrãs táteis sem :hover — depois escondem-se outra
-  // vez sozinhos, até ao próximo clique. No desktop o :hover normal (CSS,
-  // group-hover) continua a funcionar por cima disto, sem conflito.
+  // Um só estado para mobile (toque) e desktop (rato) — nenhum dos dois usa
+  // :hover CSS puro, que ficava visível para sempre enquanto o rato
+  // simplesmente descansasse parado em cima do vídeo. Clique/toque mostra na
+  // hora; mexer o rato também (ver handleControlsActivity); ambos agendam o
+  // mesmo temporizador de esconder ao fim de um tempo parado.
   const [controlsShown, setControlsShown] = useState(false);
   const controlsHideTimerRef = useRef<number | null>(null);
 
@@ -442,6 +443,13 @@ export function LessonPlayer({
         seekBy(10);
         triggerSeekFlash("fwd");
         e.preventDefault();
+      } else if (e.code === "Space") {
+        // Sem isto, espaço faz o que faz em qualquer página (scroll pra
+        // baixo) em vez de play/pause — o normal em qualquer player de vídeo.
+        e.preventDefault();
+        togglePlay();
+        const isPaused = videoRef.current?.paused ?? true;
+        triggerCenterIcon(isPaused ? "pause" : "play", isPaused);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -587,8 +595,8 @@ export function LessonPlayer({
   // próximo clique (dar play) — assim dá sempre pra ver que está pausado e
   // que se deve clicar em play. A dar play: é só uma confirmação breve
   // (persist=false), desaparece sozinho a seguir — o vídeo em reprodução
-  // não deve ficar com elementos por cima indefinidamente, só ao passar o
-  // rato por cima (:hover, CSS) ou ao pausar outra vez.
+  // não deve ficar com elementos por cima indefinidamente, nem parado o
+  // rato por cima dele (ver handleControlsActivity mais abaixo).
   const CENTER_ICON_MS = 700;
   function triggerCenterIcon(type: "play" | "pause", persist: boolean) {
     gestureIdRef.current += 1;
@@ -605,6 +613,29 @@ export function LessonPlayer({
       setControlsShown(false);
       controlsHideTimerRef.current = null;
     }, CENTER_ICON_MS);
+  }
+
+  // Desktop: mexer o rato por cima do vídeo mostra os controlos, mas — ao
+  // contrário do :hover CSS de antes — não os mantém visíveis enquanto o
+  // rato ficar parado lá em cima. Cada movimento reinicia o temporizador;
+  // sem mais movimento nenhum, escondem-se sozinhos ao fim de CONTROLS_IDLE_MS,
+  // exatamente como já acontecia ao tocar no mobile.
+  const CONTROLS_IDLE_MS = 2500;
+  function handleControlsActivity() {
+    setControlsShown(true);
+    if (controlsHideTimerRef.current) window.clearTimeout(controlsHideTimerRef.current);
+    controlsHideTimerRef.current = window.setTimeout(() => {
+      setControlsShown(false);
+      controlsHideTimerRef.current = null;
+    }, CONTROLS_IDLE_MS);
+  }
+
+  function handleControlsMouseLeave() {
+    if (controlsHideTimerRef.current) {
+      window.clearTimeout(controlsHideTimerRef.current);
+      controlsHideTimerRef.current = null;
+    }
+    setControlsShown(false);
   }
 
   // Terços laterais avançam/recuam 10s; o terço central "gosta" (like) com
@@ -1267,6 +1298,9 @@ export function LessonPlayer({
               onContextMenu={handleContextMenu}
               onTouchStart={handleFullscreenTouchStart}
               onTouchEnd={handleFullscreenTouchEnd}
+              onMouseEnter={handleControlsActivity}
+              onMouseMove={handleControlsActivity}
+              onMouseLeave={handleControlsMouseLeave}
             >
               <video
                 ref={videoRef}
@@ -1419,7 +1453,7 @@ export function LessonPlayer({
                 {playing ? <Pause size={30} className="fill-white" /> : <Play size={30} className="fill-white" />}
               </button>
 
-              <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 lg:group-hover:opacity-100 lg:focus-within:opacity-100 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
+              <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
                 <div
                   ref={progressBarRef}
                   onTouchStart={handleProgressTouchStart}

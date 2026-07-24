@@ -14,6 +14,7 @@ import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
+import { transcribeFileToVtt, uploadCaptionsVtt, type CaptionsPhase } from "@/lib/captions";
 import type { LessonData } from "@/components/instructor/LessonRow";
 
 interface LessonDraft {
@@ -25,6 +26,7 @@ interface LessonDraft {
   contentName: string | null;
   thumbnailUrl: string | null;
   thumbnailName: string | null;
+  captionsUrl: string | null;
   textContent: string;
   contributorIds: string[];
 }
@@ -65,6 +67,13 @@ export function LessonEditScreen({
     draft?.value.thumbnailUrl ?? lesson?.thumbnailUrl ?? null
   );
   const [thumbnailName, setThumbnailName] = useState<string | null>(draft?.value.thumbnailName ?? null);
+  const [captionsUrl, setCaptionsUrl] = useState<string | null>(
+    draft?.value.captionsUrl ?? lesson?.captionsUrl ?? null
+  );
+  // Não é persistido em rascunho (é derivado de um File em memória, que não
+  // sobrevive a um refresh) — só reflete o progresso da geração em curso
+  // nesta sessão do browser.
+  const [captionsPhase, setCaptionsPhase] = useState<CaptionsPhase | "idle" | "done" | "error">("idle");
   const [textContent, setTextContent] = useState(draft?.value.textContent ?? lesson?.textContent ?? "");
   const [contributorIds, setContributorIds] = useState<string[]>(
     draft?.value.contributorIds ?? lesson?.contributors?.map((c) => c.id) ?? []
@@ -89,6 +98,7 @@ export function LessonEditScreen({
       contentName,
       thumbnailUrl,
       thumbnailName,
+      captionsUrl,
       textContent,
       contributorIds,
     });
@@ -102,6 +112,7 @@ export function LessonEditScreen({
     contentName,
     thumbnailUrl,
     thumbnailName,
+    captionsUrl,
     textContent,
     contributorIds,
   ]);
@@ -122,6 +133,41 @@ export function LessonEditScreen({
   function toggleContributor(id: string) {
     setContributorIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
+
+  // Corre em paralelo ao upload do vídeo (assim que o ficheiro é escolhido,
+  // ver onFileSelected em FileUploadInput), não depois dele — os dois usam
+  // o MESMO ficheiro local, um não precisa de esperar pelo outro.
+  // generationRef evita que o resultado de uma transcrição ANTIGA (ficheiro
+  // trocado a meio) sobrescreva o estado depois de já não ser relevante.
+  const captionsGenerationRef = useRef(0);
+  async function handleGenerateCaptions(file: File) {
+    const myGeneration = ++captionsGenerationRef.current;
+    const isCurrent = () => captionsGenerationRef.current === myGeneration;
+    setCaptionsUrl(null);
+    setCaptionsPhase("loading-model");
+    try {
+      const vtt = await transcribeFileToVtt(file, (phase) => {
+        if (isCurrent()) setCaptionsPhase(phase);
+      });
+      if (!isCurrent()) return;
+      const { url } = await uploadCaptionsVtt(vtt);
+      if (!isCurrent()) return;
+      setCaptionsUrl(url);
+      setCaptionsPhase("done");
+    } catch (err) {
+      if (!isCurrent()) return;
+      console.error("Falha ao gerar legendas automáticas:", err);
+      setCaptionsPhase("error");
+    }
+  }
+
+  const CAPTIONS_PHASE_LABEL: Record<Exclude<CaptionsPhase | "idle" | "done" | "error", "idle">, string> = {
+    "loading-model": "A carregar modelo de transcrição...",
+    "decoding-audio": "A processar áudio...",
+    transcribing: "A transcrever...",
+    done: "Legendas geradas automaticamente.",
+    error: "Falha ao gerar legendas automáticas — a aula fica sem legendas.",
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,6 +190,7 @@ export function LessonEditScreen({
       type,
       contentUrl: type === "VIDEO" ? contentUrl : null,
       thumbnailUrl: type === "VIDEO" ? thumbnailUrl : null,
+      captionsUrl: type === "VIDEO" ? captionsUrl : null,
       textContent: type === "TEXT" ? textContent : null,
       description: description.trim() || null,
       contributorIds,
@@ -335,7 +382,15 @@ export function LessonEditScreen({
                     setContentUrl(r.url);
                     setContentName(r.name);
                   }}
+                  onFileSelected={handleGenerateCaptions}
                 />
+                {captionsPhase !== "idle" && (
+                  <p
+                    className={`text-xs ${captionsPhase === "error" ? "text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
+                  >
+                    {CAPTIONS_PHASE_LABEL[captionsPhase]}
+                  </p>
+                )}
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
                     mesmo LessonPlayer usado na aula a sério (gestos, seletor
                     de qualidade, tudo igual), só que a largura fica fluida
@@ -348,6 +403,7 @@ export function LessonEditScreen({
                       type="VIDEO"
                       contentUrl={contentUrl}
                       hlsMasterUrl={previewHlsMasterUrl}
+                      captionsUrl={captionsUrl}
                       initialWatchedSeconds={0}
                       onComplete={() => {}}
                       fluidWidth

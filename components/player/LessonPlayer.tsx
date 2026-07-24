@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Hls from "hls.js";
 import {
+  Captions,
   Check,
   Download,
   Gauge,
@@ -27,7 +28,14 @@ import {
 import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { getYouTubeId } from "@/lib/youtube";
 import { useAmbientColor } from "@/lib/useAmbientColor";
-import { getStoredSpeed, setStoredSpeed, getStoredQuality, setStoredQuality } from "@/lib/playerPreferences";
+import {
+  getStoredSpeed,
+  setStoredSpeed,
+  getStoredQuality,
+  setStoredQuality,
+  getStoredCaptionsOn,
+  setStoredCaptionsOn,
+} from "@/lib/playerPreferences";
 
 export interface VideoRendition {
   quality: string;
@@ -108,6 +116,7 @@ export function LessonPlayer({
   type,
   contentUrl,
   hlsMasterUrl,
+  captionsUrl,
   videoRenditions,
   textContent,
   initialWatchedSeconds,
@@ -121,6 +130,10 @@ export function LessonPlayer({
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
   hlsMasterUrl?: string | null;
+  // Legendas WebVTT geradas no browser do instrutor no upload (ver
+  // lib/captions.ts) — ficheiro pequeno, sempre servido diretamente (nunca
+  // passa pelo worker/HLS).
+  captionsUrl?: string | null;
   videoRenditions?: VideoRendition[];
   textContent?: string | null;
   initialWatchedSeconds: number;
@@ -261,6 +274,22 @@ export function LessonPlayer({
   const [speedOpen, setSpeedOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [loop, setLoop] = useState(false);
+  const [captionsOn, setCaptionsOn] = useState(getStoredCaptionsOn);
+  const trackRef = useRef<HTMLTrackElement>(null);
+  // <track default={...}> só decide o estado INICIAL de quando a track é
+  // adicionada — não é reativo depois disso. Controla-se o modo (showing/
+  // hidden) diretamente no TextTrack, não no atributo.
+  useEffect(() => {
+    const track = trackRef.current?.track;
+    if (track) track.mode = captionsOn ? "showing" : "hidden";
+  }, [captionsOn, captionsUrl]);
+  function toggleCaptions() {
+    setCaptionsOn((v) => {
+      const next = !v;
+      setStoredCaptionsOn(next);
+      return next;
+    });
+  }
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -883,7 +912,18 @@ export function LessonPlayer({
                 onPlaying={() => setVideoReady(true)}
                 onCanPlay={() => setVideoReady(true)}
                 onClick={handleVideoClick}
-              />
+              >
+                {captionsUrl && (
+                  <track
+                    ref={trackRef}
+                    kind="captions"
+                    srcLang="pt"
+                    label="Português (automático)"
+                    src={captionsUrl}
+                    default={captionsOn}
+                  />
+                )}
+              </video>
 
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
@@ -1125,6 +1165,32 @@ export function LessonPlayer({
                           Picture-in-picture
                           {isPiP && <span className="ml-auto text-blue-400">✓</span>}
                         </button>
+
+                        {captionsUrl && (
+                          <button type="button"
+                            onClick={() => {
+                              toggleCaptions();
+                              setMenuOpen(false);
+                            }}
+                            className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
+                          >
+                            <Captions size={16} />
+                            Legendas (automáticas)
+                            <span
+                              role="switch"
+                              aria-checked={captionsOn}
+                              className={`ml-auto flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+                                captionsOn ? "bg-blue-500" : "bg-white/20"
+                              }`}
+                            >
+                              <span
+                                className={`h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                                  captionsOn ? "translate-x-3.5" : "translate-x-0.5"
+                                }`}
+                              />
+                            </span>
+                          </button>
+                        )}
 
                         {onToggleCinemaMode && (
                           <button type="button"

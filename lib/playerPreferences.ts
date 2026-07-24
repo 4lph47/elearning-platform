@@ -3,6 +3,7 @@
 const SPEED_KEY = "player:speed";
 const AMBIENT_KEY = "player:ambient";
 const QUALITY_KEY = "player:quality";
+const CAPTIONS_KEY = "player:captions";
 
 export function getStoredSpeed(): number {
   if (typeof window === "undefined") return 1;
@@ -33,4 +34,13 @@ export function getStoredQuality(): string | null {
 
 export function setStoredQuality(quality: string) {
   if (typeof window !== "undefined") localStorage.setItem(QUALITY_KEY, quality);
+}
+
+export function getStoredCaptionsOn(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(CAPTIONS_KEY) === "1";
+}
+
+export function setStoredCaptionsOn(on: boolean) {
+  if (typeof window !== "undefined") localStorage.setItem(CAPTIONS_KEY, on ? "1" : "0");
 }

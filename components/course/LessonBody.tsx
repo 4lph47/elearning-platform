@@ -18,6 +18,7 @@ export function LessonBody({
   type,
   contentUrl,
   hlsMasterUrl,
+  captionsUrl,
   videoRenditions,
   textContent,
   initialCompleted,
@@ -39,6 +40,7 @@ export function LessonBody({
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
   hlsMasterUrl?: string | null;
+  captionsUrl?: string | null;
   videoRenditions?: VideoRendition[];
   textContent?: string | null;
   initialCompleted: boolean;
@@ -167,6 +169,7 @@ export function LessonBody({
               type={type}
               contentUrl={contentUrl}
               hlsMasterUrl={hlsMasterUrl}
+              captionsUrl={captionsUrl}
               videoRenditions={videoRenditions}
               textContent={textContent}
               initialWatchedSeconds={initialWatchedSeconds}

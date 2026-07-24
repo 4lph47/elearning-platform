@@ -51,6 +51,7 @@ export default async function EditLessonPage({
         type: lesson.type,
         contentUrl: lesson.contentUrl,
         hlsMasterUrl: lesson.hlsMasterUrl,
+        captionsUrl: lesson.captionsUrl,
         thumbnailUrl: lesson.thumbnailUrl,
         textContent: lesson.textContent,
         durationSeconds: lesson.durationSeconds,

@@ -315,6 +315,7 @@ export function FileUploadInput({
   currentUrl,
   currentName,
   onUploaded,
+  onFileSelected,
 }: {
   kind: Kind;
   // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
@@ -323,6 +324,10 @@ export function FileUploadInput({
   currentUrl?: string | null;
   currentName?: string | null;
   onUploaded: (result: UploadResult) => void;
+  // Ficheiro bruto assim que é escolhido, antes de qualquer envio — usado
+  // pela geração de legendas automáticas (lib/captions.ts), que corre em
+  // paralelo ao upload, direto no browser, sobre o MESMO ficheiro original.
+  onFileSelected?: (file: File) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -356,6 +361,7 @@ export function FileUploadInput({
     xhrRef.current = null;
     const myGeneration = ++generationRef.current;
     const isCurrent = () => generationRef.current === myGeneration;
+    onFileSelected?.(file);
 
     setUploading(true);
     setProgress(0);

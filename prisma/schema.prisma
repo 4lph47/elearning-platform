@@ -225,6 +225,11 @@ model Lesson {
   // que a 1ª existe, mesmo com o job ainda PROCESSING.
   hlsMasterUrl    String?
   thumbnailUrl    String?
+  // Legendas WebVTT geradas no browser do instrutor no momento do upload
+  // (transformers.js/Whisper, client-side — sem custo de API nem carga
+  // extra no worker do Railway, ver lib/captions.ts). Ficheiro pequeno,
+  // sobe pelo /api/upload normal (não precisa do worker nem de chunking).
+  captionsUrl     String?
   textContent     String?
   durationSeconds Int?
   description     String?

@@ -52,6 +52,7 @@ export const lessonSchema = z.object({
   type: z.enum(["VIDEO", "TEXT"]).optional().default("VIDEO"),
   contentUrl: httpUrlField,
   thumbnailUrl: httpUrlField,
+  captionsUrl: httpUrlField,
   textContent: z.string().optional().nullable(),
   durationSeconds: z.number().int().min(0).optional().nullable(),
   description: z.string().optional().nullable(),
@@ -105,6 +106,9 @@ const ALLOWED_MIME_BY_TYPE: Record<string, string[]> = {
   TRAILER: ["video/mp4", "video/webm"],
   DOCUMENT: ["application/pdf"],
   IMAGE: ["image/png", "image/jpeg", "image/webp"],
+  // Legendas WebVTT geradas no browser (ver lib/captions.ts) — texto puro,
+  // sempre pequeno, vão pelo /api/upload normal (sem worker/chunking).
+  CAPTIONS: ["text/vtt"],
 };
 
 const MAX_SIZE_BY_TYPE: Record<string, number> = {
@@ -123,6 +127,9 @@ const MAX_SIZE_BY_TYPE: Record<string, number> = {
   // fica com margem abaixo disso, não nos 20MB de antes (vídeo/documento já
   // não têm este problema, vão diretos para o Storage).
   IMAGE: 4 * 1024 * 1024,
+  // Legendas de uma aula de várias horas ainda ficam bem abaixo disto —
+  // texto puro, margem generosa só por segurança.
+  CAPTIONS: 2 * 1024 * 1024,
 };
 
 // Todas as mensagens de erro de um ZodError, não só a primeira — usado pelo
@@ -132,7 +139,11 @@ export function zodIssueMessages(error: z.ZodError): string[] {
   return error.issues.map((i) => i.message);
 }
 
-export function validateUpload(kind: "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE", mimeType: string, sizeBytes: number) {
+export function validateUpload(
+  kind: "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE" | "CAPTIONS",
+  mimeType: string,
+  sizeBytes: number
+) {
   const allowedMimes = ALLOWED_MIME_BY_TYPE[kind];
   if (!allowedMimes.includes(mimeType)) {
     return { ok: false as const, error: `Tipo de ficheiro não permitido para ${kind}: ${mimeType}` };

@@ -405,13 +405,7 @@ export function Navbar() {
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg dark:border-white/10 dark:bg-neutral-900">
                   <div className="border-b border-slate-100 px-3 py-2 dark:border-white/10">
-                    <FadeLink
-                      href={`/instructors/${session.user.id}`}
-                      onClick={() => setMenuOpen(false)}
-                      className="block truncate text-sm font-medium text-slate-900 hover:underline dark:text-white"
-                    >
-                      {session.user.name}
-                    </FadeLink>
+                    <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{session.user.name}</p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">{session.user.email}</p>
                   </div>
 
@@ -429,7 +423,7 @@ export function Navbar() {
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                     >
-                      <GraduationCap size={14} /> Criar
+                      <GraduationCap size={14} /> Área de Instrutor
                     </FadeLink>
                   )}
 

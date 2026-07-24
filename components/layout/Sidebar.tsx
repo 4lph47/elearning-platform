@@ -81,7 +81,7 @@ export function Sidebar() {
             label: "Área de Instrutor",
             icon: GraduationCap,
             children: [
-              { href: "/instructor", label: "Criar", icon: LayoutDashboard, exact: true },
+              { href: "/instructor", label: "Painel", icon: LayoutDashboard, exact: true },
               { href: "/instructor/analytics", label: "Analytics", icon: BarChart3 },
               {
                 href: "/instructor/profile",

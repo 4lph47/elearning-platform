@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Star,
@@ -80,6 +80,7 @@ export function InstructorProfileHero({
   initialValues,
   initialCertifications,
   stats,
+  belowContent,
 }: {
   isOwner: boolean;
   profileId: string;
@@ -93,6 +94,11 @@ export function InstructorProfileHero({
   initialValues: Record<SocialPlatformKey, string>;
   initialCertifications: CertificationInput[];
   stats: Stats;
+  // Tudo o que vem a seguir ao hero (atalhos de dono, grelha de cursos,
+  // link do catálogo) — passado de fora (a página é que sabe montar isso)
+  // mas escondido daqui quando o dono está mesmo a editar os campos, não só
+  // a pré-visualizar.
+  belowContent?: ReactNode;
 }) {
   const router = useRouter();
   const draftKey = `instructor-profile-draft:${profileId}`;
@@ -576,33 +582,39 @@ export function InstructorProfileHero({
   // horizontal), mesma técnica do HeroCarousel da home — só assim o texto
   // branco por cima continua legível independentemente do que a imagem/vídeo
   // tiver.
-  if (bannerUrl) {
-    return (
-      <div className="relative -mt-16 overflow-hidden pb-6 pt-[7.5rem] sm:pt-36">
-        {bannerType === "VIDEO" ? (
-          <video
-            key={bannerUrl}
-            src={bannerUrl}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
-        <div className="relative mx-auto max-w-5xl px-4 sm:px-8">{content}</div>
-      </div>
-    );
-  }
-
-  return (
+  const heroBox = bannerUrl ? (
+    <div className="relative -mt-16 overflow-hidden pb-6 pt-[7.5rem] sm:pt-36">
+      {bannerType === "VIDEO" ? (
+        <video
+          key={bannerUrl}
+          src={bannerUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-8">{content}</div>
+    </div>
+  ) : (
     <InstructorHeroGradient>
       <div className="mx-auto max-w-5xl px-4 sm:px-8">{content}</div>
     </InstructorHeroGradient>
+  );
+
+  return (
+    <>
+      {heroBox}
+      {/* A editar (fora do modo pré-visualização), tudo daqui pra baixo
+          (atalhos de dono, grelha de cursos, link do catálogo) some — só
+          volta ao sair do modo de edição ou ao pré-visualizar. */}
+      {!showInputs && belowContent}
+    </>
   );
 }

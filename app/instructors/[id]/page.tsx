@@ -123,6 +123,36 @@ export default async function InstructorProfilePage({ params }: { params: Promis
     };
   });
 
+  const belowContent = (
+    <div className="mx-auto max-w-5xl px-4 pb-10 pt-4 sm:px-8">
+      {isOwner && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          <FadeLink
+            href="/instructor"
+            className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <GraduationCap size={13} /> Área de Instrutor
+          </FadeLink>
+          <FadeLink
+            href="/instructor/analytics"
+            className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <BarChart3 size={13} /> Analytics
+          </FadeLink>
+        </div>
+      )}
+      <InstructorCourseGrid
+        instructorFirstName={instructorFirstName}
+        courses={courseCards}
+        hidePriceBySlug={hidePriceBySlug}
+      />
+
+      <FadeLink href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+        ← Ver catálogo completo
+      </FadeLink>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <InstructorAccentProvider imageUrl={instructor.image}>
@@ -139,35 +169,8 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           initialValues={socialValues}
           initialCertifications={instructor.certifications.map((c) => ({ name: c.name, url: c.url }))}
           stats={{ avgRating, totalReviews, totalStudents, courseCount: courses.length }}
+          belowContent={belowContent}
         />
-
-        <div className="mx-auto max-w-5xl px-4 pb-10 pt-4 sm:px-8">
-          {isOwner && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              <FadeLink
-                href="/instructor"
-                className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-              >
-                <GraduationCap size={13} /> Área de Instrutor
-              </FadeLink>
-              <FadeLink
-                href="/instructor/analytics"
-                className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-              >
-                <BarChart3 size={13} /> Analytics
-              </FadeLink>
-            </div>
-          )}
-          <InstructorCourseGrid
-            instructorFirstName={instructorFirstName}
-            courses={courseCards}
-            hidePriceBySlug={hidePriceBySlug}
-          />
-
-          <FadeLink href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
-            ← Ver catálogo completo
-          </FadeLink>
-        </div>
       </InstructorAccentProvider>
     </div>
   );

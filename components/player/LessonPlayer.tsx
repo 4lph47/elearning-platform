@@ -275,7 +275,7 @@ export function LessonPlayer({
   const [isPiP, setIsPiP] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ bottom: number; right: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [loop, setLoop] = useState(false);
@@ -364,7 +364,15 @@ export function LessonPlayer({
     setMenuOpen((prev) => {
       const next = !prev;
       if (next) {
-        setMenuPosition({ bottom: window.innerHeight - rect.top + 8, right: window.innerWidth - rect.right });
+        // Botão perto do topo do ecrã (caso mobile, canto superior direito) — o menu
+        // expande pra BAIXO dele. Botão perto do fundo (caso desktop, barra de
+        // controlos) — expande pra CIMA, como antes.
+        const opensDown = rect.top < window.innerHeight / 2;
+        setMenuPosition(
+          opensDown
+            ? { top: rect.bottom + 8, right: window.innerWidth - rect.right }
+            : { bottom: window.innerHeight - rect.top + 8, right: window.innerWidth - rect.right }
+        );
       }
       return next;
     });
@@ -1297,7 +1305,12 @@ export function LessonPlayer({
                       createPortal(
                         <div
                           ref={menuPortalRef}
-                          style={{ position: "fixed", bottom: menuPosition.bottom, right: menuPosition.right }}
+                          style={{
+                            position: "fixed",
+                            top: menuPosition.top,
+                            bottom: menuPosition.bottom,
+                            right: menuPosition.right,
+                          }}
                           className="z-[100] w-52 rounded-lg border border-white/10 bg-neutral-800/70 py-1 text-sm shadow-xl backdrop-blur-md">
                         <button type="button"
                           onClick={handleDownload}

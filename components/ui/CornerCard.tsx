@@ -62,8 +62,14 @@ function clearFieldHighlight() {
   }
 }
 
+// Navbar é fixed, h-16 (64px) — scrollIntoView("start") sozinho encosta o
+// campo mesmo por baixo dela, meio cortado. Este offset garante uma folga
+// visível acima do campo, por baixo da navbar.
+const SCROLL_HEADER_OFFSET = 96;
+
 function revealAndHighlight(el: HTMLElement) {
-  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  const top = window.scrollY + el.getBoundingClientRect().top - SCROLL_HEADER_OFFSET;
+  window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
     el.focus({ preventScroll: true });
   }

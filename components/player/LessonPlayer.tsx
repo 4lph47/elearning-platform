@@ -668,12 +668,22 @@ export function LessonPlayer({
     }
   }
 
+  // O listener de touchmove da barra (mais abaixo) é nativo e só se liga uma
+  // vez (deps []) — usa esta função através de um closure fixo no momento do
+  // mount, por isso lê duration por uma ref (não pelo state diretamente),
+  // senão ficava presa ao valor do 1º render (0, antes dos metadados
+  // carregarem) e o preview nunca aparecia.
+  const durationRef = useRef(0);
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
   function updateScrub(clientX: number) {
     const bar = progressBarRef.current;
-    if (!bar || duration <= 0) return;
+    if (!bar || durationRef.current <= 0) return;
     const rect = bar.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    setScrubPreview({ time: ratio * duration, x: ratio * rect.width });
+    setScrubPreview({ time: ratio * durationRef.current, x: ratio * rect.width });
   }
 
   // stopPropagation nos três handlers: a barra vive dentro do container que
@@ -1215,7 +1225,7 @@ export function LessonPlayer({
                     value={currentTime}
                     onChange={handleSeek}
                     style={{ "--progress": `${duration > 0 ? (currentTime / duration) * 100 : 0}%` } as React.CSSProperties}
-                    className="absolute inset-x-0 bottom-0 h-4 w-full cursor-pointer appearance-none bg-transparent
+                    className="absolute inset-x-0 bottom-0 h-4 w-full touch-pan-x cursor-pointer appearance-none bg-transparent
                       [&::-webkit-slider-runnable-track]:h-[3px] [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,#3b82f6_var(--progress),rgba(255,255,255,0.3)_var(--progress))]
                       [&::-webkit-slider-thumb]:mt-[-4.5px] [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-black/50
                       [&::-moz-range-track]:h-[3px] [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-[linear-gradient(to_right,#3b82f6_var(--progress),rgba(255,255,255,0.3)_var(--progress))]

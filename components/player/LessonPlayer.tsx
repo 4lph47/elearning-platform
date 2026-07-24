@@ -238,6 +238,10 @@ export function LessonPlayer({
   }, [usingHls, hlsMasterUrl]);
 
   function setHlsQuality(levelIndex: number) {
+    // hls.currentLevel = X reencaminha pra outra rendition (fetch novo,
+    // buffer diferente) — mostra o loading já aqui, não só quando o
+    // "waiting" nativo disparar (pode demorar um instante a chegar).
+    setVideoReady(false);
     if (hlsRef.current) hlsRef.current.currentLevel = levelIndex;
     setHlsCurrentLevel(levelIndex);
     setQualityOpen(false);
@@ -422,6 +426,7 @@ export function LessonPlayer({
     const video = videoRef.current;
     const wasPlaying = Boolean(video && !video.paused);
     const resumeAt = video?.currentTime ?? 0;
+    setVideoReady(false);
     setSelectedQuality(quality);
     setStoredQuality(quality);
     setQualityOpen(false);
@@ -836,6 +841,15 @@ export function LessonPlayer({
                   setVolume(e.currentTarget.volume);
                 }}
                 onLoadedData={() => setVideoReady(true)}
+                // "waiting" nativo cobre QUALQUER paragem por falta de dados
+                // — não só a 1ª carga: rebuffer a meio por rede lenta,
+                // mudança de qualidade, etc. "playing"/"canplay" tiram o
+                // loading assim que há dados outra vez — "canplay" cobre o
+                // caso de estar em pausa (não vai disparar "playing"
+                // sozinho), "playing" confirma que voltou mesmo a reproduzir.
+                onWaiting={() => setVideoReady(false)}
+                onPlaying={() => setVideoReady(true)}
+                onCanPlay={() => setVideoReady(true)}
                 onClick={handleVideoClick}
               />
 

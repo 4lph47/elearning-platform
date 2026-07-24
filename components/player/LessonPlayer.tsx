@@ -1096,9 +1096,10 @@ export function LessonPlayer({
                 </div>
               </div>
 
-              {/* Maximizar: no mobile fica sozinho no canto inferior direito. */}
+              {/* Maximizar: no mobile fica no canto inferior direito, mas acima da barra
+                  (mesmo nível do tempo do vídeo), não sobre ela. */}
               <div
-                className={`absolute bottom-2 right-2 z-30 text-white transition-opacity duration-150 lg:hidden ${
+                className={`absolute bottom-7 right-2 z-30 text-white transition-opacity duration-150 lg:hidden ${
                   controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
@@ -1169,7 +1170,7 @@ export function LessonPlayer({
                   onTouchStart={handleProgressTouchStart}
                   onTouchMove={handleProgressTouchMove}
                   onTouchEnd={handleProgressTouchEnd}
-                  className="group/progress absolute inset-x-0 bottom-2 h-4 pl-3 pr-12 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
+                  className="group/progress absolute inset-x-0 bottom-2 h-4 px-3 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
                 >
                   <svg
                     viewBox="0 0 1000 100"

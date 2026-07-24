@@ -1419,7 +1419,7 @@ export function LessonPlayer({
                 {playing ? <Pause size={30} className="fill-white" /> : <Play size={30} className="fill-white" />}
               </button>
 
-              <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
+              <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 lg:group-hover:opacity-100 lg:focus-within:opacity-100 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
                 <div
                   ref={progressBarRef}
                   onTouchStart={handleProgressTouchStart}

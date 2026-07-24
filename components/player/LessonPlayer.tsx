@@ -7,6 +7,8 @@ import {
   Captions,
   CaptionsOff,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Gauge,
   Link2,
@@ -126,6 +128,10 @@ export function LessonPlayer({
   onToggleCinemaMode,
   onDoubleTapLike,
   fluidWidth,
+  hasPrevious,
+  hasNext,
+  onGoPrevious,
+  onGoNext,
 }: {
   lessonId: string;
   type: "VIDEO" | "TEXT";
@@ -142,6 +148,12 @@ export function LessonPlayer({
   cinemaMode?: boolean;
   onToggleCinemaMode?: () => void;
   onDoubleTapLike?: () => void;
+  // Ecrã de fim de vídeo (replay + setas de navegação) — só mostra as
+  // setas se houver mesmo aula anterior/seguinte.
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  onGoPrevious?: () => void;
+  onGoNext?: () => void;
   // Página da aula usa larguras fixas em lg (alinhadas ao resto do layout,
   // sidebar/chat incluídos) — em qualquer sítio mais estreito (ex.: preview
   // no editor, dentro de uma card a meio de um grid) isso transbordava.
@@ -267,6 +279,7 @@ export function LessonPlayer({
   }
 
   const [playing, setPlaying] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [muted, setMuted] = useState(false);
@@ -556,6 +569,7 @@ export function LessonPlayer({
 
   async function handleEnded() {
     setPlaying(false);
+    setVideoEnded(true);
     await sendProgress({ completed: true });
     onComplete();
   }
@@ -1340,7 +1354,10 @@ export function LessonPlayer({
                 onLoadedMetadata={handleLoadedMetadata}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}
-                onPlay={() => setPlaying(true)}
+                onPlay={() => {
+                  setPlaying(true);
+                  setVideoEnded(false);
+                }}
                 onPause={() => setPlaying(false)}
                 onVolumeChange={(e) => {
                   setMuted(e.currentTarget.muted);
@@ -1477,6 +1494,50 @@ export function LessonPlayer({
               >
                 {playing ? <Pause size={30} className="fill-white" /> : <Play size={30} className="fill-white" />}
               </button>
+
+              {/* Ecrã de fim: repetir no centro (mesma zona do duplo-tap de like) e
+                  setas minimalistas pros lados pra trocar de aula — só aparecem se
+                  houver mesmo aula anterior/seguinte. */}
+              {videoEnded && (
+                <div className="absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6">
+                  {hasPrevious ? (
+                    <button type="button"
+                      onClick={onGoPrevious}
+                      aria-label="Aula anterior"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center text-white/70 transition-colors hover:text-white"
+                    >
+                      <ChevronLeft size={36} strokeWidth={1.25} />
+                    </button>
+                  ) : (
+                    <div className="h-12 w-12 shrink-0" />
+                  )}
+
+                  <button type="button"
+                    onClick={() => {
+                      const video = videoRef.current;
+                      if (!video) return;
+                      video.currentTime = 0;
+                      video.play();
+                    }}
+                    aria-label="Repetir vídeo"
+                    className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60"
+                  >
+                    <RotateCcw size={30} />
+                  </button>
+
+                  {hasNext ? (
+                    <button type="button"
+                      onClick={onGoNext}
+                      aria-label="Próxima aula"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center text-white/70 transition-colors hover:text-white"
+                    >
+                      <ChevronRight size={36} strokeWidth={1.25} />
+                    </button>
+                  ) : (
+                    <div className="h-12 w-12 shrink-0" />
+                  )}
+                </div>
+              )}
 
               <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
                 <div

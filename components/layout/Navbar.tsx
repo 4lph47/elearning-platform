@@ -242,7 +242,9 @@ export function Navbar() {
               onClick={toggleSidebar}
               aria-label="Alternar menu lateral"
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full outline-none ${
-                transparent ? "text-slate-700 hover:bg-slate-900/10 dark:text-slate-200 dark:hover:bg-white/15" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+                transparent
+                  ? "text-slate-700 dark:text-slate-200 [@media(hover:hover)]:hover:bg-slate-900/10 [@media(hover:hover)]:dark:hover:bg-white/15"
+                  : "text-slate-500 dark:text-slate-300 [@media(hover:hover)]:hover:bg-slate-100 [@media(hover:hover)]:dark:hover:bg-white/10"
               }`}
             >
               <Menu size={18} />

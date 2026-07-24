@@ -176,6 +176,10 @@ export function LessonBody({
               onComplete={markComplete}
               cinemaMode={cinemaMode}
               onDoubleTapLike={() => engagementLikeRef.current?.()}
+              hasPrevious={Boolean(previousHref)}
+              hasNext={Boolean(nextHref)}
+              onGoPrevious={previousHref ? goPrevious : undefined}
+              onGoNext={nextHref ? goNext : undefined}
               onToggleCinemaMode={
                 type === "VIDEO"
                   ? () =>

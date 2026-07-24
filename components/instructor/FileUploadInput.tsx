@@ -281,10 +281,10 @@ async function uploadToWorker(
   file: File,
   xhrRef: XhrRef,
   onProgress: (percent: number) => void,
-  onPhaseChange: (phase: "uploading" | "compressing") => void,
-  onRetry: () => void
+  onPhaseChange: (phase: "uploading" | "compressing") => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
+  const noop = () => {};
 
   let offset = 0;
   while (offset < file.size) {
@@ -295,11 +295,11 @@ async function uploadToWorker(
       return postChunk(auth, blob, actualOffset, xhrRef, (bytesSentInBlock) =>
         onProgress(Math.round(((actualOffset + bytesSentInBlock) / file.size) * 100))
       );
-    }, onRetry);
+    }, noop);
   }
 
   onPhaseChange("compressing");
-  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef), onRetry);
+  const url = await withUploadRetries(() => postFinalize(auth, file.size, xhrRef), noop);
   return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
 }
 
@@ -340,7 +340,6 @@ export function FileUploadInput({
   const [progress, setProgress] = useState(0);
   const [indeterminate, setIndeterminate] = useState(false);
   const [compressing, setCompressing] = useState(false);
-  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -373,7 +372,6 @@ export function FileUploadInput({
     setUploading(true);
     setProgress(0);
     setCompressing(false);
-    setRetrying(false);
     setError(null);
     setUploadedName(null);
 
@@ -385,23 +383,15 @@ export function FileUploadInput({
           (percent) => {
             if (!isCurrent()) return;
             setProgress(percent);
-            setRetrying(false);
           },
           (phase) => {
             if (!isCurrent()) return;
             setCompressing(phase === "compressing");
-            setRetrying(false);
-          },
-          () => {
-            if (!isCurrent()) return;
-            setCompressing(false);
-            setRetrying(true);
           }
         );
         if (!isCurrent()) return;
         setUploading(false);
         setCompressing(false);
-        setRetrying(false);
         setUploadedName(data.name);
         onUploaded(data);
         return;
@@ -440,7 +430,6 @@ export function FileUploadInput({
       setUploading(false);
       setIndeterminate(false);
       setCompressing(false);
-      setRetrying(false);
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
   }
@@ -468,13 +457,11 @@ export function FileUploadInput({
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {retrying
-              ? "Ligação instável, a continuar a partir de onde ficou..."
-              : compressing
-                ? "A comprimir vídeo..."
-                : indeterminate
-                  ? "A enviar..."
-                  : `A enviar (${progress}%)`}
+            {compressing
+              ? "A comprimir vídeo..."
+              : indeterminate
+                ? "A enviar..."
+                : `A enviar (${progress}%)`}
           </p>
         </div>
       )}

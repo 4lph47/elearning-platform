@@ -44,27 +44,27 @@ const config: Config = {
         "like-swing": {
           "0%": {
             opacity: "0",
-            transform: "translate(-50%, -50%) scaleX(-1) rotate(30deg)",
+            transform: "translate(-50%, -50%) rotate(30deg)",
             animationTimingFunction: "ease-out",
           },
           "40%": {
             opacity: "1",
-            transform: "translate(-50%, -50%) scaleX(-1) rotate(0deg)",
+            transform: "translate(-50%, -50%) rotate(0deg)",
             animationTimingFunction: "ease-in",
           },
           "65%": {
             opacity: "1",
-            transform: "translate(-50%, -50%) scaleX(-1) rotate(-15deg)",
+            transform: "translate(-50%, -50%) rotate(-15deg)",
             animationTimingFunction: "ease-out",
           },
-          "100%": { opacity: "0", transform: "translate(-50%, -50%) scaleX(-1) rotate(0deg)" },
+          "100%": { opacity: "0", transform: "translate(-50%, -50%) rotate(0deg)" },
         },
       },
       animation: {
         "seek-flash": "seek-flash 500ms ease-out forwards",
         "corner-card-in": "corner-card-in 220ms ease-out",
         "center-pop": "center-pop 700ms ease-out forwards",
-        "like-swing": "like-swing 1000ms linear forwards",
+        "like-swing": "like-swing 600ms linear forwards",
       },
     },
   },

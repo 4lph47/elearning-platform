@@ -260,6 +260,13 @@ export function LessonPlayer({
   const gestureIdRef = useRef(0);
   const [likeBurst, setLikeBurst] = useState<{ x: number; y: number; id: number } | null>(null);
   const [seekFlash, setSeekFlash] = useState<{ dir: "back" | "fwd"; id: number } | null>(null);
+  const [centerIcon, setCenterIcon] = useState<{ type: "play" | "pause"; id: number } | null>(null);
+  // Clique simples (toggle play/pause) força os controlos a aparecer por um
+  // instante, mesmo em ecrãs táteis sem :hover — depois escondem-se outra
+  // vez sozinhos, até ao próximo clique. No desktop o :hover normal (CSS,
+  // group-hover) continua a funcionar por cima disto, sem conflito.
+  const [controlsShown, setControlsShown] = useState(false);
+  const controlsHideTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -474,6 +481,25 @@ export function LessonPlayer({
     setTimeout(() => setSeekFlash((s) => (s?.id === id ? null : s)), 500);
   }
 
+  // Ícone central de play/pause no clique simples — mostra o ícone do
+  // ESTADO NOVO (a pausar mostra o play que vai retomar; a retomar mostra o
+  // pause que vai pausar), depois desaparece sozinho, e os controlos do
+  // fundo (barra) escondem-se junto — só voltam a aparecer no próximo
+  // clique, não num temporizador à parte.
+  function triggerCenterIcon(type: "play" | "pause") {
+    gestureIdRef.current += 1;
+    const id = gestureIdRef.current;
+    setCenterIcon({ type, id });
+    setControlsShown(true);
+    if (controlsHideTimerRef.current) window.clearTimeout(controlsHideTimerRef.current);
+    const duration = type === "play" ? 1000 : 700;
+    setTimeout(() => setCenterIcon((c) => (c?.id === id ? null : c)), duration);
+    controlsHideTimerRef.current = window.setTimeout(() => {
+      setControlsShown(false);
+      controlsHideTimerRef.current = null;
+    }, duration);
+  }
+
   // Terços laterais avançam/recuam 10s; o terço central "gosta" (like) com
   // animação no ponto exato do toque — mesmo gesto em mobile (duplo-tap) e
   // desktop (duplo-clique), porque ambos disparam onClick.
@@ -510,6 +536,8 @@ export function LessonPlayer({
     }
     lastClickRef.current = now;
     clickTimerRef.current = window.setTimeout(() => {
+      const wasPaused = videoRef.current?.paused ?? true;
+      triggerCenterIcon(wasPaused ? "pause" : "play");
       togglePlay();
       lastClickRef.current = null;
       clickTimerRef.current = null;
@@ -819,7 +847,22 @@ export function LessonPlayer({
                 </div>
               )}
 
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
+              {centerIcon && (
+                <div
+                  key={centerIcon.id}
+                  className={`pointer-events-none absolute left-1/2 top-1/2 z-20 ${
+                    centerIcon.type === "play" ? "animate-center-play" : "animate-center-pause"
+                  }`}
+                >
+                  {centerIcon.type === "play" ? (
+                    <Play size={64} className="fill-white text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                  ) : (
+                    <Pause size={64} className="fill-white text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                  )}
+                </div>
+              )}
+
+              <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
                 <div className="group/progress relative h-4">
                   <svg
                     viewBox="0 0 1000 100"

@@ -1,27 +1,16 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { Star, Users, BookOpen, MessageSquare, Globe, Link2, Award, Briefcase, Clock } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { SOCIAL_PLATFORMS } from "@/lib/socialPlatforms";
+import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/socialPlatforms";
 import { FadeLink } from "@/components/course/FadeLink";
 import { InstructorCourseGrid } from "@/components/instructor/InstructorCourseGrid";
+import { InstructorProfileHero } from "@/components/instructor/InstructorProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
 import { InstructorHeroGradient } from "@/components/instructor/InstructorHeroGradient";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
-
-function initials(name: string) {
-  return (
-    name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase())
-      .join("") || "?"
-  );
-}
 
 export default async function InstructorProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -104,11 +93,10 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       : null;
   const totalReviews = courses.reduce((sum, c) => sum + c.ratingCount, 0);
 
-  const socialLinks = SOCIAL_PLATFORMS.map((p) => ({
-    url: instructor[p.key],
-    label: p.label,
-    icon: p.key === "websiteUrl" ? Globe : Link2,
-  })).filter((s): s is { url: string; label: string; icon: typeof Globe } => Boolean(s.url));
+  const isOwner = session?.user.id === instructor.id;
+  const socialValues = Object.fromEntries(
+    SOCIAL_PLATFORMS.map((p) => [p.key, instructor[p.key] ?? ""])
+  ) as Record<SocialPlatformKey, string>;
 
   const instructorFirstName = instructor.name.split(" ")[0];
   const hidePriceBySlug: Record<string, boolean> = Object.fromEntries(
@@ -142,90 +130,18 @@ export default async function InstructorProfilePage({ params }: { params: Promis
             antes da grelha de cursos (que fica fora, em fundo normal). */}
         <InstructorHeroGradient>
           <div className="mx-auto max-w-5xl px-4 sm:px-8">
-            {instructor.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={instructor.image}
-                alt={instructor.name}
-                className="h-24 w-24 rounded-full object-cover shadow-lg shadow-black/30 ring-4 ring-white/30"
-              />
-            ) : (
-              <span className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-bold text-white shadow-lg shadow-black/30 ring-4 ring-white/30 backdrop-blur">
-                {initials(instructor.name)}
-              </span>
-            )}
-            <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
-            <h1 className="mt-1 text-3xl font-bold text-white sm:text-5xl">{instructor.name}</h1>
-
-            {(instructor.expertise || instructor.yearsExperience !== null) && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {instructor.expertise && (
-                  <span className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white">
-                    <Briefcase size={13} /> {instructor.expertise}
-                  </span>
-                )}
-                {instructor.yearsExperience !== null && instructor.yearsExperience !== undefined && (
-                  <span className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white">
-                    <Clock size={13} /> {instructor.yearsExperience} ano{instructor.yearsExperience !== 1 ? "s" : ""} de experiência
-                  </span>
-                )}
-              </div>
-            )}
-
-            {instructor.bio && (
-              <p className="mt-3 max-w-2xl whitespace-pre-wrap text-white/85">{instructor.bio}</p>
-            )}
-
-            {socialLinks.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {socialLinks.map(({ url, label, icon: Icon }) => (
-                  <a
-                    key={label}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white hover:bg-white/20"
-                  >
-                    <Icon size={13} /> {label}
-                  </a>
-                ))}
-              </div>
-            )}
-
-            {instructor.certifications.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {instructor.certifications.map((cert) => (
-                  <a
-                    key={cert.id}
-                    href={cert.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white hover:bg-white/20"
-                  >
-                    <Award size={13} /> {cert.name}
-                  </a>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/85">
-              {avgRating !== null && (
-                <span className="flex items-center gap-1.5">
-                  <Star size={15} className="fill-white text-white" /> {avgRating.toFixed(1)} média
-                </span>
-              )}
-              {totalReviews > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <MessageSquare size={15} /> {totalReviews} avaliaç{totalReviews !== 1 ? "ões" : "ão"}
-                </span>
-              )}
-              <span className="flex items-center gap-1.5">
-                <Users size={15} /> {totalStudents} aluno{totalStudents !== 1 ? "s" : ""}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <BookOpen size={15} /> {courses.length} curso{courses.length !== 1 ? "s" : ""}
-              </span>
-            </div>
+            <InstructorProfileHero
+              isOwner={isOwner}
+              profileId={instructor.id}
+              initialName={instructor.name}
+              initialImage={instructor.image}
+              initialBio={instructor.bio ?? ""}
+              initialExpertise={instructor.expertise ?? ""}
+              initialYearsExperience={instructor.yearsExperience}
+              initialValues={socialValues}
+              initialCertifications={instructor.certifications.map((c) => ({ name: c.name, url: c.url }))}
+              stats={{ avgRating, totalReviews, totalStudents, courseCount: courses.length }}
+            />
           </div>
         </InstructorHeroGradient>
 

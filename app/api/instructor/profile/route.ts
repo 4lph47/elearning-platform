@@ -23,7 +23,11 @@ const certificationSchema = z.object({
 
 const profileSchema = z
   .object({
+    name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100, "Nome deve ter no máximo 100 caracteres").optional(),
+    image: z.string().max(500, "Link da imagem deve ter no máximo 500 caracteres").optional().nullable(),
     bio: z.string().max(600, "Bio deve ter no máximo 600 caracteres").optional().nullable(),
+    expertise: z.string().max(120, "Área de especialização deve ter no máximo 120 caracteres").optional().nullable(),
+    yearsExperience: z.number().int().min(0, "Não pode ser negativo").max(80, "Valor inválido").optional().nullable(),
     certifications: z.array(certificationSchema).max(30, "Máximo de 30 certificações").optional().default([]),
     ...Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, baseUrlField])),
   })
@@ -56,7 +60,11 @@ export async function PATCH(request: Request) {
   // z.infer não propaga chaves construídas via Object.fromEntries — cast
   // explícito para o shape real (bio + certificações + um URL opcional por plataforma).
   const data = parsed.data as {
+    name?: string;
+    image?: string | null;
     bio?: string | null;
+    expertise?: string | null;
+    yearsExperience?: number | null;
     certifications: { name: string; url: string }[];
   } & Record<SocialPlatformKey, string | null | undefined>;
   const urlData = Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, data[p.key]?.trim() || null]));
@@ -64,7 +72,11 @@ export async function PATCH(request: Request) {
   const updated = await prisma.user.update({
     where: { id: session.user.id },
     data: {
+      ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.image !== undefined ? { image: data.image?.trim() || null } : {}),
       bio: data.bio?.trim() || null,
+      expertise: data.expertise?.trim() || null,
+      yearsExperience: data.yearsExperience ?? null,
       ...urlData,
       // Substitui a lista toda de uma vez (mesmo padrão das perguntas de um
       // quiz) — mais simples que sincronizar criações/edições/remoções item
@@ -78,7 +90,11 @@ export async function PATCH(request: Request) {
   });
 
   return NextResponse.json({
+    name: updated.name,
+    image: updated.image,
     bio: updated.bio,
+    expertise: updated.expertise,
+    yearsExperience: updated.yearsExperience,
     certifications: updated.certifications,
     ...Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, updated[p.key as keyof typeof updated]])),
   });

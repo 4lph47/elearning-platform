@@ -84,10 +84,9 @@ export function Sidebar() {
               { href: "/instructor", label: "Painel", icon: LayoutDashboard, exact: true },
               { href: "/instructor/analytics", label: "Analytics", icon: BarChart3 },
               {
-                href: "/instructor/profile",
+                href: `/instructors/${session?.user.id ?? ""}`,
                 label: "Perfil público",
                 icon: UserCircle,
-                extraMatch: session?.user.id ? [`/instructors/${session.user.id}`] : [],
               },
             ],
           } as GroupItem,

@@ -44,7 +44,7 @@ export default async function InstructorHomePage() {
                 Analytics
               </FadeLink>
               <FadeLink
-                href="/instructor/profile"
+                href={`/instructors/${session.user.id}`}
                 className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               >
                 Perfil público

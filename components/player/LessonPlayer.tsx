@@ -687,6 +687,35 @@ export function LessonPlayer({
     }, DOUBLE_CLICK_MS);
   }
 
+  // O botão de play central (mobile) fica exatamente em cima da zona de
+  // "gosto" do duplo-tap (handleDoubleInteraction, terço do meio) — sem
+  // isto, o botão intercetava cada toque e dava play/pause duas vezes
+  // seguidas em vez do 2º toque completar o duplo-tap de like. Reusa os
+  // mesmos timers/lógica do vídeo: toque único (depois do prazo) = play/
+  // pause; dois toques a tempo = like, nunca seek (está sempre no centro).
+  function handleCenterButtonClick() {
+    if (clickTimerRef.current) {
+      window.clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    const now = Date.now();
+    const last = lastClickRef.current;
+    if (last !== null && now - last < DOUBLE_CLICK_MS) {
+      lastClickRef.current = null;
+      const rect = containerRef.current?.getBoundingClientRect();
+      triggerLikeBurst(rect ? rect.width / 2 : 0, rect ? rect.height / 2 : 0);
+      return;
+    }
+    lastClickRef.current = now;
+    clickTimerRef.current = window.setTimeout(() => {
+      togglePlay();
+      const isPaused = videoRef.current?.paused ?? true;
+      triggerCenterIcon(isPaused ? "pause" : "play", isPaused);
+      lastClickRef.current = null;
+      clickTimerRef.current = null;
+    }, DOUBLE_CLICK_MS);
+  }
+
   function toggleMute() {
     const video = videoRef.current;
     if (!video) return;
@@ -1436,11 +1465,7 @@ export function LessonPlayer({
                   Some com fadeout junto dos outros controlos ao dar play. */}
               <button
                 type="button"
-                onClick={() => {
-                  togglePlay();
-                  const isPaused = videoRef.current?.paused ?? true;
-                  triggerCenterIcon(isPaused ? "pause" : "play", isPaused);
-                }}
+                onClick={handleCenterButtonClick}
                 aria-label={playing ? "Pausar" : "Reproduzir"}
                 style={{
                   transform: barExpanded ? `translate(-50%, calc(-50% - ${playButtonLift}px))` : "translate(-50%, -50%)",

@@ -307,7 +307,7 @@ export function LessonPlayer({
   const progressDragRef = useRef<{ startY: number; revealed: boolean; alreadyExpanded: boolean } | null>(null);
   const barExpandedRef = useRef(false);
   const [barExpanded, setBarExpandedState] = useState(false);
-  const PROGRESS_LIFT_MAX = 100;
+  const PROGRESS_LIFT_MAX = 84; // barra fica em bottom-2(8) + 84 = 92px, igual ao topo da filmstrip (FILMSTRIP_BOTTOM + FILMSTRIP_HEIGHT) — encostadas.
   const PROGRESS_REVEAL_DY = 60;
   const FILMSTRIP_COUNT = 20;
   const THUMB_W = 64;
@@ -317,6 +317,10 @@ export function LessonPlayer({
   const filmstripCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const [filmstripTimes, setFilmstripTimes] = useState<number[] | null>(null);
   const [scrubTime, setScrubTime] = useState(0);
+  // Quanto o play central sobe quando a barra expande — limitado à altura do
+  // vídeo (containerRef), senão em vídeos baixos (ecrã em paisagem, etc.) o
+  // botão passava do próprio iframe.
+  const [playButtonLift, setPlayButtonLift] = useState(0);
   const lastScrubLabelRef = useRef(0);
   const filmstripSeekTimerRef = useRef<number | null>(null);
 
@@ -705,9 +709,16 @@ export function LessonPlayer({
     return times;
   }
 
+  // Timeout de segurança em ambos: se o seek/metadata nunca disparar o
+  // evento (rede lenta, HLS ainda a iniciar), resolve na mesma — nunca
+  // trava o resto da filmstrip por causa de UM frame.
   function seekAndDraw(video: HTMLVideoElement, canvas: HTMLCanvasElement, time: number): Promise<void> {
     return new Promise((resolve) => {
-      function draw() {
+      let settled = false;
+      function finish() {
+        if (settled) return;
+        settled = true;
+        video.removeEventListener("seeked", onSeeked);
         const ctx = canvas.getContext("2d");
         if (ctx) {
           try {
@@ -718,16 +729,31 @@ export function LessonPlayer({
         }
         resolve();
       }
-      if (video.readyState >= 1 && Math.abs(video.currentTime - time) > 0.3) {
-        const onSeeked = () => {
-          video.removeEventListener("seeked", onSeeked);
-          draw();
-        };
-        video.addEventListener("seeked", onSeeked);
-        video.currentTime = time;
-      } else {
-        draw();
+      function onSeeked() {
+        finish();
       }
+      if (Math.abs(video.currentTime - time) <= 0.3 && video.readyState >= 2) {
+        finish();
+        return;
+      }
+      video.addEventListener("seeked", onSeeked);
+      video.currentTime = time;
+      window.setTimeout(finish, 1500);
+    });
+  }
+
+  function waitForMetadata(video: HTMLVideoElement): Promise<void> {
+    return new Promise((resolve) => {
+      if (video.readyState >= 1) {
+        resolve();
+        return;
+      }
+      function onLoaded() {
+        video.removeEventListener("loadedmetadata", onLoaded);
+        resolve();
+      }
+      video.addEventListener("loadedmetadata", onLoaded);
+      window.setTimeout(resolve, 3000);
     });
   }
 
@@ -738,6 +764,10 @@ export function LessonPlayer({
     const thumbVideo = thumbVideoRef.current;
     if (!thumbVideo || totalDuration <= 0) return;
     ensureThumbSource();
+    // Sem isto, o loop de seeks a seguir corria com o <video> escondido
+    // ainda em readyState 0 (metadados por carregar) — cada seekAndDraw
+    // desistia logo e desenhava nada, dava frames em branco em todos.
+    await waitForMetadata(thumbVideo);
     const times = pickImportantMoments(FILMSTRIP_COUNT, totalDuration);
     setFilmstripTimes(times);
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -750,8 +780,12 @@ export function LessonPlayer({
   useEffect(() => {
     if (barExpanded) {
       void buildFilmstrip(duration);
+      const h = containerRef.current?.clientHeight ?? 0;
+      const maxLift = Math.max(0, h / 2 - 44); // 32 (raio do botão) + 12 (respiro)
+      setPlayButtonLift(Math.min(110, maxLift));
     } else {
       setFilmstripTimes(null);
+      setPlayButtonLift(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [barExpanded]);
@@ -1301,7 +1335,7 @@ export function LessonPlayer({
                 }}
                 aria-label={playing ? "Pausar" : "Reproduzir"}
                 style={{
-                  transform: barExpanded ? "translate(-50%, calc(-50% - 110px))" : "translate(-50%, -50%)",
+                  transform: barExpanded ? `translate(-50%, calc(-50% - ${playButtonLift}px))` : "translate(-50%, -50%)",
                   transition: "transform 200ms ease-out, opacity 150ms",
                 }}
                 className={`absolute left-1/2 top-1/2 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm lg:hidden ${

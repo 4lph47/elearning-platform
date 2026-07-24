@@ -491,7 +491,7 @@ export function LessonPlayer({
     const id = gestureIdRef.current;
     setLikeBurst({ x, y, id });
     onDoubleTapLike?.();
-    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 800);
+    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 1000);
   }
 
   function triggerSeekFlash(dir: "back" | "fwd") {
@@ -503,21 +503,29 @@ export function LessonPlayer({
 
   // Ícone central de play/pause no clique simples — mostra o ícone do
   // ESTADO NOVO (a pausar mostra o play que vai retomar; a retomar mostra o
-  // pause que vai pausar), depois desaparece sozinho, e os controlos do
-  // fundo (barra) escondem-se junto — só voltam a aparecer no próximo
-  // clique, não num temporizador à parte.
-  function triggerCenterIcon(type: "play" | "pause") {
+  // pause que vai pausar), junto com os controlos do fundo (barra).
+  // Pausado: fica tudo visível INDEFINIDAMENTE (persist=true) — só some no
+  // próximo clique (dar play) — assim dá sempre pra ver que está pausado e
+  // que se deve clicar em play. A dar play: é só uma confirmação breve
+  // (persist=false), desaparece sozinho a seguir — o vídeo em reprodução
+  // não deve ficar com elementos por cima indefinidamente, só ao passar o
+  // rato por cima (:hover, CSS) ou ao pausar outra vez.
+  const CENTER_ICON_MS = 700;
+  function triggerCenterIcon(type: "play" | "pause", persist: boolean) {
     gestureIdRef.current += 1;
     const id = gestureIdRef.current;
     setCenterIcon({ type, id });
     setControlsShown(true);
-    if (controlsHideTimerRef.current) window.clearTimeout(controlsHideTimerRef.current);
-    const duration = type === "play" ? 1000 : 700;
-    setTimeout(() => setCenterIcon((c) => (c?.id === id ? null : c)), duration);
+    if (controlsHideTimerRef.current) {
+      window.clearTimeout(controlsHideTimerRef.current);
+      controlsHideTimerRef.current = null;
+    }
+    if (persist) return;
+    setTimeout(() => setCenterIcon((c) => (c?.id === id ? null : c)), CENTER_ICON_MS);
     controlsHideTimerRef.current = window.setTimeout(() => {
       setControlsShown(false);
       controlsHideTimerRef.current = null;
-    }, duration);
+    }, CENTER_ICON_MS);
   }
 
   // Terços laterais avançam/recuam 10s; o terço central "gosta" (like) com
@@ -556,9 +564,12 @@ export function LessonPlayer({
     }
     lastClickRef.current = now;
     clickTimerRef.current = window.setTimeout(() => {
-      const wasPaused = videoRef.current?.paused ?? true;
-      triggerCenterIcon(wasPaused ? "pause" : "play");
       togglePlay();
+      // video.paused já reflete o estado NOVO aqui (play()/pause() aplicam-no
+      // sincronamente, mesmo antes da reprodução em si começar/parar de
+      // verdade) — não é preciso adivinhar antes de chamar togglePlay().
+      const isPaused = videoRef.current?.paused ?? true;
+      triggerCenterIcon(isPaused ? "play" : "pause", isPaused);
       lastClickRef.current = null;
       clickTimerRef.current = null;
     }, DOUBLE_CLICK_MS);
@@ -883,10 +894,10 @@ export function LessonPlayer({
               {likeBurst && (
                 <div
                   key={likeBurst.id}
-                  className="pointer-events-none absolute z-20 animate-like-pop"
+                  className="pointer-events-none absolute z-20 animate-like-swing"
                   style={{ left: likeBurst.x, top: likeBurst.y }}
                 >
-                  <ThumbsUp size={72} className="-scale-x-100 fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
+                  <ThumbsUp size={72} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
                 </div>
               )}
 
@@ -905,12 +916,7 @@ export function LessonPlayer({
               )}
 
               {centerIcon && (
-                <div
-                  key={centerIcon.id}
-                  className={`pointer-events-none absolute left-1/2 top-1/2 z-20 ${
-                    centerIcon.type === "play" ? "animate-center-play" : "animate-center-pause"
-                  }`}
-                >
+                <div key={centerIcon.id} className="pointer-events-none absolute left-1/2 top-1/2 z-20 animate-center-pop">
                   {centerIcon.type === "play" ? (
                     <Play size={64} className="fill-white text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
                   ) : (

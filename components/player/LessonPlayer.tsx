@@ -155,6 +155,11 @@ export function LessonPlayer({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuPortalRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const thumbVideoRef = useRef<HTMLVideoElement>(null);
+  const thumbCanvasRef = useRef<HTMLCanvasElement>(null);
+  const thumbHlsRef = useRef<Hls | null>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const mobileMenuBtnRef = useRef<HTMLDivElement>(null);
   const collapsed = useSidebarCollapsed();
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
   const ambientColor = useAmbientColor(videoRef, Boolean(cinemaMode) && !youtubeId && type === "VIDEO");
@@ -296,6 +301,12 @@ export function LessonPlayer({
   const heatmapRef = useRef<number[]>(seededHeatmapBaseline(lessonId));
   const lastHeatmapRenderRef = useRef(0);
   const [, setHeatmapVersion] = useState(0);
+  // Preview de scrub (mobile): thumbnail real gerado num <video>/<canvas>
+  // escondidos, dedicados só a isto — nunca mexe no <video> principal
+  // (evita interromper a reprodução em curso pra "roubar" um frame).
+  const [scrubPreview, setScrubPreview] = useState<{ time: number; x: number } | null>(null);
+  const scrubDraggingRef = useRef(false);
+  const lastScrubUpdateRef = useRef(0);
 
   // Duplo-clique/duplo-tap: 1º clique adia o play/pause (setTimeout); se um
   // 2º chegar a tempo, cancela-se o adiado e interpreta-se como gesto duplo
@@ -323,12 +334,10 @@ export function LessonPlayer({
       // O menu em si vive num portal (fora do vídeo, ver render mais
       // abaixo) — clicar lá dentro não conta como "fora", precisa de
       // verificar os dois sítios (botão + conteúdo portalado).
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(target) &&
-        menuPortalRef.current &&
-        !menuPortalRef.current.contains(target)
-      ) {
+      const insideDesktopBtn = menuRef.current?.contains(target) ?? false;
+      const insideMobileBtn = mobileMenuBtnRef.current?.contains(target) ?? false;
+      const insidePortal = menuPortalRef.current?.contains(target) ?? false;
+      if (!insideDesktopBtn && !insideMobileBtn && !insidePortal) {
         setMenuOpen(false);
         setSpeedOpen(false);
         setQualityOpen(false);
@@ -343,15 +352,16 @@ export function LessonPlayer({
   // dentro, era cortado sempre que não coubesse no espaço visível. Calcula
   // a posição a partir do botão e o conteúdo do menu é portalado pra
   // document.body (ver render), fora de qualquer limitação do vídeo.
-  function toggleSettingsMenu() {
+  // Recebe o evento (não usa mais o menuRef fixo) porque agora há dois
+  // botões possíveis que abrem este menu — o de desktop (na barra de
+  // controlos) e o de mobile (canto superior direito) — e a posição tem de
+  // ser calculada a partir de QUAL DOS DOIS foi clicado.
+  function toggleSettingsMenu(e: React.MouseEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
     setMenuOpen((prev) => {
       const next = !prev;
       if (next) {
-        const btn = menuRef.current;
-        if (btn) {
-          const rect = btn.getBoundingClientRect();
-          setMenuPosition({ bottom: window.innerHeight - rect.top + 8, right: window.innerWidth - rect.right });
-        }
+        setMenuPosition({ bottom: window.innerHeight - rect.top + 8, right: window.innerWidth - rect.right });
       }
       return next;
     });
@@ -624,6 +634,64 @@ export function LessonPlayer({
     video.currentTime = Number(e.target.value);
   }
 
+  // Fonte do <video> escondido usado só pra desenhar thumbnails de scrub —
+  // criada só na 1ª vez que se arrasta a barra (não no mount), pra não gastar
+  // banda/CPU em aulas onde ninguém chega a arrastar. Espelha a mesma lógica
+  // de HLS do player principal, mas em instância própria (não pode partilhar
+  // o <video> a tocar, senão interrompia a reprodução real).
+  function ensureThumbSource() {
+    const thumbVideo = thumbVideoRef.current;
+    if (!thumbVideo || thumbVideo.dataset.ready) return;
+    thumbVideo.dataset.ready = "1";
+    if (usingHls && hlsMasterUrl) {
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        thumbHlsRef.current = hls;
+        hls.loadSource(hlsMasterUrl);
+        hls.attachMedia(thumbVideo);
+      } else if (thumbVideo.canPlayType("application/vnd.apple.mpegurl")) {
+        thumbVideo.src = hlsMasterUrl;
+      }
+    } else if (activeSrc) {
+      thumbVideo.src = activeSrc;
+    }
+  }
+
+  function updateScrub(clientX: number) {
+    const bar = progressBarRef.current;
+    if (!bar || duration <= 0) return;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    setScrubPreview({ time: ratio * duration, x: ratio * rect.width });
+  }
+
+  // stopPropagation nos três handlers: a barra vive dentro do container que
+  // também escuta touchstart/touchend pro gesto de arrastar pra
+  // maximizar/minimizar o vídeo (ver handleFullscreenTouchStart/End) — sem
+  // isto, arrastar na barra também dispararia esse gesto ao mesmo tempo.
+  function handleProgressTouchStart(e: React.TouchEvent) {
+    e.stopPropagation();
+    scrubDraggingRef.current = true;
+    ensureThumbSource();
+    updateScrub(e.touches[0].clientX);
+  }
+
+  function handleProgressTouchMove(e: React.TouchEvent) {
+    if (!scrubDraggingRef.current) return;
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - lastScrubUpdateRef.current < 120) return; // throttle: 1 seek/desenho a cada 120ms, não a cada pixel
+    lastScrubUpdateRef.current = now;
+    updateScrub(e.touches[0].clientX);
+  }
+
+  function handleProgressTouchEnd(e: React.TouchEvent) {
+    if (!scrubDraggingRef.current) return;
+    e.stopPropagation();
+    scrubDraggingRef.current = false;
+    setScrubPreview(null);
+  }
+
   function setRate(rate: number) {
     const video = videoRef.current;
     if (!video) return;
@@ -833,6 +901,45 @@ export function LessonPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [youtubeId]);
 
+  // Redesenha o frame do thumbnail sempre que o tempo do scrub muda (já
+  // vem throttled a 120ms por handleProgressTouchMove). Só faz seek no
+  // <video> escondido se o frame atual estiver longe o suficiente do pedido
+  // (>0.3s) — arrastos pequenos dentro do mesmo frame não repetem o seek.
+  useEffect(() => {
+    if (!scrubPreview) return;
+    const thumbVideo = thumbVideoRef.current;
+    const canvas = thumbCanvasRef.current;
+    if (!thumbVideo || !canvas) return;
+    let cancelled = false;
+    function draw() {
+      const ctx = canvas!.getContext("2d");
+      if (ctx && !cancelled) ctx.drawImage(thumbVideo!, 0, 0, canvas!.width, canvas!.height);
+    }
+    if (Math.abs(thumbVideo.currentTime - scrubPreview.time) > 0.3) {
+      const onSeeked = () => {
+        thumbVideo.removeEventListener("seeked", onSeeked);
+        if (!cancelled) draw();
+      };
+      thumbVideo.addEventListener("seeked", onSeeked);
+      thumbVideo.currentTime = scrubPreview.time;
+    } else {
+      draw();
+    }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrubPreview?.time]);
+
+  useEffect(() => {
+    const thumbVideo = thumbVideoRef.current;
+    if (thumbVideo) delete thumbVideo.dataset.ready;
+    return () => {
+      thumbHlsRef.current?.destroy();
+      thumbHlsRef.current = null;
+    };
+  }, [usingHls, hlsMasterUrl, activeSrc]);
+
   const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"}`;
   const playerClassName = `aspect-video w-full rounded-lg bg-black ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
@@ -925,11 +1032,40 @@ export function LessonPlayer({
                 )}
               </video>
 
+              <video ref={thumbVideoRef} muted playsInline preload="none" className="hidden" aria-hidden="true" />
+
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
                   <Loader2 size={80} className="animate-spin text-white" />
                 </div>
               )}
+
+              {/* Settings + maximizar: no mobile sobem pro canto superior direito (fora da
+                  barra de baixo); no desktop continuam na barra de controlos (ver mais abaixo,
+                  escondidos aqui via lg:hidden). Desaparecem com fadeout junto dos outros
+                  controlos ao dar play (controlsShown). */}
+              <div
+                className={`absolute right-2 top-2 z-30 flex items-center gap-2 text-white transition-opacity duration-150 lg:hidden ${
+                  controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <button type="button"
+                  onClick={toggleFullscreen}
+                  aria-label={isFullscreen ? "Sair de ecrã inteiro" : "Ecrã inteiro"}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                >
+                  {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                </button>
+                <div ref={mobileMenuBtnRef} className="relative">
+                  <button type="button"
+                    onClick={toggleSettingsMenu}
+                    aria-label="Definições"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  >
+                    <Settings size={18} />
+                  </button>
+                </div>
+              </div>
 
               {likeBurst && (
                 <div
@@ -956,7 +1092,7 @@ export function LessonPlayer({
               )}
 
               {centerIcon && (
-                <div key={centerIcon.id} className="pointer-events-none absolute left-1/2 top-1/2 z-20 animate-center-pop">
+                <div key={centerIcon.id} className="pointer-events-none absolute left-1/2 top-1/2 z-20 hidden animate-center-pop lg:block">
                   {centerIcon.type === "play" ? (
                     <Play size={64} className="fill-white text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />
                   ) : (
@@ -965,8 +1101,32 @@ export function LessonPlayer({
                 </div>
               )}
 
+              {/* Botão de play/pause central: no mobile substitui o botão inline da barra
+                  de baixo (que fica escondido, ver lg:block mais abaixo) — igual ao YouTube.
+                  Some com fadeout junto dos outros controlos ao dar play. */}
+              <button
+                type="button"
+                onClick={() => {
+                  togglePlay();
+                  const isPaused = videoRef.current?.paused ?? true;
+                  triggerCenterIcon(isPaused ? "play" : "pause", isPaused);
+                }}
+                aria-label={playing ? "Pausar" : "Reproduzir"}
+                className={`absolute left-1/2 top-1/2 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-opacity duration-150 lg:hidden ${
+                  controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                {playing ? <Pause size={30} className="fill-white" /> : <Play size={30} className="fill-white" />}
+              </button>
+
               <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 ${controlsShown ? "opacity-100" : "opacity-0"}`}>
-                <div className="group/progress relative h-4">
+                <div
+                  ref={progressBarRef}
+                  onTouchStart={handleProgressTouchStart}
+                  onTouchMove={handleProgressTouchMove}
+                  onTouchEnd={handleProgressTouchEnd}
+                  className="group/progress absolute inset-x-0 bottom-1 h-4 px-3 lg:static lg:inset-auto lg:bottom-auto lg:px-0"
+                >
                   <svg
                     viewBox="0 0 1000 100"
                     preserveAspectRatio="none"
@@ -999,12 +1159,38 @@ export function LessonPlayer({
                   />
                 </div>
 
+                {/* Preview de scrub (mobile): thumbnail real do frame arrastado. Fica
+                    colado por cima da barra — a barra já está no limite de baixo do
+                    vídeo, não há espaço visível por baixo dela pra encaixar isto. */}
+                {scrubPreview && (
+                  <div
+                    className="pointer-events-none absolute z-30 flex -translate-x-1/2 flex-col items-center gap-1 lg:hidden"
+                    style={{
+                      left: Math.min(
+                        Math.max(scrubPreview.x, 60),
+                        (progressBarRef.current?.clientWidth ?? scrubPreview.x + 60) - 60
+                      ),
+                      bottom: 28,
+                    }}
+                  >
+                    <canvas
+                      ref={thumbCanvasRef}
+                      width={112}
+                      height={63}
+                      className="rounded border border-white/30 bg-black shadow-lg"
+                    />
+                    <span className="rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-medium text-white">
+                      {formatTime(scrubPreview.time)}
+                    </span>
+                  </div>
+                )}
+
                 <div className="mt-2 flex items-center gap-3 text-white">
-                  <button type="button" onClick={togglePlay} aria-label={playing ? "Pausar" : "Reproduzir"} className="hover:text-blue-400">
+                  <button type="button" onClick={togglePlay} aria-label={playing ? "Pausar" : "Reproduzir"} className="hidden hover:text-blue-400 lg:block">
                     {playing ? <Pause size={22} /> : <Play size={22} />}
                   </button>
 
-                  <div className="group/volume flex items-center">
+                  <div className="group/volume hidden items-center lg:flex">
                     <button type="button" onClick={toggleMute} aria-label={muted ? "Ativar som" : "Silenciar"} className="flex items-center hover:text-blue-400">
                       {muted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
                     </button>
@@ -1034,12 +1220,12 @@ export function LessonPlayer({
                   <button type="button"
                     onClick={toggleFullscreen}
                     aria-label={isFullscreen ? "Sair de ecrã inteiro" : "Ecrã inteiro"}
-                    className="hover:text-blue-400"
+                    className="hidden hover:text-blue-400 lg:block"
                   >
                     {isFullscreen ? <Minimize size={22} /> : <Maximize size={22} />}
                   </button>
 
-                  <div ref={menuRef} className="relative flex items-center">
+                  <div ref={menuRef} className="relative hidden items-center lg:flex">
                     <button type="button"
                       onClick={toggleSettingsMenu}
                       aria-label="Definições"

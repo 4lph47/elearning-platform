@@ -876,7 +876,7 @@ export function LessonPlayer({
 
               {!videoReady && (usingHls || activeSrc) && (
                 <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-                  <Loader2 size={32} className="animate-spin text-white" />
+                  <Loader2 size={56} className="animate-spin text-white" />
                 </div>
               )}
 

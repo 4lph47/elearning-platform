@@ -15,6 +15,7 @@ import { useFadeNav } from "@/components/course/FadeNavContext";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
 import { transcribeFileToVtt, uploadCaptionsVtt, type CaptionsPhase } from "@/lib/captions";
+import { captureFirstFrame, uploadThumbnailBlob } from "@/lib/videoThumbnail";
 import type { LessonData } from "@/components/instructor/LessonRow";
 
 interface LessonDraft {
@@ -67,6 +68,9 @@ export function LessonEditScreen({
     draft?.value.thumbnailUrl ?? lesson?.thumbnailUrl ?? null
   );
   const [thumbnailName, setThumbnailName] = useState<string | null>(draft?.value.thumbnailName ?? null);
+  // true só enquanto o thumbnail atual veio do frame capturado automaticamente
+  // (não de uma escolha manual) — decide se um novo vídeo pode substituí-lo.
+  const [thumbnailIsAuto, setThumbnailIsAuto] = useState(false);
   const [captionsUrl, setCaptionsUrl] = useState<string | null>(
     draft?.value.captionsUrl ?? lesson?.captionsUrl ?? null
   );
@@ -158,6 +162,33 @@ export function LessonEditScreen({
       if (!isCurrent()) return;
       console.error("Falha ao gerar legendas automáticas:", err);
       setCaptionsPhase("error");
+    }
+  }
+
+  // Mesmo princípio do handleGenerateCaptions acima (corre em paralelo ao
+  // upload do vídeo, sobre o mesmo ficheiro) — só que gera o thumbnail da
+  // aula a partir do 1º frame, e só quando o instrutor ainda não escolheu
+  // um à mão (thumbnailUrl vazio, ou o atual também é auto de um vídeo
+  // anterior). Isto é o que faz o thumbnail do curso (syncCourseThumbnail
+  // usa o thumbnail da 1ª aula) e o trailer (fallback em app/courses/[slug]
+  // e afins usa o contentUrl da 1ª aula) ficarem preenchidos sozinhos
+  // quando o instrutor não define nada manualmente.
+  const thumbnailGenerationRef = useRef(0);
+  async function handleGenerateThumbnail(file: File) {
+    if (thumbnailUrl && !thumbnailIsAuto) return;
+    const myGeneration = ++thumbnailGenerationRef.current;
+    const isCurrent = () => thumbnailGenerationRef.current === myGeneration;
+    try {
+      const blob = await captureFirstFrame(file);
+      if (!isCurrent()) return;
+      const { url, name } = await uploadThumbnailBlob(blob);
+      if (!isCurrent()) return;
+      setThumbnailUrl(url);
+      setThumbnailName(name);
+      setThumbnailIsAuto(true);
+    } catch (err) {
+      if (!isCurrent()) return;
+      console.error("Falha ao gerar thumbnail automático:", err);
     }
   }
 
@@ -382,7 +413,10 @@ export function LessonEditScreen({
                     setContentUrl(r.url);
                     setContentName(r.name);
                   }}
-                  onFileSelected={handleGenerateCaptions}
+                  onFileSelected={(file) => {
+                    handleGenerateCaptions(file);
+                    handleGenerateThumbnail(file);
+                  }}
                 />
                 {captionsPhase !== "idle" && (
                   <p
@@ -423,8 +457,14 @@ export function LessonEditScreen({
                     onUploaded={(r) => {
                       setThumbnailUrl(r.url);
                       setThumbnailName(r.name);
+                      setThumbnailIsAuto(false);
                     }}
                   />
+                  {thumbnailIsAuto && (
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                      Gerado automaticamente a partir do vídeo.
+                    </p>
+                  )}
                   {thumbnailUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

@@ -198,7 +198,14 @@ export function LessonPlayer({
       return;
     }
 
-    const hls = new Hls();
+    // capLevelToPlayerSize: no modo automático (sem escolha manual no menu
+    // de qualidade), nunca descodifica mais resolução do que o próprio
+    // elemento <video> está a mostrar em ecrã — decodificar 1080p num
+    // player mostrado a 400px de largura só gasta CPU à toa, e é
+    // exatamente esse excesso que causava pausas a meio da reprodução em
+    // aparelhos mais fracos. Escolha manual de qualidade continua a
+    // funcionar na mesma (isto só limita o automático).
+    const hls = new Hls({ capLevelToPlayerSize: true });
     hlsRef.current = hls;
     hls.loadSource(hlsMasterUrl);
     hls.attachMedia(video);

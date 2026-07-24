@@ -185,6 +185,14 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
   // -threads 2 evita cada thread duplicar os seus próprios buffers. "fast"
   // em vez de "medium" soma-se a isto — mais uma redução de memória, não só
   // de tempo.
+  //
+  // -tune fastdecode: desliga CABAC (usa CAVLC), o deblocking filter entre
+  // fatias e weighted prediction — troca uma fatia pequena de eficiência de
+  // compressão por MUITO menos trabalho pro descodificador do lado de quem
+  // vê o vídeo. É o oposto do "preset"/"-x264-params" de cima (esses só
+  // poupam RAM/tempo AQUI, na compressão) — isto poupa CPU no aparelho de
+  // quem reproduz, que é onde os cortes/pausas a meio do vídeo estavam a
+  // acontecer.
   const codecArgs = [
     "-vf",
     `scale=-2:${targetHeight}`,
@@ -192,6 +200,8 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf) {
     "libx264",
     "-preset",
     "fast",
+    "-tune",
+    "fastdecode",
     "-x264-params",
     "rc-lookahead=20:ref=2",
     "-threads",

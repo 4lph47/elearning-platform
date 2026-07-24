@@ -83,14 +83,21 @@ const MODEL_ID = "Xenova/whisper-base";
 export async function transcribeFileToVtt(file: File, onProgress?: (phase: CaptionsPhase) => void): Promise<string> {
   onProgress?.("loading-model");
   const { pipeline } = await import(/* webpackIgnore: true */ TRANSFORMERS_CDN_URL);
-  // dtype explícito: por omissão a lib escolhe pesos quantizados (q4) pro
+  // dtype explícito nos dois módulos — por omissão a lib escolhe q4 pro
   // decoder deste modelo, e o ficheiro q4 atualmente servido pro
-  // Xenova/whisper-base no CDN vem sem o scale tensor que o próprio grafo
-  // ONNX exige ("Can't create a session... Missing required scale:
+  // Xenova/whisper-base vem sem o scale tensor que o próprio grafo ONNX
+  // exige ("Can't create a session... Missing required scale:
   // model.decoder.embed_tokens.weight_merged_0_scale") — sessão nunca
-  // chega a criar-se. fp32 ignora essa escolha automática e usa os pesos
-  // completos, que carregam sempre.
-  const transcriber = await pipeline("automatic-speech-recognition", MODEL_ID, { dtype: "fp32" });
+  // chega a criar-se. fp32 (tentado antes) evita o q4 quebrado mas é
+  // pesado a mais (encoder 82.5MB + decoder 209MB, ~291MB ao todo) —
+  // download longo o suficiente pra bater em ERR_HTTP2_PROTOCOL_ERROR a
+  // meio. q8 (quantização de 8-bit "clássica", ficheiros "_quantized" no
+  // repo) é bem mais leve (23.2MB + 53.7MB, ~77MB) e não tem o problema
+  // do q4 (esquema de quantização diferente, sem tensor de escala externo
+  // em falta).
+  const transcriber = await pipeline("automatic-speech-recognition", MODEL_ID, {
+    dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
+  });
 
   onProgress?.("decoding-audio");
   const audio = await decodeAudioFromFile(file);

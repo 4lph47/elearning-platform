@@ -595,6 +595,7 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
           // Um rung novo (não vindo do resume) acabou de ficar pronto —
           // avança o contador que o cliente lê via /upload-finalize-status.
           const job = finalizeJobs.get(assetId);
+          console.log(`  -> [finalize] ${assetId} onRendition: job antes de incrementar = ${JSON.stringify(job)}`);
           if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed: job.completed + 1 });
         },
         {
@@ -684,6 +685,7 @@ async function handleUploadFinalizeStatusRequest(req, res) {
   }
 
   const job = finalizeJobs.get(assetId);
+  console.log(`  -> [finalize] status pedido para ${assetId}: ${job ? JSON.stringify(job) : "SEM JOB no mapa"}`);
   if (!job) {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ state: "unknown" }));

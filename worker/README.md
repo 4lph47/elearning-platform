@@ -35,7 +35,13 @@ um poller em fundo.
 3. Depois do último bloco, o browser chama `POST /upload-finalize` (sem
    corpo). O worker corre `ffprobe`, e para cada qualidade — do MENOR pro
    MAIOR — gera uma variante HLS (segmentos `.ts` + `index.m3u8`, nunca faz
-   upscale) e SÓ ENTÃO sobe pro Supabase Storage (já comprimido).
+   upscale) e SÓ ENTÃO sobe pro Supabase Storage (já comprimido). Cada rung
+   concluído fica gravado num checkpoint (`progress.json` no work dir) —
+   um vídeo longo pode levar minutos a comprimir, e se o pedido de
+   `/upload-finalize` cair a meio (aparece como "erro de rede" do lado do
+   browser, mesmo sem nada de errado na compressão em si), o cliente repete
+   a chamada (retry infinito, ver `FileUploadInput.tsx`) e o worker retoma a
+   partir do rung onde ficou, sem recomeçar a escada toda.
 4. Quando a escada toda estiver pronta, responde ao pedido de finalização
    com o URL do master playlist. O browser guarda-o como `contentUrl` da
    aula — ao gravar a aula, a app já regista isto como `hlsMasterUrl`

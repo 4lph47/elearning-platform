@@ -328,7 +328,16 @@ function scaledEvenWidth(sourceWidth, sourceHeight, targetHeight) {
   return width % 2 === 0 ? width : width - 1;
 }
 
-async function transcodeToHls(key, sourcePath, workDir, onRendition) {
+// options.resume / options.persistProgress — só usados pelo caminho de
+// upload direto (ver handleUploadFinalizeRequest): retoma rungs já feitos
+// numa tentativa de finalize anterior (em vez de recomeçar a escada TODA
+// do zero a cada retry) e grava o progresso em disco depois de CADA rung,
+// pra um próximo retry poder ler onde ficou. A fila assíncrona não passa
+// nada aqui — já tem o próprio checkpointing (reportRendition por job).
+async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
+  const resume = options && options.resume;
+  const persistProgress = Boolean(options && options.persistProgress);
+
   const { width: sourceWidth, height: sourceHeight } = await probeDimensions(sourcePath);
   const durationSeconds = await probeDuration(sourcePath);
 
@@ -338,12 +347,17 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition) {
     rungs = [{ label: `${sourceHeight}p`, height: sourceHeight }];
   }
 
-  const variantsSoFar = [];
-  const renditions = [];
-  let masterPlaylistUrl = null;
+  const doneLabels = new Set((resume && resume.renditions ? resume.renditions : []).map((r) => r.quality));
+  const variantsSoFar = resume && resume.variants ? [...resume.variants] : [];
+  const renditions = resume && resume.renditions ? [...resume.renditions] : [];
+  let masterPlaylistUrl = (resume && resume.masterPlaylistUrl) || null;
 
   for (let i = 0; i < rungs.length; i++) {
     const rung = rungs[i];
+    if (doneLabels.has(rung.label)) {
+      console.log(`  -> ${rung.label} já estava pronto (retomado de uma tentativa anterior), a saltar`);
+      continue;
+    }
     const outDir = path.join(workDir, rung.label);
     // rungs vem do menor pro maior — o último é sempre o de maior qualidade
     // da escada (o mais próximo da fonte), fica com CRF mais baixo.
@@ -362,6 +376,9 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition) {
 
     const rendition = { quality: rung.label, url: indexUrl, width, height, sizeBytes: totalBytes };
     renditions.push(rendition);
+    if (persistProgress) {
+      await saveTranscodeProgress(workDir, { renditions, variants: variantsSoFar, masterPlaylistUrl });
+    }
     const isLast = i === rungs.length - 1;
     if (onRendition) await onRendition(rendition, masterPlaylistUrl, isLast);
 
@@ -431,6 +448,32 @@ async function getReceivedBytes(assetId) {
   } catch {
     return 0;
   }
+}
+
+// Checkpoint da COMPRESSÃO (não do upload — isso é o "source" + offset
+// acima). Vídeos longos podem levar minutos a comprimir; se o pedido de
+// /upload-finalize cair a meio (a app reporta isto como "erro de rede",
+// mas é só o pedido HTTP em si a morrer, a compressão em curso no worker
+// não sabe disso), sem isto um retry recomeçava a escada TODA — 480p e
+// 720p já prontos incluídos — em vez de continuar só a partir do rung
+// onde ficou. Grava-se depois de CADA rung concluído (ver transcodeToHls).
+function transcodeProgressPath(workDir) {
+  return path.join(workDir, "progress.json");
+}
+
+async function loadTranscodeProgress(workDir) {
+  try {
+    const raw = await fs.readFile(transcodeProgressPath(workDir), "utf8");
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.renditions) && Array.isArray(data.variants)) return data;
+  } catch {
+    // sem checkpoint ainda (1ª tentativa) ou ficheiro corrompido — começa do zero
+  }
+  return { renditions: [], variants: [], masterPlaylistUrl: null };
+}
+
+async function saveTranscodeProgress(workDir, progress) {
+  await fs.writeFile(transcodeProgressPath(workDir), JSON.stringify(progress)).catch(() => {});
 }
 
 // append=true (retoma): abre em modo "a", só acrescenta ao que já lá está.
@@ -550,8 +593,18 @@ async function handleUploadFinalizeRequest(req, res) {
       res.end(JSON.stringify({ error: "Upload incompleto", receivedBytes: actualBytes }));
       return;
     }
-    console.log(`  -> ${assetId} recebido por completo (${actualBytes} bytes), a comprimir`);
-    const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null);
+    const progress = await loadTranscodeProgress(workDir);
+    if (progress.renditions.length > 0) {
+      console.log(
+        `  -> ${assetId} a retomar compressão (${progress.renditions.length} rendition(s) já prontas de uma tentativa anterior)`
+      );
+    } else {
+      console.log(`  -> ${assetId} recebido por completo (${actualBytes} bytes), a comprimir`);
+    }
+    const { renditions, masterPlaylistUrl } = await transcodeToHls(assetId, sourcePath, workDir, null, {
+      resume: progress,
+      persistProgress: true,
+    });
     if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
     console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
     res.writeHead(200, { "Content-Type": "application/json" });

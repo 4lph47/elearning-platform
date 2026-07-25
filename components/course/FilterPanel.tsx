@@ -13,6 +13,13 @@ export const SORT_OPTIONS = [
   { value: "comments", label: "Mais comentados" },
   { value: "price_asc", label: "Preço: menor primeiro" },
   { value: "price_desc", label: "Preço: maior primeiro" },
+  { value: "deals", label: "Melhores ofertas" },
+] as const;
+
+export const RESULT_TYPE_OPTIONS = [
+  { value: "", label: "Tudo" },
+  { value: "courses", label: "Cursos" },
+  { value: "people", label: "Pessoas" },
 ] as const;
 
 export const LEVEL_OPTIONS = [
@@ -29,6 +36,7 @@ type SliderKey = "price" | "duration" | "enrollments";
 
 export interface FilterValues {
   sort: string;
+  resultType: string;
   categories: string[];
   level: string;
   maxPrice: number;
@@ -38,6 +46,7 @@ export interface FilterValues {
 
 export const DEFAULT_FILTER_VALUES: FilterValues = {
   sort: "",
+  resultType: "",
   categories: [],
   level: "",
   maxPrice: MAX_PRICE_CEIL,
@@ -70,6 +79,7 @@ export function FilterPanel({
   onClose: () => void;
 }) {
   const [sort, setSort] = useState(values.sort);
+  const [resultType, setResultType] = useState(values.resultType);
   const [categories, setCategories] = useState(values.categories);
   const [level, setLevel] = useState(values.level);
   const [maxPrice, setMaxPrice] = useState(values.maxPrice);
@@ -97,7 +107,7 @@ export function FilterPanel({
   }
 
   function apply() {
-    onApply({ sort, categories, level, maxPrice, minDuration, minEnrollments });
+    onApply({ sort, resultType, categories, level, maxPrice, minDuration, minEnrollments });
     requestClose();
   }
 
@@ -122,6 +132,22 @@ export function FilterPanel({
 
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
         <div className="mx-auto max-w-2xl space-y-8">
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Pesquisar por</h3>
+            <div className="flex flex-wrap gap-2">
+              {RESULT_TYPE_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setResultType(o.value)}
+                  className={pillClass(resultType === o.value)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Ordenar por</h3>
             <div className="flex flex-wrap gap-2">

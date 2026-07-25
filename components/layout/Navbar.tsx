@@ -200,15 +200,11 @@ export function Navbar() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = q.trim();
-    if (trimmed.startsWith("@")) {
-      // Sem página de resultados dedicada a pessoas — Enter só serve pra
-      // ir direto ao primeiro resultado do dropdown, se houver algum.
-      const first = suggestions.users[0];
-      if (first) selectUser(first);
-      return;
-    }
-    fadeNavigate(q ? `/courses?q=${encodeURIComponent(q)}` : "/courses");
+    // "@" é só o sinal do dropdown ao vivo pra mudar pra modo pessoas — o
+    // catálogo (destino do Enter) já pesquisa cursos, bundles e pessoas ao
+    // mesmo tempo, não precisa do prefixo.
+    const term = q.trim().replace(/^@+/, "").trim();
+    fadeNavigate(term ? `/courses?q=${encodeURIComponent(term)}` : "/courses");
     setMenuOpen(false);
     setMobileSearchOpen(false);
     (document.activeElement as HTMLElement | null)?.blur();

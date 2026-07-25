@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { CourseRow } from "@/components/course/CourseRow";
 import { SearchBar } from "@/components/course/SearchBar";
 import type { CourseCardData } from "@/components/course/CourseCard";
+import { PeopleRow, BundlesRow, type PersonResult, type BundleResult } from "@/components/course/SearchExtras";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ type CoursesSearchParams = Promise<{
   category?: string;
   level?: string;
   sort?: string;
+  type?: string;
   maxPrice?: string;
   minDuration?: string;
   minEnrollments?: string;
@@ -72,34 +74,52 @@ function CoursesSkeleton() {
 }
 
 async function CoursesResults({ searchParams }: { searchParams: CoursesSearchParams }) {
-  const { q, category, level, sort, maxPrice, minDuration, minEnrollments } = await searchParams;
+  const { q, category, level, sort, type, maxPrice, minDuration, minEnrollments } = await searchParams;
   const selectedCategories = (category ?? "").split(",").filter(Boolean);
   const session = await getServerSession(authOptions);
+  // "@" pode chegar aqui vindo do dropdown ao vivo da Navbar (só sinaliza lá
+  // "modo pessoas") — no catálogo pesquisa tudo ao mesmo tempo, não precisa
+  // do prefixo.
+  const term = (q ?? "").trim().replace(/^@+/, "").trim();
+  const resultType = type ?? "";
+  const showCourses = resultType !== "people";
+  const showPeople = resultType !== "courses" && (term.length > 0 || resultType === "people");
+  const showBundles = showCourses && term.length > 0;
 
-  const [courses, categories, enrollments] = await Promise.all([
-    prisma.course.findMany({
-      where: {
-        published: true,
-        ...(q ? { title: { contains: q, mode: "insensitive" } } : {}),
-        ...(selectedCategories.length > 0 ? { category: { in: selectedCategories } } : {}),
-        ...(level ? { level } : {}),
-        ...(maxPrice ? { price: { lte: Number(maxPrice) } } : {}),
-      },
-      include: {
-        instructor: { select: { name: true } },
-        _count: { select: { enrollments: true } },
-        modules: {
+  const [courses, categories, enrollments, people, resaleBundles, instructorBundles] = await Promise.all([
+    showCourses
+      ? prisma.course.findMany({
+          where: {
+            published: true,
+            ...(term
+              ? {
+                  OR: [
+                    { title: { contains: term, mode: "insensitive" } },
+                    { instructor: { name: { contains: term, mode: "insensitive" } } },
+                    { instructor: { username: { contains: term, mode: "insensitive" } } },
+                  ],
+                }
+              : {}),
+            ...(selectedCategories.length > 0 ? { category: { in: selectedCategories } } : {}),
+            ...(level ? { level } : {}),
+            ...(maxPrice ? { price: { lte: Number(maxPrice) } } : {}),
+          },
           include: {
-            _count: { select: { lessons: true } },
-            lessons: {
-              orderBy: { order: "asc" },
-              select: { contentUrl: true, isFreePreview: true, durationSeconds: true },
+            instructor: { select: { name: true } },
+            _count: { select: { enrollments: true } },
+            modules: {
+              include: {
+                _count: { select: { lessons: true } },
+                lessons: {
+                  orderBy: { order: "asc" },
+                  select: { contentUrl: true, isFreePreview: true, durationSeconds: true },
+                },
+              },
             },
           },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
     prisma.course.findMany({
       where: { published: true },
       distinct: ["category"],
@@ -108,7 +128,58 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
     session
       ? prisma.enrollment.findMany({ where: { userId: session.user.id }, select: { courseId: true } })
       : Promise.resolve([]),
+    showPeople
+      ? prisma.user.findMany({
+          where: term
+            ? {
+                OR: [
+                  { name: { contains: term, mode: "insensitive" } },
+                  { username: { contains: term, mode: "insensitive" } },
+                ],
+              }
+            : {},
+          select: { id: true, name: true, username: true, image: true, role: true },
+          orderBy: term ? undefined : { createdAt: "desc" },
+          take: resultType === "people" ? 30 : 12,
+        })
+      : Promise.resolve([]),
+    showBundles
+      ? prisma.resaleBundle.findMany({
+          where: { name: { contains: term, mode: "insensitive" }, listings: { some: { active: true } } },
+          include: {
+            listings: { where: { active: true }, select: { price: true, course: { select: { title: true, thumbnailUrl: true } } } },
+          },
+          take: 8,
+        })
+      : Promise.resolve([]),
+    showBundles
+      ? prisma.bundle.findMany({
+          where: { name: { contains: term, mode: "insensitive" }, courses: { some: { published: true } } },
+          include: { courses: { where: { published: true }, select: { title: true, thumbnailUrl: true, price: true } } },
+          take: 8,
+        })
+      : Promise.resolve([]),
   ]);
+
+  const peopleResults: PersonResult[] = people;
+  const bundleResults: BundleResult[] = [
+    ...resaleBundles.map((b) => ({
+      id: b.id,
+      name: b.name,
+      thumbnailUrl: b.listings[0]?.course.thumbnailUrl ?? null,
+      priceLabel: `${b.listings.reduce((sum, l) => sum + l.price, 0).toFixed(2)}€`,
+      subtitle: `Revenda · Inclui: ${b.listings.map((l) => l.course.title).join(", ")}`,
+      href: `/resale/bundles/${b.id}/checkout`,
+    })),
+    ...instructorBundles.map((b) => ({
+      id: b.id,
+      name: b.name,
+      thumbnailUrl: b.courses[0]?.thumbnailUrl ?? null,
+      priceLabel: `${b.courses.reduce((sum, c) => sum + c.price, 0).toFixed(2)}€`,
+      subtitle: `Pacote do instrutor · Inclui: ${b.courses.map((c) => c.title).join(", ")}`,
+      href: `/instructors/${b.instructorId}`,
+    })),
+  ];
 
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
 
@@ -151,6 +222,11 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
     const favoriteScore =
       course.rating * 20 + course.ratingCount * 2 + engagement.commentCount * 3 + engagement.likeCount;
 
+    const discountPct =
+      course.originalPrice && course.originalPrice > course.price
+        ? Math.round((1 - course.price / course.originalPrice) * 100)
+        : 0;
+
     const card: CourseCardData = {
       slug: course.slug,
       title: course.title,
@@ -174,6 +250,7 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       commentCount: engagement.commentCount,
       likeCount: engagement.likeCount,
       favoriteScore,
+      discountPct,
       createdAt: course.createdAt,
     };
   });
@@ -181,7 +258,10 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   const minDurationSeconds = minDuration ? Number(minDuration) * 3600 : 0;
   const minEnrollmentsCount = minEnrollments ? Number(minEnrollments) : 0;
   const filtered = enriched.filter(
-    (c) => c.totalDurationSeconds >= minDurationSeconds && c.enrollmentCount >= minEnrollmentsCount
+    (c) =>
+      c.totalDurationSeconds >= minDurationSeconds &&
+      c.enrollmentCount >= minEnrollmentsCount &&
+      (sort !== "deals" || c.discountPct > 0)
   );
 
   const sorted = [...filtered];
@@ -209,6 +289,9 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       break;
     case "price_desc":
       sorted.sort((a, b) => b.card.price - a.card.price);
+      break;
+    case "deals":
+      sorted.sort((a, b) => b.discountPct - a.discountPct);
       break;
     default:
       break;
@@ -239,19 +322,30 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       </div>
 
       <div className="mx-auto max-w-6xl py-3">
-        <p className="mb-1 px-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">
-          {cards.length} curso{cards.length !== 1 ? "s" : ""} encontrado{cards.length !== 1 ? "s" : ""}
-        </p>
-        {cards.length === 0 ? (
-          <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhum curso encontrado.</p>
-        ) : sort ? (
-          <CourseRow title="Resultados" courses={cards} hidePriceBySlug={hidePriceBySlug} rankBySlug={rankBySlug} />
-        ) : (
-          <div className="space-y-1">
-            {Array.from(byCategory.entries()).map(([cat, list]) => (
-              <CourseRow key={cat} title={cat} courses={list} hidePriceBySlug={hidePriceBySlug} />
-            ))}
-          </div>
+        {showPeople && <PeopleRow people={peopleResults} />}
+        {showBundles && <BundlesRow bundles={bundleResults} />}
+
+        {showCourses && (
+          <>
+            <p className="mb-1 px-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">
+              {cards.length} curso{cards.length !== 1 ? "s" : ""} encontrado{cards.length !== 1 ? "s" : ""}
+            </p>
+            {cards.length === 0 ? (
+              <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhum curso encontrado.</p>
+            ) : sort ? (
+              <CourseRow title="Resultados" courses={cards} hidePriceBySlug={hidePriceBySlug} rankBySlug={rankBySlug} />
+            ) : (
+              <div className="space-y-1">
+                {Array.from(byCategory.entries()).map(([cat, list]) => (
+                  <CourseRow key={cat} title={cat} courses={list} hidePriceBySlug={hidePriceBySlug} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {!showCourses && peopleResults.length === 0 && (
+          <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhuma pessoa encontrada.</p>
         )}
       </div>
     </>

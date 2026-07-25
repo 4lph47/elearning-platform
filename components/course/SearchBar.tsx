@@ -3,7 +3,14 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import { FilterPanel, SORT_OPTIONS, LEVEL_OPTIONS, MAX_PRICE_CEIL, type FilterValues } from "@/components/course/FilterPanel";
+import {
+  FilterPanel,
+  SORT_OPTIONS,
+  LEVEL_OPTIONS,
+  RESULT_TYPE_OPTIONS,
+  MAX_PRICE_CEIL,
+  type FilterValues,
+} from "@/components/course/FilterPanel";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -21,6 +28,7 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
   const selectedCategories = (searchParams.get("category") ?? "").split(",").filter(Boolean);
   const level = searchParams.get("level") ?? "";
   const sort = searchParams.get("sort") ?? "";
+  const resultType = searchParams.get("type") ?? "";
   const maxPrice = searchParams.get("maxPrice");
   const minDuration = searchParams.get("minDuration");
   const minEnrollments = searchParams.get("minEnrollments");
@@ -72,6 +80,7 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
       else params.delete(key);
     };
     set("sort", values.sort);
+    set("type", values.resultType);
     set("category", values.categories.join(","));
     set("level", values.level);
     set("maxPrice", values.maxPrice < MAX_PRICE_CEIL ? String(values.maxPrice) : "");
@@ -81,6 +90,7 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
   }
 
   const activeFilters = [
+    resultType ? { key: "type", label: RESULT_TYPE_OPTIONS.find((t) => t.value === resultType)?.label ?? resultType } : null,
     ...selectedCategories.map((c) => ({ key: `category:${c}`, label: c })),
     level ? { key: "level", label: LEVEL_OPTIONS.find((l) => l.value === level)?.label ?? level } : null,
     sort ? { key: "sort", label: SORT_OPTIONS.find((s) => s.value === sort)?.label ?? sort } : null,
@@ -153,6 +163,7 @@ export function SearchBar({ categories: allCategories }: { categories: string[] 
           categories={allCategories}
           values={{
             sort,
+            resultType,
             categories: selectedCategories,
             level,
             maxPrice: maxPrice ? Number(maxPrice) : MAX_PRICE_CEIL,

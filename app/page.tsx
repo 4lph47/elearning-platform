@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CourseRow } from "@/components/course/CourseRow";
 import { HeroCarousel } from "@/components/course/HeroCarousel";
 import type { CourseCardData } from "@/components/course/CourseCard";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -114,9 +114,9 @@ export default async function Home() {
       <div className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-3xl font-bold text-slate-900">Aprende ao teu ritmo</h1>
         <p className="mt-4 text-slate-500">Ainda não há cursos publicados. Volta em breve.</p>
-        <Link href="/register" className="mt-6 inline-block">
+        <FadeLink href="/register" className="mt-6 inline-block">
           <Button variant="primary">Começar a ensinar</Button>
-        </Link>
+        </FadeLink>
       </div>
     );
   }
@@ -215,13 +215,13 @@ export default async function Home() {
         )}
         <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-4 pt-4 sm:px-8">
           {categories.map((category) => (
-            <Link
+            <FadeLink
               key={category}
               href={`/courses?category=${encodeURIComponent(category)}`}
               className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-blue-500/60 hover:bg-blue-600/10 hover:text-slate-900 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:text-white"
             >
               {category}
-            </Link>
+            </FadeLink>
           ))}
         </div>
 
@@ -259,12 +259,12 @@ export default async function Home() {
           ))}
         </div>
 
-        <Link
+        <FadeLink
           href="/courses"
           className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
         >
           Ver catálogo completo →
-        </Link>
+        </FadeLink>
       </div>
     </div>
   );

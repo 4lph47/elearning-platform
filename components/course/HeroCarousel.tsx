@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { BookOpen, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getYouTubeId } from "@/lib/youtube";
 import type { CourseCardData } from "@/components/course/CourseCard";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export interface HeroCarouselItem {
   card: CourseCardData;
@@ -141,16 +141,16 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
               {textCard.description}
             </p>
             <div className="mt-6 flex gap-3">
-              <Link href={`/courses/${textCard.slug}`}>
+              <FadeLink href={`/courses/${textCard.slug}`}>
                 <Button variant="accent">
                   <BookOpen size={16} /> Inscrever-me
                 </Button>
-              </Link>
-              <Link href={`/courses/${textCard.slug}`}>
+              </FadeLink>
+              <FadeLink href={`/courses/${textCard.slug}`}>
                 <Button variant="outline-dark">
                   <Info size={16} /> Mais informações
                 </Button>
-              </Link>
+              </FadeLink>
             </div>
           </div>
 

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
@@ -10,6 +9,7 @@ import type { CourseCardData } from "@/components/course/CourseCard";
 import type { TransitionKind } from "@/components/course/CardTransitionContext";
 import { WeeklyActivityChart } from "@/components/dashboard/WeeklyActivityChart";
 import { CategoryBreakdown } from "@/components/dashboard/CategoryBreakdown";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -261,9 +261,9 @@ export default async function DashboardPage() {
           <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900">
             <p className="text-slate-500 dark:text-slate-400">
               Ainda não estás matriculado em nenhum curso.{" "}
-              <Link href="/courses" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+              <FadeLink href="/courses" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
                 Explorar catálogo
-              </Link>
+              </FadeLink>
             </p>
           </div>
         ) : (

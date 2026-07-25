@@ -1614,6 +1614,59 @@ async function main() {
     "fundamentos-de-vendas",
   ]);
 
+  // Revenda: liga resaleMinCommission nalguns cursos (o instrutor definiu um
+  // mínimo que quer receber por cada revenda) e cria vendedores com o curso
+  // já concluído, para o marketplace (app/marketplace) não aparecer vazio.
+  await prisma.course.updateMany({ where: { slug: "introducao-ao-nextjs" }, data: { resaleMinCommission: 6 } });
+  await prisma.course.updateMany({ where: { slug: "python-ciencia-de-dados" }, data: { resaleMinCommission: 8 } });
+  await prisma.course.updateMany({ where: { slug: "marketing-digital-do-zero" }, data: { resaleMinCommission: 6 } });
+  await prisma.course.updateMany({ where: { slug: "design-de-interfaces" }, data: { resaleMinCommission: 5 } });
+  await prisma.course.updateMany({ where: { slug: "gestao-de-projetos-ageis" }, data: { resaleMinCommission: 4 } });
+  await prisma.course.updateMany({ where: { slug: "fotografia-com-telemovel" }, data: { resaleMinCommission: 3 } });
+  await prisma.course.updateMany({ where: { slug: "yoga-e-mindfulness" }, data: { resaleMinCommission: 4 } });
+  await prisma.course.updateMany({ where: { slug: "cozinha-rapida-do-dia-a-dia" }, data: { resaleMinCommission: 3 } });
+
+  async function completeEnrollment(userId: string, slug: string) {
+    await enroll(userId, slug, 1);
+    await prisma.enrollment.update({
+      where: { userId_courseId: { userId, courseId: courses[slug].id } },
+      data: { completedAt: new Date() },
+    });
+  }
+
+  async function ensureResaleListing(sellerId: string, slug: string, price: number, resaleBundleId?: string) {
+    await completeEnrollment(sellerId, slug);
+    await prisma.resaleListing.upsert({
+      where: { sellerId_courseId: { sellerId, courseId: courses[slug].id } },
+      update: { price, active: true, resaleBundleId: resaleBundleId ?? null },
+      create: { sellerId, courseId: courses[slug].id, price, resaleBundleId: resaleBundleId ?? null },
+    });
+  }
+
+  async function ensureResaleBundle(name: string, sellerId: string, entries: { slug: string; price: number }[]) {
+    let bundle = await prisma.resaleBundle.findFirst({ where: { name, sellerId } });
+    if (!bundle) {
+      bundle = await prisma.resaleBundle.create({ data: { name, sellerId } });
+    }
+    for (const entry of entries) {
+      await ensureResaleListing(sellerId, entry.slug, entry.price, bundle.id);
+    }
+  }
+
+  await ensureResaleBundle("Combo Frontend & Dados", bruno.id, [
+    { slug: "introducao-ao-nextjs", price: 15 },
+    { slug: "python-ciencia-de-dados", price: 20 },
+  ]);
+  await ensureResaleBundle("Combo Bem-estar", beatriz.id, [
+    { slug: "yoga-e-mindfulness", price: 11 },
+    { slug: "cozinha-rapida-do-dia-a-dia", price: 9 },
+  ]);
+
+  await ensureResaleListing(sofia.id, "marketing-digital-do-zero", 18);
+  await ensureResaleListing(miguel.id, "design-de-interfaces", 16);
+  await ensureResaleListing(carla.id, "gestao-de-projetos-ageis", 12);
+  await ensureResaleListing(tiago.id, "fotografia-com-telemovel", 10);
+
   const REVIEW_COMMENTS: Record<number, string[]> = {
     5: [
       "Curso excelente, recomendo a qualquer pessoa que queira aprender a sério.",

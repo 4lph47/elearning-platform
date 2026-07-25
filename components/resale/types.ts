@@ -17,6 +17,7 @@ export interface ResaleListingCardData {
 export interface ResaleBundleCardData {
   id: string;
   name: string;
+  coverImageUrl: string | null;
   price: number;
   listingCount: number;
   courseTitles: string[];

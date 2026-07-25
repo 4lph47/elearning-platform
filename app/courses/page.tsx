@@ -6,7 +6,8 @@ import { prisma } from "@/lib/db";
 import { CourseRow } from "@/components/course/CourseRow";
 import { SearchBar } from "@/components/course/SearchBar";
 import type { CourseCardData } from "@/components/course/CourseCard";
-import { PeopleRow, BundlesRow, type PersonResult, type BundleResult } from "@/components/course/SearchExtras";
+import { PeopleRow, BundlesRow, type PersonResult, type InstructorBundleResult } from "@/components/course/SearchExtras";
+import type { ResaleBundleCardData } from "@/components/resale/types";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +148,7 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       ? prisma.resaleBundle.findMany({
           where: { name: { contains: term, mode: "insensitive" }, listings: { some: { active: true } } },
           include: {
+            seller: { select: { id: true, name: true } },
             listings: { where: { active: true }, select: { price: true, course: { select: { title: true, thumbnailUrl: true } } } },
           },
           take: 8,
@@ -162,24 +164,24 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   ]);
 
   const peopleResults: PersonResult[] = people;
-  const bundleResults: BundleResult[] = [
-    ...resaleBundles.map((b) => ({
-      id: b.id,
-      name: b.name,
-      thumbnailUrl: b.listings[0]?.course.thumbnailUrl ?? null,
-      priceLabel: `${b.listings.reduce((sum, l) => sum + l.price, 0).toFixed(2)}€`,
-      subtitle: `Revenda · Inclui: ${b.listings.map((l) => l.course.title).join(", ")}`,
-      href: `/resale/bundles/${b.id}/checkout`,
-    })),
-    ...instructorBundles.map((b) => ({
-      id: b.id,
-      name: b.name,
-      thumbnailUrl: b.courses[0]?.thumbnailUrl ?? null,
-      priceLabel: `${b.courses.reduce((sum, c) => sum + c.price, 0).toFixed(2)}€`,
-      subtitle: `Pacote do instrutor · Inclui: ${b.courses.map((c) => c.title).join(", ")}`,
-      href: `/instructors/${b.instructorId}`,
-    })),
-  ];
+  const resaleBundleCards: ResaleBundleCardData[] = resaleBundles.map((b) => ({
+    id: b.id,
+    name: b.name,
+    coverImageUrl: b.coverImageUrl ?? b.listings[0]?.course.thumbnailUrl ?? null,
+    price: b.listings.reduce((sum, l) => sum + l.price, 0),
+    listingCount: b.listings.length,
+    courseTitles: b.listings.map((l) => l.course.title),
+    sellerId: b.seller.id,
+    sellerName: b.seller.name,
+  }));
+  const instructorBundleCards: InstructorBundleResult[] = instructorBundles.map((b) => ({
+    id: b.id,
+    name: b.name,
+    thumbnailUrl: b.courses[0]?.thumbnailUrl ?? null,
+    priceLabel: `${b.courses.reduce((sum, c) => sum + c.price, 0).toFixed(2)}€`,
+    subtitle: `Pacote do instrutor · Inclui: ${b.courses.map((c) => c.title).join(", ")}`,
+    href: `/instructors/${b.instructorId}`,
+  }));
 
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
 
@@ -323,7 +325,7 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
 
       <div className="mx-auto max-w-6xl py-3">
         {showPeople && <PeopleRow people={peopleResults} />}
-        {showBundles && <BundlesRow bundles={bundleResults} />}
+        {showBundles && <BundlesRow resaleBundles={resaleBundleCards} instructorBundles={instructorBundleCards} />}
 
         {showCourses && (
           <>

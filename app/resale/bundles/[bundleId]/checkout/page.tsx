@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { ArrowLeft } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CheckoutForm } from "@/components/course/CheckoutForm";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -47,12 +47,12 @@ export default async function ResaleBundleCheckoutPage({ params }: { params: Pro
   return (
     <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
       <div className="mx-auto max-w-lg">
-        <Link
+        <FadeLink
           href="/marketplace"
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft size={14} /> Voltar ao marketplace
-        </Link>
+        </FadeLink>
 
         <div className="mt-4 space-y-2">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">

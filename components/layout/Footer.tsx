@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { GraduationCap } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { FadeLink } from "@/components/course/FadeLink";
 
 // Rodapé é igual em todas as páginas — cache partilhado evita 1 query à BD
 // por página carregada (e por página gerada no build).
@@ -65,12 +65,12 @@ export async function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-5">
           <div className="col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+            <FadeLink href="/" className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <GraduationCap size={18} />
               </span>
               Moz Academy
-            </Link>
+            </FadeLink>
             <p className="mt-3 max-w-xs text-sm text-slate-500 dark:text-slate-400">
               Aprende ao teu ritmo com cursos criados por instrutores reais.
             </p>
@@ -82,12 +82,12 @@ export async function Footer() {
               <ul className="mt-3 space-y-2">
                 {col.links.map((link) => (
                   <li key={link.href + link.label}>
-                    <Link
+                    <FadeLink
                       href={link.href}
                       className="text-sm text-slate-500 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-white"
                     >
                       {link.label}
-                    </Link>
+                    </FadeLink>
                   </li>
                 ))}
               </ul>

@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { ArrowLeft } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CheckoutForm } from "@/components/course/CheckoutForm";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +38,12 @@ export default async function CartCheckoutPage() {
   return (
     <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
       <div className="mx-auto max-w-lg">
-        <Link
+        <FadeLink
           href="/cart"
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft size={14} /> Voltar ao carrinho
-        </Link>
+        </FadeLink>
 
         <div className="mt-4 space-y-2">
           {items.map((item) => (

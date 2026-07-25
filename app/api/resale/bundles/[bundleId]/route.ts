@@ -20,7 +20,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
     return NextResponse.json({ error: "Bundle não encontrado" }, { status: 404 });
   }
 
-  const { name, listingIds } = parsed.data;
+  const { name, description, coverImageUrl, listingIds } = parsed.data;
+  const bundleFields = {
+    ...(name !== undefined ? { name } : {}),
+    ...(description !== undefined ? { description } : {}),
+    ...(coverImageUrl !== undefined ? { coverImageUrl } : {}),
+  };
+  const hasBundleFields = Object.keys(bundleFields).length > 0;
 
   if (listingIds) {
     const listings = await prisma.resaleListing.findMany({
@@ -47,10 +53,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
         where: { id: { in: listingIds } },
         data: { resaleBundleId: bundleId },
       }),
-      ...(name !== undefined ? [prisma.resaleBundle.update({ where: { id: bundleId }, data: { name } })] : []),
+      ...(hasBundleFields ? [prisma.resaleBundle.update({ where: { id: bundleId }, data: bundleFields })] : []),
     ]);
-  } else if (name !== undefined) {
-    await prisma.resaleBundle.update({ where: { id: bundleId }, data: { name } });
+  } else if (hasBundleFields) {
+    await prisma.resaleBundle.update({ where: { id: bundleId }, data: bundleFields });
   }
 
   const updated = await prisma.resaleBundle.findUnique({

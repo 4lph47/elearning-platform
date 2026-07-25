@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2, ShoppingCart } from "lucide-react";
+import { FadeLink } from "@/components/course/FadeLink";
 
 interface CartCourse {
   id: string;
@@ -34,9 +34,9 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900">
         <ShoppingCart size={28} className="mx-auto text-slate-400 dark:text-slate-600" />
         <p className="mt-3 text-slate-500 dark:text-slate-400">O teu carrinho está vazio.</p>
-        <Link href="/courses" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+        <FadeLink href="/courses" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
           Explorar cursos
-        </Link>
+        </FadeLink>
       </div>
     );
   }
@@ -55,9 +55,9 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
               <div className="h-14 w-20 shrink-0 rounded-md bg-slate-200 dark:bg-slate-800" />
             )}
             <div className="min-w-0 flex-1">
-              <Link href={`/courses/${item.slug}`} className="line-clamp-1 font-medium text-slate-800 hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400">
+              <FadeLink href={`/courses/${item.slug}`} className="line-clamp-1 font-medium text-slate-800 hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400">
                 {item.title}
-              </Link>
+              </FadeLink>
               <p className="text-xs text-slate-500">{item.instructorName}</p>
             </div>
             <span className="shrink-0 font-semibold text-slate-900 dark:text-white">
@@ -80,12 +80,12 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
         <span className="text-lg font-bold text-slate-900 dark:text-white">{total.toFixed(2)}€</span>
       </div>
 
-      <Link
+      <FadeLink
         href="/checkout"
         className="flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-500"
       >
         Finalizar compra
-      </Link>
+      </FadeLink>
     </div>
   );
 }

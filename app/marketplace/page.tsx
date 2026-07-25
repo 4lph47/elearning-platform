@@ -21,7 +21,7 @@ export default async function MarketplacePage() {
       orderBy: { createdAt: "desc" },
       include: {
         seller: { select: { id: true, name: true } },
-        listings: { where: { active: true }, include: { course: { select: { title: true } } } },
+        listings: { where: { active: true }, include: { course: { select: { title: true, thumbnailUrl: true } } } },
       },
     }),
   ]);
@@ -42,6 +42,7 @@ export default async function MarketplacePage() {
     .map((bundle) => ({
       id: bundle.id,
       name: bundle.name,
+      coverImageUrl: bundle.coverImageUrl ?? bundle.listings[0]?.course.thumbnailUrl ?? null,
       price: bundle.listings.reduce((sum, l) => sum + l.price, 0),
       listingCount: bundle.listings.length,
       courseTitles: bundle.listings.map((l) => l.course.title),

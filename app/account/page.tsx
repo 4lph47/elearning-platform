@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
-import Link from "next/link";
 import { Download, Trash2, Briefcase } from "lucide-react";
+import { FadeLink } from "@/components/course/FadeLink";
+import { UsernameField } from "@/components/account/UsernameField";
 
 export default function AccountPage() {
   const { data: session } = useSession();
@@ -50,9 +51,9 @@ export default function AccountPage() {
       <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">A minha conta</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Gere os teus dados pessoais. Ver{" "}
-        <Link href="/privacidade" className="text-blue-500 hover:underline">
+        <FadeLink href="/privacidade" className="text-blue-500 hover:underline">
           política de privacidade
-        </Link>
+        </FadeLink>
         .
       </p>
 
@@ -71,14 +72,22 @@ export default function AccountPage() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Cria e vende os teus próprios cursos na plataforma.
             </p>
-            <Link
+            <FadeLink
               href="/register/complete?role=instrutor"
               className="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
             >
               Continuar
-            </Link>
+            </FadeLink>
           </div>
         )}
+
+        <div className="rounded-lg border border-slate-200 p-4 dark:border-white/10">
+          <h2 className="font-medium text-slate-900 dark:text-white">Username</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            O teu @ único, usado nas menções e no teu perfil público.
+          </p>
+          <UsernameField />
+        </div>
 
         <div className="rounded-lg border border-slate-200 p-4 dark:border-white/10">
           <h2 className="font-medium text-slate-900 dark:text-white">Exportar os meus dados</h2>

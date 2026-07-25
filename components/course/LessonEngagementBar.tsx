@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { ThumbsUp, ThumbsDown, Share2, Check } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
+import { FadeLink } from "@/components/course/FadeLink";
 
 interface Author {
   id: string;
@@ -169,9 +169,9 @@ export function LessonEngagementBar({
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-500 dark:text-slate-400">{meta}</div>
         <div className="mt-3 flex items-center justify-between gap-3">
           {primaryAuthor && (
-            <Link href={`/instructors/${primaryAuthor.id}`} className="flex shrink-0 items-center">
+            <FadeLink href={`/instructors/${primaryAuthor.id}`} className="flex shrink-0 items-center">
               {avatar}
-            </Link>
+            </FadeLink>
           )}
           {actions}
         </div>
@@ -180,10 +180,10 @@ export function LessonEngagementBar({
       {/* Desktop: avatar + meta juntos numa linha, ações à direita. */}
       <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-3">
         {primaryAuthor && (
-          <Link href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 items-center gap-2.5">
+          <FadeLink href={`/instructors/${primaryAuthor.id}`} className="flex min-w-0 items-center gap-2.5">
             {avatar}
             <span className="flex flex-wrap items-center gap-x-1.5 truncate text-sm text-slate-500 dark:text-slate-400">{meta}</span>
-          </Link>
+          </FadeLink>
         )}
         {actions}
       </div>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { CheckCircle2, Video, ListChecks, Paperclip, Infinity as InfinityIcon, HelpCircle, Lock, Star, Users, BookOpen, Smartphone, Award, MessageSquare } from "lucide-react";
@@ -261,13 +260,13 @@ export default async function CourseDetailPage({
                 <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Explorar tópicos relacionados</h2>
                 <div className="flex flex-wrap gap-2">
                   {course.topics.map((topic) => (
-                    <Link
+                    <FadeLink
                       key={topic}
                       href={`/courses?q=${encodeURIComponent(topic)}`}
                       className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:border-blue-500/60 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:text-white"
                     >
                       {topic}
-                    </Link>
+                    </FadeLink>
                   ))}
                 </div>
               </div>
@@ -371,20 +370,20 @@ export default async function CourseDetailPage({
                 )}
 
                 {resaleListing && !isEnrolled && !isOwner && (
-                  <Link
+                  <FadeLink
                     href={`/resale/${resaleListing.id}/checkout`}
                     className="mb-3 block rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500"
                   >
                     Comprar por {resaleListing.price.toFixed(2)}€ a {resaleListing.seller.name}
-                  </Link>
+                  </FadeLink>
                 )}
 
                 {isOwner ? (
-                  <Link href={`/instructor/courses/${course.id}`}>
+                  <FadeLink href={`/instructor/courses/${course.id}`}>
                     <p className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5">
                       Editar este curso
                     </p>
-                  </Link>
+                  </FadeLink>
                 ) : isEnrolled ? (
                   firstLesson ? (
                     <ContinueCourseLink
@@ -483,13 +482,13 @@ export default async function CourseDetailPage({
               {course.quiz && (
                 <div className="border-t border-slate-200 p-4 dark:border-white/10">
                   {isEnrolled || isOwner ? (
-                    <Link
+                    <FadeLink
                       href={`/courses/${course.slug}/quiz/${course.quiz.id}`}
                       className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
                     >
                       <HelpCircle size={16} />
                       Fazer teste final do curso
-                    </Link>
+                    </FadeLink>
                   ) : (
                     <p className="flex items-center justify-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-center text-sm text-slate-500 dark:border-white/10">
                       <Lock size={14} />
@@ -522,7 +521,7 @@ export default async function CourseDetailPage({
           <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">{authors.length > 1 ? "Instrutores" : "Instrutor"}</h2>
           <div className="space-y-4">
             {authors.map((author) => (
-              <Link
+              <FadeLink
                 key={author.id}
                 href={`/instructors/${author.id}`}
                 className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20 sm:flex-row sm:items-start"
@@ -559,7 +558,7 @@ export default async function CourseDetailPage({
                   )}
                   {author.bio && <p className="mt-3 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{author.bio}</p>}
                 </div>
-              </Link>
+              </FadeLink>
             ))}
           </div>
         </div>

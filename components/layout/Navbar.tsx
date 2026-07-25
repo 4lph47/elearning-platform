@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -547,7 +546,7 @@ export function Navbar() {
 
         <nav className="flex items-center justify-end gap-3 text-sm">
           {status === "authenticated" && (
-            <Link
+            <FadeLink
               href="/dashboard"
               prefetch
               aria-label="A minha aprendizagem"
@@ -556,10 +555,10 @@ export function Navbar() {
               }`}
             >
               <BookOpen size={15} /> A minha aprendizagem
-            </Link>
+            </FadeLink>
           )}
           {status === "authenticated" && (
-            <Link
+            <FadeLink
               href="/cart"
               aria-label="Carrinho"
               className={`relative hidden h-8 w-8 items-center justify-center rounded-full sm:flex ${
@@ -572,7 +571,7 @@ export function Navbar() {
                   {cartCount}
                 </span>
               )}
-            </Link>
+            </FadeLink>
           )}
 
           {!mobileSearchOpen && (
@@ -723,7 +722,7 @@ export function Navbar() {
             </div>
           ) : status === "unauthenticated" ? (
             <div className="flex items-center gap-2">
-              <Link
+              <FadeLink
                 href="/courses"
                 prefetch
                 className={`hidden font-medium transition-colors sm:inline ${
@@ -733,13 +732,13 @@ export function Navbar() {
                 }`}
               >
                 Catálogo
-              </Link>
-              <Link href="/login">
+              </FadeLink>
+              <FadeLink href="/login">
                 <Button variant={transparent ? "outline-dark" : "ghost"}>Entrar</Button>
-              </Link>
-              <Link href="/register" className="hidden sm:inline-flex">
+              </FadeLink>
+              <FadeLink href="/register" className="hidden sm:inline-flex">
                 <Button variant="accent">Registar</Button>
-              </Link>
+              </FadeLink>
             </div>
           ) : null}
           </div>

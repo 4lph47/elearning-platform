@@ -17,10 +17,11 @@ export interface TransitionTextBox extends TransitionBox {
   color: string;
 }
 
-// "profile" reaproveita a mesma mecânica de "hero" (o campo "video" carrega
-// o avatar, "title" carrega o nome) — só muda a forma no overlay (círculo,
-// não retângulo) e o destino (perfil de instrutor/aluno, não CourseHero).
-export type TransitionKind = "hero" | "lesson-video" | "lesson-text" | "profile";
+// "profile"/"bundle" reaproveitam a mesma mecânica de "hero" (o campo
+// "video" carrega o avatar/capa, "title" carrega o nome) — só muda a forma
+// no overlay ("profile" é círculo, "bundle" fica retângulo como curso) e o
+// destino (perfil de instrutor/aluno ou página do bundle, não CourseHero).
+export type TransitionKind = "hero" | "lesson-video" | "lesson-text" | "profile" | "bundle";
 
 export interface ArriveTargets {
   video: TransitionBox;

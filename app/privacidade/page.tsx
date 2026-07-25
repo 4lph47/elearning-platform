@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const metadata = { title: "Política de Privacidade — Moz Academy" };
 
@@ -39,9 +39,9 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">4. Os teus direitos (RGPD)</h2>
           <p>
             Podes aceder, exportar ou eliminar os teus dados a qualquer momento na página{" "}
-            <Link href="/account" className="text-blue-500 hover:underline">
+            <FadeLink href="/account" className="text-blue-500 hover:underline">
               A minha conta
-            </Link>
+            </FadeLink>
             . Para pedidos que não consigas resolver aí (ex: transferência de cursos de instrutor), contacta-nos.
           </p>
         </section>

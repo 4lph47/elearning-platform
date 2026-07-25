@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { name, listingIds } = parsed.data;
+  const { name, description, coverImageUrl, listingIds } = parsed.data;
 
   const listings = await prisma.resaleListing.findMany({
     where: { id: { in: listingIds }, sellerId: session.user.id, active: true, resaleBundleId: null },
@@ -42,7 +42,9 @@ export async function POST(request: Request) {
   }
 
   const bundle = await prisma.$transaction(async (tx) => {
-    const created = await tx.resaleBundle.create({ data: { name, sellerId: session.user.id } });
+    const created = await tx.resaleBundle.create({
+      data: { name, description, coverImageUrl, sellerId: session.user.id },
+    });
     await tx.resaleListing.updateMany({
       where: { id: { in: listingIds } },
       data: { resaleBundleId: created.id },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { FadeLink } from "@/components/course/FadeLink";
 
 const STORAGE_KEY = "cookie-consent-ack";
 
@@ -24,9 +24,9 @@ export function CookieConsentBanner() {
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Usamos apenas cookies essenciais (sessão/autenticação) para o site funcionar. Sem tracking, sem publicidade.{" "}
-          <Link href="/privacidade" className="text-blue-500 hover:underline">
+          <FadeLink href="/privacidade" className="text-blue-500 hover:underline">
             Política de privacidade
-          </Link>
+          </FadeLink>
         </p>
         <button
           onClick={accept}

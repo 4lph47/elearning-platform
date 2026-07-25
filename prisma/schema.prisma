@@ -78,6 +78,9 @@ model User {
   // público — escolhido no registo (credenciais) ou em /register/complete
   // (Google/link mágico, cuja conta o adapter já cria sem isto).
   username                     String?         @unique
+  // Quando o username foi alterado pela última vez (null = nunca, ainda é o
+  // escolhido no registo) — usado para bloquear trocas a cada 14 dias.
+  usernameChangedAt            DateTime?
   // Código de 6 dígitos enviado por email às contas por password — só
   // essas precisam disto (Google/link mágico já provam dono do email só
   // por completarem o respetivo fluxo).
@@ -268,10 +271,12 @@ model ResaleListing {
 // (mesma convenção do Bundle de instrutor, sem desconto próprio), nunca
 // guardado à parte.
 model ResaleBundle {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  coverImageUrl  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   sellerId String
   seller   User   @relation("ResaleBundlesSold", fields: [sellerId], references: [id], onDelete: Cascade)

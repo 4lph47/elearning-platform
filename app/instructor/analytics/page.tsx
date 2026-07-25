@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { FadeLink } from "@/components/course/FadeLink";
 import {
   AnalyticsCharts,
   type CourseMetric,
@@ -286,12 +286,12 @@ export default async function InstructorAnalyticsPage() {
               Visão agregada e por curso/aula de tudo o que acontece nos teus cursos.
             </p>
           </div>
-          <Link
+          <FadeLink
             href="/instructor"
             className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
             ← Voltar à área de instrutor
-          </Link>
+          </FadeLink>
         </div>
 
         {courses.length === 0 ? (

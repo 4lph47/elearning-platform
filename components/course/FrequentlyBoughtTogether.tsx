@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Check } from "lucide-react";
+import { FadeLink } from "@/components/course/FadeLink";
 
 interface BundleItem {
   id: string;
@@ -94,12 +94,12 @@ export function FrequentlyBoughtTogether({
               <div className="h-10 w-14 shrink-0 rounded bg-slate-200 dark:bg-slate-800" />
             )}
             <div className="min-w-0 flex-1">
-              <Link
+              <FadeLink
                 href={`/courses/${item.slug}`}
                 className="line-clamp-1 text-xs font-medium text-slate-800 hover:text-blue-600 dark:text-slate-100 dark:hover:text-blue-400"
               >
                 {item.title}
-              </Link>
+              </FadeLink>
               <p className="text-[11px] text-slate-500">{item.instructorName}</p>
             </div>
             <span className="shrink-0 text-xs font-semibold text-slate-900 dark:text-white">

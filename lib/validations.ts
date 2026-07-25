@@ -228,12 +228,16 @@ export type ResaleListingUpdateInput = z.infer<typeof resaleListingUpdateSchema>
 
 export const resaleBundleSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  description: z.string().max(2000).optional(),
+  coverImageUrl: z.string().url().optional().nullable(),
   listingIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos uma listagem"),
 });
 export type ResaleBundleInput = z.infer<typeof resaleBundleSchema>;
 
 export const resaleBundleUpdateSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
+  description: z.string().max(2000).optional().nullable(),
+  coverImageUrl: z.string().url().optional().nullable(),
   listingIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos uma listagem").optional(),
 });
 export type ResaleBundleUpdateInput = z.infer<typeof resaleBundleUpdateSchema>;

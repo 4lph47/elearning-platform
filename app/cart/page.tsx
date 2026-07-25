@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { ArrowLeft } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CartList } from "@/components/course/CartList";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const dynamic = "force-dynamic";
 
@@ -47,12 +47,12 @@ export default async function CartPage() {
   return (
     <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link
+        <FadeLink
           href="/courses"
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft size={14} /> Continuar a explorar cursos
-        </Link>
+        </FadeLink>
 
         <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">O meu carrinho</h1>
 

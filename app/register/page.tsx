@@ -8,6 +8,7 @@ import { User, AtSign, Mail, Lock, Briefcase, Link2, ArrowRight, GraduationCap, 
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { FadeLink } from "@/components/course/FadeLink";
 import { SOCIAL_PLATFORMS, matchesPlatformDomain, type SocialPlatformKey } from "@/lib/socialPlatforms";
 
 interface CertificationInput {
@@ -180,9 +181,9 @@ export default function RegisterPage() {
         footer={
           <>
             Já tens conta?{" "}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+            <FadeLink href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
               Entra
-            </Link>
+            </FadeLink>
           </>
         }
       >
@@ -226,9 +227,9 @@ export default function RegisterPage() {
       footer={
         <>
           Já tens conta?{" "}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+          <FadeLink href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
             Entra
-          </Link>
+          </FadeLink>
         </>
       }
     >

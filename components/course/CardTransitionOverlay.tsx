@@ -155,11 +155,12 @@ export function CardTransitionOverlay() {
   // Duração muda por fase: sem transição enquanto nasce (0), 300ms a crescer
   // pro zoom (bate com a row), 450ms a voar pro alvo real (hero/aula).
   const transitionMs = !zoomed ? 0 : animate ? FLY_MS : ZOOM_MS;
-  // "hero"/"profile" têm alvo real pro texto voar (CourseHero/perfil chamam
-  // arrive() com as posições). "lesson-video"/"lesson-text" não têm onde o
-  // texto aterrar — fica no sítio (zoomado) e esmorece assim que o vídeo
-  // começa a voar.
-  const fliesToTarget = state.destinationKind === "hero" || state.destinationKind === "profile";
+  // "hero"/"profile"/"bundle" têm alvo real pro texto voar (CourseHero/
+  // perfil/BundleHero chamam arrive() com as posições). "lesson-video"/
+  // "lesson-text" não têm onde o texto aterrar — fica no sítio (zoomado) e
+  // esmorece assim que o vídeo começa a voar.
+  const fliesToTarget =
+    state.destinationKind === "hero" || state.destinationKind === "profile" || state.destinationKind === "bundle";
   const isProfile = state.destinationKind === "profile";
   const textOpacity = animate && !fliesToTarget ? 0 : 1;
   const videoBox = !zoomed ? state.videoRawBox : animate ? state.videoTargetBox : state.videoBox;

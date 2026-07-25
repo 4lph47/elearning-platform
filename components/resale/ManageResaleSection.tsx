@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Pencil } from "lucide-react";
+import { FadeLink } from "@/components/course/FadeLink";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
@@ -44,8 +46,6 @@ export function ManageResaleSection({
   const [priceByCourse, setPriceByCourse] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [bundleName, setBundleName] = useState("");
-  const [bundleListingIds, setBundleListingIds] = useState<string[]>([]);
 
   if (eligibleCourses.length === 0 && listings.length === 0 && bundles.length === 0) return null;
 
@@ -94,29 +94,6 @@ export function ManageResaleSection({
     router.refresh();
   }
 
-  async function createBundle() {
-    setError(null);
-    if (bundleName.trim().length < 2) {
-      setError("Indica um nome para o bundle");
-      return;
-    }
-    if (bundleListingIds.length === 0) {
-      setError("Escolhe pelo menos uma listagem para o bundle");
-      return;
-    }
-    setBusy(true);
-    const res = await fetch("/api/resale/bundles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: bundleName.trim(), listingIds: bundleListingIds }),
-    });
-    setBusy(false);
-    if (!res.ok) return handleError(res);
-    setBundleName("");
-    setBundleListingIds([]);
-    router.refresh();
-  }
-
   async function deleteBundle(bundleId: string) {
     setError(null);
     setBusy(true);
@@ -124,10 +101,6 @@ export function ManageResaleSection({
     setBusy(false);
     if (!res.ok) return handleError(res);
     router.refresh();
-  }
-
-  function toggleBundleListing(id: string) {
-    setBundleListingIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   const unbundledActiveListings = listings.filter((l) => l.active && !l.bundleId);
@@ -209,6 +182,12 @@ export function ManageResaleSection({
                   <span className="min-w-0 flex-1 truncate">
                     {bundle.name} · {bundle.listingIds.length} cursos
                   </span>
+                  <FadeLink
+                    href={`/resale/bundles/${bundle.id}/edit`}
+                    className="flex shrink-0 items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <Pencil size={11} /> editar
+                  </FadeLink>
                   <button
                     type="button"
                     disabled={busy}
@@ -222,24 +201,12 @@ export function ManageResaleSection({
             </div>
           )}
           {unbundledActiveListings.length > 0 && (
-            <div className="space-y-2 rounded-md border border-slate-200 p-3 dark:border-white/10">
-              <Input placeholder="Nome do bundle" value={bundleName} onChange={(e) => setBundleName(e.target.value)} />
-              <div className="space-y-1">
-                {unbundledActiveListings.map((listing) => (
-                  <label key={listing.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={bundleListingIds.includes(listing.id)}
-                      onChange={() => toggleBundleListing(listing.id)}
-                    />
-                    {listing.courseTitle} ({listing.price.toFixed(2)}€)
-                  </label>
-                ))}
-              </div>
-              <Button type="button" variant="outline" disabled={busy} onClick={createBundle}>
-                Criar bundle
-              </Button>
-            </div>
+            <FadeLink
+              href="/resale/bundles/new"
+              className="flex w-fit items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+            >
+              <Plus size={14} /> Criar bundle
+            </FadeLink>
           )}
         </div>
       )}

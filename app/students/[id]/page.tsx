@@ -48,7 +48,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       },
       resaleBundlesSold: {
         orderBy: { createdAt: "desc" },
-        include: { listings: { include: { course: { select: { title: true } } } } },
+        include: { listings: { include: { course: { select: { title: true, thumbnailUrl: true } } } } },
       },
       enrollments: {
         orderBy: { enrolledAt: "desc" },
@@ -127,6 +127,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const resaleBundles = student.resaleBundlesSold.map((bundle) => ({
     id: bundle.id,
     name: bundle.name,
+    coverImageUrl: bundle.coverImageUrl ?? bundle.listings[0]?.course.thumbnailUrl ?? null,
     price: bundle.listings.reduce((sum, l) => sum + l.price, 0),
     listingCount: bundle.listings.length,
     courseTitles: bundle.listings.map((l) => l.course.title),

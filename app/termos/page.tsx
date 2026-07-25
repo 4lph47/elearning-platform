@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export const metadata = { title: "Termos e Serviços — Moz Academy" };
 
@@ -47,9 +47,9 @@ export default function TermsPage() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">5. Privacidade</h2>
           <p>
             O tratamento dos teus dados pessoais está descrito na{" "}
-            <Link href="/privacidade" className="text-blue-500 hover:underline">
+            <FadeLink href="/privacidade" className="text-blue-500 hover:underline">
               Política de Privacidade
-            </Link>
+            </FadeLink>
             .
           </p>
         </section>

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { GraduationCap, Check } from "lucide-react";
+import { FadeLink } from "@/components/course/FadeLink";
 
 const FEATURES = [
   "Cursos criados por instrutores reais",
@@ -31,12 +31,12 @@ export function AuthLayout({
           <div className="absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl" />
         </div>
 
-        <Link href="/" className="relative flex w-fit items-center gap-2 text-lg font-bold text-white">
+        <FadeLink href="/" className="relative flex w-fit items-center gap-2 text-lg font-bold text-white">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-950/40">
             <GraduationCap size={20} />
           </span>
           Moz Academy
-        </Link>
+        </FadeLink>
 
         <div className="relative">
           <h2 className="max-w-md text-3xl font-bold leading-tight text-white">
@@ -67,7 +67,7 @@ export function AuthLayout({
 
         <div className={`relative w-full ${wide ? "max-w-3xl" : "max-w-sm"}`}>
           <div className="mb-8 text-center">
-            <Link
+            <FadeLink
               href="/"
               className="mx-auto flex w-fit items-center gap-2 text-lg font-bold text-slate-900 dark:text-white lg:hidden"
             >
@@ -75,7 +75,7 @@ export function AuthLayout({
                 <GraduationCap size={22} />
               </span>
               Moz Academy
-            </Link>
+            </FadeLink>
             <h1 className="mt-5 text-2xl font-bold text-slate-900 dark:text-white lg:mt-0">{title}</h1>
             <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
           </div>

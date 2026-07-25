@@ -110,6 +110,7 @@ interface CourseDraft {
   level: string;
   price: string;
   originalPrice: string;
+  resaleEnabled: boolean;
   resaleMinCommission: string;
   trailerUrl: string | null;
   trailerName: string | null;
@@ -140,6 +141,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [originalPrice, setOriginalPrice] = useState(
     draft?.value.originalPrice ?? (course.originalPrice != null ? String(course.originalPrice) : "")
   );
+  const [resaleEnabled, setResaleEnabled] = useState(draft?.value.resaleEnabled ?? course.resaleMinCommission != null);
   const [resaleMinCommission, setResaleMinCommission] = useState(
     draft?.value.resaleMinCommission ?? (course.resaleMinCommission != null ? String(course.resaleMinCommission) : "")
   );
@@ -175,6 +177,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
       level,
       price,
       originalPrice,
+      resaleEnabled,
       resaleMinCommission,
       trailerUrl,
       trailerName,
@@ -194,6 +197,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     level,
     price,
     originalPrice,
+    resaleEnabled,
     resaleMinCommission,
     trailerUrl,
     trailerName,
@@ -242,7 +246,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         level,
         price: Number(price) || 0,
         originalPrice: originalPrice.trim() === "" ? null : Number(originalPrice) || 0,
-        resaleMinCommission: resaleMinCommission.trim() === "" ? null : Number(resaleMinCommission) || 0,
+        resaleMinCommission: resaleEnabled ? Number(resaleMinCommission) || 0 : null,
         trailerUrl,
         learningOutcomes: outcomes.items.map((o) => o.trim()).filter(Boolean),
         requirements: requirements.items.map((r) => r.trim()).filter(Boolean),
@@ -399,18 +403,30 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
                 onChange={(e) => setOriginalPrice(e.target.value)}
               />
             </div>
-            <div>
-              <Label htmlFor="resaleMinCommission">Comissão mínima de revenda (€, vazio = revenda desligada)</Label>
-              <Input
-                id="resaleMinCommission"
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="Ex.: 10"
-                value={resaleMinCommission}
-                onChange={(e) => setResaleMinCommission(e.target.value)}
-              />
-            </div>
+          </div>
+
+          <div>
+            <Toggle
+              id="resaleEnabled"
+              checked={resaleEnabled}
+              onChange={(checked) => setResaleEnabled(checked)}
+              labelPosition="left"
+              label="Permitir revenda deste curso"
+            />
+            {resaleEnabled && (
+              <div className="mt-2 max-w-[12rem]">
+                <Label htmlFor="resaleMinCommission">Comissão mínima de revenda (€)</Label>
+                <Input
+                  id="resaleMinCommission"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Ex.: 10"
+                  value={resaleMinCommission}
+                  onChange={(e) => setResaleMinCommission(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </CollapsibleCard>
 

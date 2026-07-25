@@ -1,6 +1,8 @@
-import Link from "next/link";
 import Image from "next/image";
 import { PersonTile } from "@/components/course/PersonTile";
+import { ResaleBundleTile } from "@/components/resale/ResaleTile";
+import type { ResaleBundleCardData } from "@/components/resale/types";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export interface PersonResult {
   id: string;
@@ -10,7 +12,10 @@ export interface PersonResult {
   role: "STUDENT" | "INSTRUCTOR" | "ADMIN";
 }
 
-export interface BundleResult {
+// Bundle criado pelo próprio instrutor (Bundle, não ResaleBundle) — sem
+// página/checkout próprios, por isso sem o voo do ResaleBundleTile: leva
+// direto ao perfil de quem o vende.
+export interface InstructorBundleResult {
   id: string;
   name: string;
   thumbnailUrl: string | null;
@@ -19,11 +24,10 @@ export interface BundleResult {
   href: string;
 }
 
-// Resultados de pesquisa que não são cursos — pessoas e bundles. Pessoas
-// usam a mesma estrutura/animação dos cards de curso (PersonTile reaproveita
-// o CardTransitionContext do CourseTile: avatar em cima, nome embaixo, voo
-// até à posição real no perfil). Bundles ficam com um tile mais simples
-// (sem voo — não têm uma página própria com hero pra aterrar).
+// Resultados de pesquisa que não são cursos — pessoas e bundles. Pessoas e
+// bundles de revenda usam a mesma estrutura/animação dos cards de curso
+// (PersonTile/ResaleBundleTile reaproveitam o CardTransitionContext do
+// CourseTile: capa/avatar em cima, texto embaixo, voo até à página própria).
 export function PeopleRow({ people }: { people: PersonResult[] }) {
   if (people.length === 0) return null;
   return (
@@ -38,14 +42,23 @@ export function PeopleRow({ people }: { people: PersonResult[] }) {
   );
 }
 
-export function BundlesRow({ bundles }: { bundles: BundleResult[] }) {
-  if (bundles.length === 0) return null;
+export function BundlesRow({
+  resaleBundles,
+  instructorBundles,
+}: {
+  resaleBundles: ResaleBundleCardData[];
+  instructorBundles: InstructorBundleResult[];
+}) {
+  if (resaleBundles.length === 0 && instructorBundles.length === 0) return null;
   return (
     <section className="py-5">
       <h2 className="mb-3 px-4 text-lg font-semibold text-slate-900 dark:text-white sm:px-8 sm:text-xl">Bundles</h2>
       <div className="grid grid-cols-1 gap-x-6 gap-y-10 px-4 sm:grid-cols-2 sm:px-8 lg:grid-cols-3">
-        {bundles.map((b) => (
-          <Link key={b.id} href={b.href} className="group block">
+        {resaleBundles.map((b) => (
+          <ResaleBundleTile key={b.id} bundle={b} showSeller />
+        ))}
+        {instructorBundles.map((b) => (
+          <FadeLink key={b.id} href={b.href} className="group block">
             <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 p-4 ring-1 ring-white/10 transition-all duration-200 group-hover:ring-slate-400 dark:group-hover:ring-white/40">
               {b.thumbnailUrl && (
                 <Image
@@ -67,7 +80,7 @@ export function BundlesRow({ bundles }: { bundles: BundleResult[] }) {
               </h3>
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{b.subtitle}</p>
             </div>
-          </Link>
+          </FadeLink>
         ))}
       </div>
     </section>

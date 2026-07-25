@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Paperclip, Eye, Presentation } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
 import { linkify } from "@/lib/linkify";
+import { FadeLink } from "@/components/course/FadeLink";
 
 export interface LessonResourceData {
   id: string;
@@ -100,7 +100,7 @@ export function LessonTabs({
             {videoMeta && showDetails && (
               <div className="mt-5 space-y-4">
                 {videoMeta.authors[0] && (
-                  <Link
+                  <FadeLink
                     href={`/instructors/${videoMeta.authors[0].id}`}
                     className="flex items-center gap-3 hover:text-slate-900 dark:hover:text-white"
                   >
@@ -120,7 +120,7 @@ export function LessonTabs({
                         Instrutor{videoMeta.authors.length > 1 ? "es" : ""} desta aula
                       </p>
                     </div>
-                  </Link>
+                  </FadeLink>
                 )}
 
                 <div>

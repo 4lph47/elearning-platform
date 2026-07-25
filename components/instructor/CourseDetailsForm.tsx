@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Card";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
+import { Toggle } from "@/components/ui/Toggle";
 import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
@@ -428,15 +429,14 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
                   <p className="text-xs text-slate-500">Não tens outros cursos publicados para incluir no bundle.</p>
                 ) : (
                   otherCourses.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={bundleCourseIds.includes(c.id)}
-                        onChange={() => toggleBundleCourse(c.id)}
-                        className="rounded border-slate-300"
-                      />
-                      {c.title}
-                    </label>
+                    <Toggle
+                      key={c.id}
+                      id={`bundle-course-${c.id}`}
+                      checked={bundleCourseIds.includes(c.id)}
+                      onChange={() => toggleBundleCourse(c.id)}
+                      labelPosition="left"
+                      label={c.title}
+                    />
                   ))
                 )}
               </div>

@@ -14,6 +14,7 @@ import {
   type CornerCardIssue,
 } from "@/components/ui/CornerCard";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
+import { Toggle } from "@/components/ui/Toggle";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { FileUploadInput, type ResumableFinalize } from "@/components/instructor/FileUploadInput";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
@@ -462,30 +463,27 @@ export function LessonEditScreen({
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={isFreePreview}
-                onChange={(e) => setIsFreePreview(e.target.checked)}
-                className="rounded border-slate-300"
-              />
-              Aula disponível como preview grátis (sem matrícula)
-            </label>
+            <Toggle
+              id="lesson-free-preview"
+              checked={isFreePreview}
+              onChange={setIsFreePreview}
+              labelPosition="left"
+              label="Aula disponível como preview grátis (sem matrícula)"
+            />
 
             {courseAuthors.length > 1 && (
               <div>
                 <Label>Envolvidos nesta aula</Label>
                 <div className="space-y-1">
                   {courseAuthors.map((a) => (
-                    <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={contributorIds.includes(a.id)}
-                        onChange={() => toggleContributor(a.id)}
-                        className="rounded border-slate-300"
-                      />
-                      {a.name}
-                    </label>
+                    <Toggle
+                      key={a.id}
+                      id={`lesson-contributor-${a.id}`}
+                      checked={contributorIds.includes(a.id)}
+                      onChange={() => toggleContributor(a.id)}
+                      labelPosition="left"
+                      label={a.name}
+                    />
                   ))}
                 </div>
               </div>

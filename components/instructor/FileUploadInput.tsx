@@ -34,6 +34,11 @@ interface UploadResult {
   sizeBytes: number;
   name: string;
   mimeType: string;
+  // Só vem preenchido pra kind="VIDEO" — o worker gera as legendas a
+  // seguir à compressão (ver worker/index.js:transcribeToVtt). null se a
+  // transcrição falhou (a aula fica sem legendas, mas o vídeo em si já
+  // está pronto — não é motivo pra falhar o upload todo).
+  captionsUrl?: string | null;
 }
 
 // Disparado quando um upload em curso é cancelado por causa de uma nova
@@ -227,9 +232,11 @@ function postChunk(
   });
 }
 
+type ServerPhase = "compressing" | "transcribing";
+
 type FinalizeStatus =
-  | { state: "processing"; completed: number; total: number | null }
-  | { state: "done"; hlsMasterUrl: string }
+  | { state: "processing"; phase: ServerPhase; completed: number; total: number | null }
+  | { state: "done"; hlsMasterUrl: string; captionsUrl: string | null }
   | { state: "error"; error: string }
   | { state: "unknown" };
 
@@ -304,27 +311,28 @@ function getFinalizeStatus(auth: WorkerAuth, xhrRef: XhrRef): Promise<FinalizeSt
 
 const FINALIZE_POLL_MS = 4000;
 
-// Dispara a compressão e depois faz poll do estado até acabar (done/error).
-// isCurrent() é checado entre polls — sem isto, escolher um ficheiro novo a
-// meio da compressão não tinha nenhum pedido em curso pra o xhrRef.abort()
-// cortar (só há pedidos de vez em quando, entre esperas), e o poll
-// continuava sozinho em fundo até acabar por conta própria.
+// Dispara a compressão (que encadeia legendas a seguir, ver
+// worker/index.js:startFinalizeJob) e depois faz poll do estado até acabar
+// (done/error). isCurrent() é checado entre polls — sem isto, escolher um
+// ficheiro novo a meio da compressão não tinha nenhum pedido em curso pra
+// o xhrRef.abort() cortar (só há pedidos de vez em quando, entre esperas),
+// e o poll continuava sozinho em fundo até acabar por conta própria.
 async function postFinalize(
   auth: WorkerAuth,
   totalBytes: number,
   xhrRef: XhrRef,
   isCurrent: () => boolean,
-  onProgress: (completed: number, total: number | null) => void
-): Promise<string> {
+  onProgress: (phase: ServerPhase, completed: number, total: number | null) => void
+): Promise<{ hlsMasterUrl: string; captionsUrl: string | null }> {
   await postFinalizeStart(auth, totalBytes, xhrRef);
   for (;;) {
     await new Promise((r) => setTimeout(r, FINALIZE_POLL_MS));
     if (!isCurrent()) throw new UploadAbortedError();
     const status = await getFinalizeStatus(auth, xhrRef);
-    if (status.state === "done") return status.hlsMasterUrl;
+    if (status.state === "done") return { hlsMasterUrl: status.hlsMasterUrl, captionsUrl: status.captionsUrl };
     if (status.state === "error") throw new UploadError(status.error, true);
     if (status.state === "unknown") await postFinalizeStart(auth, totalBytes, xhrRef);
-    else onProgress(status.completed, status.total);
+    else onProgress(status.phase, status.completed, status.total);
   }
 }
 
@@ -366,9 +374,9 @@ async function uploadToWorker(
   file: File,
   xhrRef: XhrRef,
   onProgress: (percent: number) => void,
-  onPhaseChange: (phase: "uploading" | "compressing") => void,
+  onPhaseChange: (phase: "uploading" | ServerPhase) => void,
   isCurrent: () => boolean,
-  onCompressionProgress: (completed: number, total: number | null) => void,
+  onServerProgress: (phase: ServerPhase, completed: number, total: number | null) => void,
   onFinalizePending: (resume: ResumableFinalize | null) => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
@@ -389,7 +397,7 @@ async function uploadToWorker(
   onPhaseChange("compressing");
   // A partir daqui já não é preciso o ficheiro original — só o assetId/token
   // guardam o que basta pra retomar isto (ver resumeWorkerFinalize) mesmo
-  // que a pessoa feche a aba a meio da compressão.
+  // que a pessoa feche a aba a meio da compressão/legendas.
   onFinalizePending({
     assetId: auth.assetId,
     token: auth.token,
@@ -397,30 +405,40 @@ async function uploadToWorker(
     totalBytes: file.size,
     fileName: file.name,
   });
-  const url = await withUploadRetries(
-    () => postFinalize(auth, file.size, xhrRef, isCurrent, onCompressionProgress),
+  const { hlsMasterUrl, captionsUrl } = await withUploadRetries(
+    () =>
+      postFinalize(auth, file.size, xhrRef, isCurrent, (phase, completed, total) => {
+        onPhaseChange(phase);
+        onServerProgress(phase, completed, total);
+      }),
     noop
   );
-  return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
+  return { url: hlsMasterUrl, sizeBytes: file.size, name: file.name, mimeType: file.type, captionsUrl };
 }
 
 // Idêntico à cauda de uploadToWorker (a partir da compressão) — só que sem
 // nenhum ficheiro nem fase de envio, porque quando isto corre já não há
 // ficheiro nenhum (a página foi reaberta): o worker já tinha os bytes todos
-// há muito, só falta continuar a acompanhar/retomar a compressão.
+// há muito, só falta continuar a acompanhar/retomar a compressão e as
+// legendas.
 async function resumeWorkerFinalize(
   resume: ResumableFinalize,
   xhrRef: XhrRef,
   isCurrent: () => boolean,
-  onCompressionProgress: (completed: number, total: number | null) => void
+  onPhaseChange: (phase: ServerPhase) => void,
+  onServerProgress: (phase: ServerPhase, completed: number, total: number | null) => void
 ): Promise<UploadResult> {
   const auth: WorkerAuth = { uploadUrl: resume.uploadUrl, token: resume.token, assetId: resume.assetId };
   const noop = () => {};
-  const url = await withUploadRetries(
-    () => postFinalize(auth, resume.totalBytes, xhrRef, isCurrent, onCompressionProgress),
+  const { hlsMasterUrl, captionsUrl } = await withUploadRetries(
+    () =>
+      postFinalize(auth, resume.totalBytes, xhrRef, isCurrent, (phase, completed, total) => {
+        onPhaseChange(phase);
+        onServerProgress(phase, completed, total);
+      }),
     noop
   );
-  return { url, sizeBytes: resume.totalBytes, name: resume.fileName, mimeType: "video/mp4" };
+  return { url: hlsMasterUrl, sizeBytes: resume.totalBytes, name: resume.fileName, mimeType: "video/mp4", captionsUrl };
 }
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -449,15 +467,16 @@ export function FileUploadInput({
   currentName?: string | null;
   onUploaded: (result: UploadResult) => void;
   // Ficheiro bruto assim que é escolhido, antes de qualquer envio — usado
-  // pela geração de legendas automáticas (lib/captions.ts), que arranca
-  // depois da compressão terminar, sobre o MESMO ficheiro original.
+  // pela geração automática do thumbnail (captureFirstFrame em
+  // LessonEditScreen), que corre no browser sobre o MESMO ficheiro
+  // original, sem depender do upload/compressão.
   onFileSelected?: (file: File) => void;
-  // Espelha o estado interno de uploading/compressing (e o % de compressão,
-  // quando há um) pro pai poder desenhar um indicador de etapas por cima
-  // (ver stepper em LessonEditScreen.tsx) — stage null quando não há nenhum
-  // envio em curso; percent é sempre null fora da fase de compressão (o
+  // Espelha o estado interno (uploading/compressing/transcribing, e o % de
+  // cada uma quando há) pro pai poder desenhar um indicador de etapas por
+  // cima (ver stepper em LessonEditScreen.tsx) — stage null quando não há
+  // nenhum envio em curso; percent é sempre null durante "uploading" (o
   // envio já mostra o seu próprio % à parte, ver progress abaixo).
-  onStageChange?: (stage: "uploading" | "compressing" | null, compressionPercent: number | null) => void;
+  onStageChange?: (stage: "uploading" | ServerPhase | null, percent: number | null) => void;
   // Em espaços apertados no mobile (ex.: painel de banner com dois
   // uploaders lado a lado), o nome do ficheiro que o próprio browser
   // desenha ao lado do botão nativo não cabe — encolhe o input ao tamanho
@@ -475,8 +494,8 @@ export function FileUploadInput({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [indeterminate, setIndeterminate] = useState(false);
-  const [compressing, setCompressing] = useState(false);
-  const [compressionPercent, setCompressionPercent] = useState<number | null>(null);
+  const [serverPhase, setServerPhase] = useState<ServerPhase | null>(null);
+  const [serverPhasePercent, setServerPhasePercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -488,13 +507,13 @@ export function FileUploadInput({
   const generationRef = useRef(0);
 
   // Deriva o stage reportado ao pai diretamente do estado interno, em vez de
-  // chamar onStageChange em cada ponto que mexe em uploading/compressing —
+  // chamar onStageChange em cada ponto que mexe em uploading/serverPhase —
   // um único sítio, nunca desalinha dos dois.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!uploading) onStageChange?.(null, null);
-    else onStageChange?.(compressing ? "compressing" : "uploading", compressing ? compressionPercent : null);
-  }, [uploading, compressing, compressionPercent]);
+    else onStageChange?.(serverPhase ?? "uploading", serverPhase ? serverPhasePercent : null);
+  }, [uploading, serverPhase, serverPhasePercent]);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -517,8 +536,8 @@ export function FileUploadInput({
 
     setUploading(true);
     setProgress(0);
-    setCompressing(false);
-    setCompressionPercent(null);
+    setServerPhase(null);
+    setServerPhasePercent(null);
     setError(null);
     setUploadedName(null);
 
@@ -538,19 +557,24 @@ export function FileUploadInput({
           },
           (phase) => {
             if (!isCurrent()) return;
-            setCompressing(phase === "compressing");
+            // Muda de fase (compressing -> transcribing) reseta o %, não
+            // faz sentido clampar um valor da fase anterior contra o da nova.
+            setServerPhase((prev) => {
+              if (prev !== phase) setServerPhasePercent(null);
+              return phase === "uploading" ? null : phase;
+            });
           },
           isCurrent,
-          (completed, total) => {
+          (phase, completed, total) => {
             if (!isCurrent()) return;
             const percent = total ? Math.round((completed / total) * 100) : null;
-            setCompressionPercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
+            setServerPhasePercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
           },
           (resume) => onFinalizePending?.(resume)
         );
         if (!isCurrent()) return;
         setUploading(false);
-        setCompressing(false);
+        setServerPhase(null);
         setUploadedName(data.name);
         onFinalizePending?.(null);
         onUploaded(data);
@@ -589,8 +613,8 @@ export function FileUploadInput({
       if (!isCurrent() || err instanceof UploadAbortedError) return;
       setUploading(false);
       setIndeterminate(false);
-      setCompressing(false);
-      setCompressionPercent(null);
+      setServerPhase(null);
+      setServerPhasePercent(null);
       onFinalizePending?.(null);
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
@@ -608,24 +632,31 @@ export function FileUploadInput({
     const isCurrent = () => generationRef.current === myGeneration;
 
     setUploading(true);
-    setCompressing(true);
-    setCompressionPercent(null);
+    setServerPhase("compressing");
+    setServerPhasePercent(null);
     setError(null);
 
     resumeWorkerFinalize(
       resumeUpload,
       xhrRef,
       isCurrent,
-      (completed, total) => {
+      (phase) => {
+        if (!isCurrent()) return;
+        setServerPhase((prev) => {
+          if (prev !== phase) setServerPhasePercent(null);
+          return phase;
+        });
+      },
+      (phase, completed, total) => {
         if (!isCurrent()) return;
         const percent = total ? Math.round((completed / total) * 100) : null;
-        setCompressionPercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
+        setServerPhasePercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
       }
     )
       .then((data) => {
         if (!isCurrent()) return;
         setUploading(false);
-        setCompressing(false);
+        setServerPhase(null);
         setUploadedName(data.name);
         onFinalizePending?.(null);
         onUploaded(data);
@@ -633,8 +664,8 @@ export function FileUploadInput({
       .catch((err) => {
         if (!isCurrent() || err instanceof UploadAbortedError) return;
         setUploading(false);
-        setCompressing(false);
-        setCompressionPercent(null);
+        setServerPhase(null);
+        setServerPhasePercent(null);
         onFinalizePending?.(null);
         setError(err instanceof Error ? err.message : "Erro ao retomar compressão");
       });
@@ -654,23 +685,27 @@ export function FileUploadInput({
       {uploading && (
         <div className="mt-2">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-            {indeterminate || (compressing && compressionPercent === null) ? (
+            {indeterminate || (serverPhase && serverPhasePercent === null) ? (
               <div className="h-full w-full animate-pulse rounded-full bg-blue-600" />
             ) : (
               <div
                 className="h-full rounded-full bg-blue-600 transition-[width] duration-150"
-                style={{ width: `${compressing ? compressionPercent : progress}%` }}
+                style={{ width: `${serverPhase ? serverPhasePercent : progress}%` }}
               />
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {compressing
-              ? compressionPercent !== null
-                ? `A comprimir vídeo (${compressionPercent}%)...`
+            {serverPhase === "compressing"
+              ? serverPhasePercent !== null
+                ? `A comprimir vídeo (${serverPhasePercent}%)...`
                 : "A comprimir vídeo..."
-              : indeterminate
-                ? "A enviar..."
-                : `A enviar (${progress}%)`}
+              : serverPhase === "transcribing"
+                ? serverPhasePercent !== null
+                  ? `A gerar legendas (${serverPhasePercent}%)...`
+                  : "A gerar legendas..."
+                : indeterminate
+                  ? "A enviar..."
+                  : `A enviar (${progress}%)`}
           </p>
         </div>
       )}

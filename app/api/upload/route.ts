@@ -7,7 +7,7 @@ import { validateUpload } from "@/lib/validations";
 
 export const runtime = "nodejs";
 
-const ALLOWED_KINDS = ["VIDEO", "DOCUMENT", "IMAGE", "CAPTIONS"] as const;
+const ALLOWED_KINDS = ["VIDEO", "DOCUMENT", "IMAGE"] as const;
 type Kind = (typeof ALLOWED_KINDS)[number];
 
 // Imagens (thumbnails, avatares, etc.) chegavam ao storage exatamente como
@@ -61,8 +61,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const folder = kind === "CAPTIONS" ? "captions" : `${kind.toLowerCase()}s`;
-  const saved = await storage.save(file, folder);
+  const saved = await storage.save(file, `${kind.toLowerCase()}s`);
 
   return NextResponse.json({
     url: saved.url,

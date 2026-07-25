@@ -137,9 +137,9 @@ export function LessonPlayer({
   type: "VIDEO" | "TEXT";
   contentUrl: string | null;
   hlsMasterUrl?: string | null;
-  // Legendas WebVTT geradas no browser do instrutor no upload (ver
-  // lib/captions.ts) — ficheiro pequeno, sempre servido diretamente (nunca
-  // passa pelo worker/HLS).
+  // Legendas WebVTT geradas no worker a seguir à compressão do vídeo (ver
+  // worker/index.js:transcribeToVtt) — ficheiro pequeno, servido
+  // diretamente do Storage.
   captionsUrl?: string | null;
   videoRenditions?: VideoRendition[];
   textContent?: string | null;

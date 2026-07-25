@@ -433,6 +433,149 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
   return { renditions, masterPlaylistUrl };
 }
 
+// --- Legendas automáticas (Whisper, corre AQUI no worker) --------------
+//
+// Antes corria no browser do instrutor (transformers.js + WASM, ver git log
+// de lib/captions.ts) — de propósito, pra não tocar no worker (já sujeito a
+// OOM a 1080p, ver QUALITY_LADDER acima). Passou pra cá a pedido: o modelo
+// (~232MB) deixa de ser descarregado do CDN em CADA upload (um por
+// instrutor, por sessão de browser) — corre 1x por vídeo aqui, com os
+// pesos em cache local em disco (transformers.js/onnxruntime-node já
+// cacheiam por omissão em Node, ao contrário do browser), só o 1º vídeo
+// desde que o container arrancou paga o download do CDN.
+//
+// Corre DEPOIS de transcodeToHls terminar (nunca em paralelo com o
+// ffmpeg) — de propósito: o worker só tem 2GB de RAM, já apertado só com o
+// ffmpeg a 1080p (ver comentário no QUALITY_LADDER). getTranscriber() NÃO
+// fica cacheado entre vídeos (ao contrário do padrão "singleton" óbvio) —
+// carrega-se e descarta-se (transcriber.dispose()) a cada vídeo, pra não
+// ocupar ~300-400MB de RAM PERMANENTEMENTE e reduzir a margem que o
+// PRÓXIMO vídeo tem pra comprimir. Falha aqui nunca derruba o upload —
+// vídeo/compressão já são o caminho crítico, a aula só fica sem legendas
+// (ver catch em startFinalizeJob).
+const WHISPER_MODEL_ID = "Xenova/whisper-base";
+const CAPTION_CHUNK_SECONDS = 30;
+const CAPTION_SAMPLE_RATE = 16000;
+
+async function getTranscriber() {
+  const { pipeline } = await import("@huggingface/transformers");
+  // Mesma config de dtype usada no browser (encoder q8, decoder fp32) — é o
+  // que evita o bug conhecido do runtime v4 do onnxruntime (MatMulNBits a
+  // exigir um scale tensor que os ficheiros quantizados do decoder deste
+  // modelo não têm, ver huggingface/transformers.js#1707). Não confirmado
+  // se o mesmo bug existe no onnxruntime-node (motor diferente do
+  // onnxruntime-web), mas é a config já comprovada a carregar sem falhar
+  // para este modelo exato, por isso reutiliza-se.
+  return pipeline("automatic-speech-recognition", WHISPER_MODEL_ID, {
+    dtype: { encoder_model: "q8", decoder_model_merged: "fp32" },
+  });
+}
+
+function formatVttTimestamp(totalSeconds) {
+  const clamped = Math.max(0, totalSeconds);
+  const h = Math.floor(clamped / 3600);
+  const m = Math.floor((clamped % 3600) / 60);
+  const s = Math.floor(clamped % 60);
+  const ms = Math.round((clamped - Math.floor(clamped)) * 1000);
+  const pad = (n, len = 2) => String(n).padStart(len, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(ms, 3)}`;
+}
+
+function chunksToVtt(chunks) {
+  const lines = ["WEBVTT", ""];
+  for (const chunk of chunks) {
+    const [start, endRaw] = chunk.timestamp;
+    const end = endRaw == null ? start + 3 : endRaw;
+    const text = chunk.text.trim();
+    if (!text) continue;
+    lines.push(`${formatVttTimestamp(start)} --> ${formatVttTimestamp(end)}`);
+    lines.push(text);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+// PCM cru (f32le, mono, 16kHz) — exatamente o formato que o Whisper espera,
+// não precisa de parser de WAV nenhum, só ler os bytes direto pra
+// Float32Array.
+async function extractAudioPcm(sourcePath, pcmPath) {
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-loglevel",
+    "error",
+    "-i",
+    sourcePath,
+    "-vn",
+    "-ac",
+    "1",
+    "-ar",
+    String(CAPTION_SAMPLE_RATE),
+    "-f",
+    "f32le",
+    pcmPath,
+  ]);
+}
+
+async function uploadCaptionsVtt(key, vttText) {
+  const objectPath = `video-captions/${key}/legendas.vtt`;
+  await withRetries(async () => {
+    const { error } = await supabase.storage.from(BUCKET).upload(objectPath, Buffer.from(vttText, "utf8"), {
+      contentType: "text/vtt",
+      upsert: true,
+    });
+    if (error) throw error;
+  }, 3, `upload Storage ${objectPath}`);
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(objectPath);
+  return data.publicUrl;
+}
+
+// Faz a mesma cadência de 30s que o pipeline usava internamente
+// (chunk_length_s: 30) no browser, só que à mão — cada volta do loop chama
+// o transcriber com <=30s de áudio (dentro da janela nativa do Whisper),
+// dá pra reportar progresso real (chunk a chunk) sem depender de nenhum
+// callback interno da lib. Troca: perde-se o stride_length_s de 5s
+// (overlap entre chunks que ajudava a não cortar palavras na fronteira) —
+// aceitável pela granularidade de progresso ganha.
+async function transcribeToVtt(key, sourcePath, workDir, onProgress) {
+  const pcmPath = path.join(workDir, "audio.f32");
+  await extractAudioPcm(sourcePath, pcmPath);
+  const raw = await fs.readFile(pcmPath);
+  await fs.rm(pcmPath, { force: true }).catch(() => {});
+
+  // .slice() no ArrayBuffer copia pra um novo buffer com byteOffset 0 — o
+  // Buffer devolvido por fs.readFile pode não estar alinhado a 4 bytes
+  // (exigido pelo Float32Array), não dá pra ler o .buffer dele direto.
+  const arrayBuffer = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.length);
+  const samples = new Float32Array(arrayBuffer);
+  if (samples.length === 0) throw new Error("Áudio vazio (vídeo sem faixa de áudio?)");
+
+  const chunkLenSamples = CAPTION_CHUNK_SECONDS * CAPTION_SAMPLE_RATE;
+  const totalChunks = Math.max(1, Math.ceil(samples.length / chunkLenSamples));
+
+  const transcriber = await getTranscriber();
+  try {
+    const allChunks = [];
+    for (let i = 0; i < totalChunks; i++) {
+      const slice = samples.subarray(i * chunkLenSamples, (i + 1) * chunkLenSamples);
+      const output = await transcriber(slice, { language: "portuguese", task: "transcribe", return_timestamps: true });
+      const result = Array.isArray(output) ? output[0] : output;
+      const resultChunks = (result && result.chunks) || [];
+      const offsetSeconds = i * CAPTION_CHUNK_SECONDS;
+      for (const c of resultChunks) {
+        const [start, endRaw] = c.timestamp;
+        allChunks.push({ text: c.text, timestamp: [start + offsetSeconds, endRaw == null ? null : endRaw + offsetSeconds] });
+      }
+      onProgress(i + 1, totalChunks);
+    }
+    return await uploadCaptionsVtt(key, chunksToVtt(allChunks));
+  } finally {
+    // Liberta os ~300-400MB do modelo já — não fica à espera do GC
+    // (onnxruntime-node é um addon nativo, memória fora do heap do V8 que
+    // o GC do JS não sabe reclamar sozinho).
+    if (typeof transcriber.dispose === "function") await transcriber.dispose().catch(() => {});
+  }
+}
+
 // --- Caminho 1: upload direto (POST /upload) ---------------------------
 
 // Token = "{assetId}.{expiresAt}.{assinatura}", assinado com o mesmo
@@ -619,12 +762,12 @@ async function handleUploadChunkRequest(req, res) {
 const finalizeJobs = new Map();
 
 function startFinalizeJob(assetId, workDir, sourcePath) {
-  finalizeJobs.set(assetId, { state: "processing", completed: 0, total: null });
+  finalizeJobs.set(assetId, { state: "processing", phase: "compressing", completed: 0, total: null });
   (async () => {
     try {
       const progress = await loadTranscodeProgress(workDir);
       const alreadyDone = progress.renditions.length;
-      finalizeJobs.set(assetId, { state: "processing", completed: alreadyDone, total: null });
+      finalizeJobs.set(assetId, { state: "processing", phase: "compressing", completed: alreadyDone, total: null });
       if (alreadyDone > 0) {
         console.log(`  -> ${assetId} a retomar compressão (${alreadyDone} rendition(s) já prontas de uma tentativa anterior)`);
       } else {
@@ -660,8 +803,25 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
         }
       );
       if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
-      console.log(`Upload direto ${assetId} concluído (${renditions.length} rendition(s)).`);
-      finalizeJobs.set(assetId, { state: "done", hlsMasterUrl: masterPlaylistUrl, renditions });
+      console.log(`Upload direto ${assetId}: vídeo comprimido (${renditions.length} rendition(s)), a gerar legendas`);
+
+      finalizeJobs.set(assetId, { state: "processing", phase: "transcribing", completed: 0, total: null });
+      let captionsUrl = null;
+      try {
+        captionsUrl = await transcribeToVtt(assetId, sourcePath, workDir, (completed, total) => {
+          const job = finalizeJobs.get(assetId);
+          if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed, total });
+        });
+      } catch (err) {
+        // Nunca derruba o upload por isto — vídeo já está comprimido e
+        // pronto, a aula só fica sem legendas.
+        console.error(`Legendas do upload ${assetId} falharam (aula fica sem legendas):`, err);
+      }
+
+      console.log(
+        `Upload direto ${assetId} concluído (${renditions.length} rendition(s))${captionsUrl ? ", com legendas" : ", sem legendas"}.`
+      );
+      finalizeJobs.set(assetId, { state: "done", hlsMasterUrl: masterPlaylistUrl, renditions, captionsUrl });
       // só limpa o work dir em caso de sucesso — numa falha o ficheiro fonte
       // fica pra um retry poder recomeçar a comprimir sem reenviar nada.
       await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
@@ -744,7 +904,14 @@ async function handleUploadFinalizeStatusRequest(req, res) {
   }
   if (job.state === "done") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ state: "done", hlsMasterUrl: job.hlsMasterUrl, renditions: job.renditions }));
+    res.end(
+      JSON.stringify({
+        state: "done",
+        hlsMasterUrl: job.hlsMasterUrl,
+        renditions: job.renditions,
+        captionsUrl: job.captionsUrl ?? null,
+      })
+    );
     return;
   }
   if (job.state === "error") {
@@ -753,7 +920,7 @@ async function handleUploadFinalizeStatusRequest(req, res) {
     return;
   }
   res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ state: "processing", completed: job.completed, total: job.total }));
+  res.end(JSON.stringify({ state: "processing", phase: job.phase, completed: job.completed, total: job.total }));
 }
 
 const server = http.createServer((req, res) => {

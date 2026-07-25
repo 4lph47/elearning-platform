@@ -1,8 +1,8 @@
 // Thumbnail automático da aula: captura o 1º frame do vídeo direto no
-// browser (canvas), no momento do upload — mesma ideia de lib/captions.ts
-// (processamento client-side, sem tocar no worker do Railway). Só é usado
-// como fallback quando o instrutor não escolhe um thumbnail à mão (ver
-// handleGenerateThumbnail em LessonEditScreen.tsx).
+// browser (canvas), no momento do upload — processamento client-side, sem
+// tocar no worker do Railway. Só é usado como fallback quando o instrutor
+// não escolhe um thumbnail à mão (ver handleGenerateThumbnail em
+// LessonEditScreen.tsx).
 
 // Frame em t=0 é muitas vezes preto/transição — um instante à frente já
 // costuma ter conteúdo real, sem arriscar passar do fim em vídeos curtos.

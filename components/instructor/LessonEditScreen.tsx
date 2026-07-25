@@ -23,7 +23,6 @@ import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft, sanitizeUploadedUrl } from "@/lib/formDraft";
-import { transcribeFileToVtt, uploadCaptionsVtt, type CaptionsPhase } from "@/lib/captions";
 import { captureFirstFrame, uploadThumbnailBlob } from "@/lib/videoThumbnail";
 import type { LessonData } from "@/components/instructor/LessonRow";
 
@@ -107,15 +106,13 @@ export function LessonEditScreen({
   const [captionsUrl, setCaptionsUrl] = useState<string | null>(
     sanitizeUploadedUrl(draft?.value.captionsUrl ?? lesson?.captionsUrl)
   );
-  // Não é persistido em rascunho (é derivado de um File em memória, que não
-  // sobrevive a um refresh) — só reflete o progresso da geração em curso
-  // nesta sessão do browser.
-  const [captionsPhase, setCaptionsPhase] = useState<CaptionsPhase | "idle" | "done" | "error">("idle");
   // Espelha o stage interno do FileUploadInput do vídeo (ver onStageChange)
-  // — só serve pro stepper de 3 etapas acima do input, não guarda mais
-  // nenhuma lógica própria.
-  const [videoStage, setVideoStage] = useState<"uploading" | "compressing" | null>(null);
-  const [videoCompressionPercent, setVideoCompressionPercent] = useState<number | null>(null);
+  // — legendas são geradas no worker (ver worker/index.js:transcribeToVtt),
+  // não no browser, por isso "transcribing" é só mais um valor reportado
+  // pelo servidor, igual a "compressing". Só serve pro stepper de 3 etapas
+  // acima do input, não guarda mais nenhuma lógica própria.
+  const [videoStage, setVideoStage] = useState<"uploading" | "compressing" | "transcribing" | null>(null);
+  const [videoStagePercent, setVideoStagePercent] = useState<number | null>(null);
   const [pendingVideoUpload, setPendingVideoUpload] = useState<ResumableFinalize | null>(
     draft?.value.pendingVideoUpload ?? null
   );
@@ -194,59 +191,27 @@ export function LessonEditScreen({
       if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
     };
   }, []);
-  // Guardado só pra "Tentar novamente" (ver botão junto ao erro de
-  // legendas) poder repetir a transcrição sem obrigar a reescolher o
-  // vídeo — o ficheiro em si já está na memória da aba, não há razão pra
-  // pedir de novo só porque o CDN do modelo teve um soluço.
-  const lastVideoFileRef = useRef<File | null>(null);
   function handleVideoFileSelected(file: File) {
-    lastVideoFileRef.current = file;
     if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
     const url = URL.createObjectURL(file);
     localPreviewUrlRef.current = url;
     setLocalPreviewUrl(url);
-    // Thumbnail corre já (não depende da compressão). Legendas só arrancam
-    // quando a compressão do vídeo terminar (ver onUploaded/handleVideoUploaded
-    // abaixo) — antes corriam em paralelo com a compressão e disputavam CPU
-    // com ela no mesmo browser.
+    // Thumbnail corre já, no browser (não depende da compressão). Legendas
+    // já não correm aqui — o worker gera-as sozinho a seguir à compressão
+    // (ver worker/index.js:transcribeToVtt) e devolve o URL delas no
+    // onUploaded, junto com o do vídeo.
     handleGenerateThumbnail(file);
   }
 
-  // Disparado só depois da compressão do vídeo terminar (onUploaded do
-  // FileUploadInput) — usa o MESMO ficheiro local guardado em
-  // lastVideoFileRef (setado em handleVideoFileSelected). generationRef
-  // evita que o resultado de uma transcrição ANTIGA (ficheiro trocado a
-  // meio) sobrescreva o estado depois de já não ser relevante.
-  const captionsGenerationRef = useRef(0);
-  async function handleGenerateCaptions(file: File) {
-    const myGeneration = ++captionsGenerationRef.current;
-    const isCurrent = () => captionsGenerationRef.current === myGeneration;
-    setCaptionsUrl(null);
-    setCaptionsPhase("loading-model");
-    try {
-      const vtt = await transcribeFileToVtt(file, (phase) => {
-        if (isCurrent()) setCaptionsPhase(phase);
-      });
-      if (!isCurrent()) return;
-      const { url } = await uploadCaptionsVtt(vtt);
-      if (!isCurrent()) return;
-      setCaptionsUrl(url);
-      setCaptionsPhase("done");
-    } catch (err) {
-      if (!isCurrent()) return;
-      console.error("Falha ao gerar legendas automáticas:", err);
-      setCaptionsPhase("error");
-    }
-  }
-
-  // Mesmo princípio do handleGenerateCaptions acima (corre em paralelo ao
-  // upload do vídeo, sobre o mesmo ficheiro) — só que gera o thumbnail da
-  // aula a partir do 1º frame, e só quando o instrutor ainda não escolheu
-  // um à mão (thumbnailUrl vazio, ou o atual também é auto de um vídeo
-  // anterior). Isto é o que faz o thumbnail do curso (syncCourseThumbnail
-  // usa o thumbnail da 1ª aula) e o trailer (fallback em app/courses/[slug]
-  // e afins usa o contentUrl da 1ª aula) ficarem preenchidos sozinhos
-  // quando o instrutor não define nada manualmente.
+  // Gera o thumbnail da aula a partir do 1º frame do vídeo, e só quando o
+  // instrutor ainda não escolheu um à mão (thumbnailUrl vazio, ou o atual
+  // também é auto de um vídeo anterior). Isto é o que faz o thumbnail do
+  // curso (syncCourseThumbnail usa o thumbnail da 1ª aula) e o trailer
+  // (fallback em app/courses/[slug] e afins usa o contentUrl da 1ª aula)
+  // ficarem preenchidos sozinhos quando o instrutor não define nada
+  // manualmente. generationRef evita que o resultado de uma captura ANTIGA
+  // (ficheiro trocado a meio) sobrescreva o estado depois de já não ser
+  // relevante.
   const thumbnailGenerationRef = useRef(0);
   async function handleGenerateThumbnail(file: File) {
     if (thumbnailUrl && !thumbnailIsAuto) return;
@@ -266,21 +231,12 @@ export function LessonEditScreen({
     }
   }
 
-  const CAPTIONS_PHASE_LABEL: Record<Exclude<CaptionsPhase | "idle" | "done" | "error", "idle">, string> = {
-    "loading-model": "A carregar modelo de transcrição...",
-    "decoding-audio": "A processar áudio...",
-    transcribing: "A transcrever...",
-    done: "Legendas geradas automaticamente.",
-    error: "Falha ao gerar legendas automáticas — a aula fica sem legendas.",
-  };
-
-  // Pipeline do vídeo: enviar -> comprimir -> legendas (nessa ordem, ver
-  // handleGenerateCaptions chamado só no onUploaded). O stepper só aparece
-  // enquanto alguma destas 3 etapas está mesmo a decorrer — nada antes do
-  // upload arrancar, nada depois de legendas terminar (done/error já têm o
-  // próprio aviso, ver CAPTIONS_PHASE_LABEL acima).
-  const captionsRunning = captionsPhase === "loading-model" || captionsPhase === "decoding-audio" || captionsPhase === "transcribing";
-  const videoPipelineStep = videoStage === "uploading" ? 1 : videoStage === "compressing" ? 2 : captionsRunning ? 3 : null;
+  // Pipeline do vídeo: enviar -> comprimir -> legendas, tudo reportado pelo
+  // worker via onStageChange (FileUploadInput.tsx) — o stepper só aparece
+  // enquanto alguma das 3 etapas está mesmo a decorrer, nada antes do
+  // upload arrancar nem depois de "transcribing" acabar (videoStage volta
+  // a null).
+  const videoPipelineStep = videoStage === "uploading" ? 1 : videoStage === "compressing" ? 2 : videoStage === "transcribing" ? 3 : null;
   const VIDEO_PIPELINE_STEPS = ["Enviar vídeo", "Comprimir vídeo", "Gerar legendas"];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -516,7 +472,7 @@ export function LessonEditScreen({
                             }
                           >
                             {stepNumber}. {stepLabel}
-                            {isCurrentStep && stepNumber === 2 && videoCompressionPercent !== null && ` (${videoCompressionPercent}%)`}
+                            {isCurrentStep && stepNumber !== 1 && videoStagePercent !== null && ` (${videoStagePercent}%)`}
                           </span>
                         </div>
                       );
@@ -529,7 +485,7 @@ export function LessonEditScreen({
                   currentName={contentName}
                   onStageChange={(stage, percent) => {
                     setVideoStage(stage);
-                    setVideoCompressionPercent(percent);
+                    setVideoStagePercent(percent);
                   }}
                   onUploaded={(r) => {
                     if (localPreviewUrlRef.current) {
@@ -539,28 +495,15 @@ export function LessonEditScreen({
                     setLocalPreviewUrl(null);
                     setContentUrl(r.url);
                     setContentName(r.name);
-                    if (lastVideoFileRef.current) handleGenerateCaptions(lastVideoFileRef.current);
+                    // Gerado (ou não, ver worker/index.js:startFinalizeJob)
+                    // pelo worker a seguir à compressão — nunca falha o
+                    // upload em si, só fica null se a transcrição não correu.
+                    setCaptionsUrl(r.captionsUrl ?? null);
                   }}
                   onFileSelected={handleVideoFileSelected}
                   resumeUpload={pendingVideoUpload}
                   onFinalizePending={setPendingVideoUpload}
                 />
-                {captionsPhase !== "idle" && (
-                  <p
-                    className={`text-xs ${captionsPhase === "error" ? "text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
-                  >
-                    {CAPTIONS_PHASE_LABEL[captionsPhase]}
-                    {captionsPhase === "error" && lastVideoFileRef.current && (
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateCaptions(lastVideoFileRef.current!)}
-                        className="ml-2 underline hover:no-underline"
-                      >
-                        Tentar novamente
-                      </button>
-                    )}
-                  </p>
-                )}
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
                     mesmo LessonPlayer usado na aula a sério (gestos, seletor
                     de qualidade, tudo igual), só que a largura fica fluida

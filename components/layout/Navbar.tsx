@@ -398,9 +398,14 @@ export function Navbar() {
                 onClick={() => setMenuOpen((v) => !v)}
                 className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-2 ${transparent ? "hover:bg-slate-900/10 dark:hover:bg-white/10" : "hover:bg-slate-100 dark:hover:bg-white/10"}`}
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
-                  {initials}
-                </span>
+                {session.user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.user.image} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                    {initials}
+                  </span>
+                )}
                 <ChevronDown
                   size={14}
                   className={`transition-transform ${menuOpen ? "rotate-180" : ""} ${transparent ? "text-slate-600 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"}`}

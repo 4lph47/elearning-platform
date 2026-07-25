@@ -3,15 +3,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Star,
-  Users,
   BookOpen,
+  Clock,
   MessageSquare,
+  Award,
   Globe,
   Link2,
-  Award,
   Briefcase,
-  Clock,
   Pencil,
   Plus,
   X,
@@ -48,10 +46,10 @@ interface CertificationInput {
 type BannerType = "IMAGE" | "VIDEO";
 
 interface Stats {
-  avgRating: number | null;
-  totalReviews: number;
-  totalStudents: number;
   courseCount: number;
+  totalHours: number;
+  reviewCount: number;
+  certificationCount: number;
 }
 
 interface ProfileDraft {
@@ -60,14 +58,19 @@ interface ProfileDraft {
   bannerUrl: string | null;
   bannerType: BannerType | null;
   bio: string;
-  expertise: string;
-  yearsExperience: string;
+  interestArea: string;
+  yearsLearning: string;
   values: Record<SocialPlatformKey, string>;
   activeKeys: SocialPlatformKey[];
   certifications: CertificationInput[];
 }
 
-export function InstructorProfileHero({
+// Mesma estrutura do InstructorProfileHero (edição inline, rascunho local,
+// mesmos campos base do User) — só muda o rótulo "Aluno", os stats (sem
+// rating, porque aluno não tem cursos avaliados por outros) e o significado
+// dos campos "área de especialização"/"anos de experiência", reaproveitados
+// aqui como "área de interesse"/"anos a estudar".
+export function StudentProfileHero({
   isOwner,
   profileId,
   initialName,
@@ -75,8 +78,8 @@ export function InstructorProfileHero({
   initialBannerUrl,
   initialBannerType,
   initialBio,
-  initialExpertise,
-  initialYearsExperience,
+  initialInterestArea,
+  initialYearsLearning,
   initialValues,
   initialCertifications,
   stats,
@@ -89,21 +92,15 @@ export function InstructorProfileHero({
   initialBannerUrl: string | null;
   initialBannerType: BannerType | null;
   initialBio: string;
-  initialExpertise: string;
-  initialYearsExperience: number | null;
+  initialInterestArea: string;
+  initialYearsLearning: number | null;
   initialValues: Record<SocialPlatformKey, string>;
   initialCertifications: CertificationInput[];
   stats: Stats;
-  // Tudo o que vem a seguir ao hero (atalhos de dono, grelha de cursos,
-  // link do catálogo) — passado de fora (a página é que sabe montar isso)
-  // mas escondido daqui quando o dono está mesmo a editar os campos, não só
-  // a pré-visualizar.
   belowContent?: ReactNode;
 }) {
   const router = useRouter();
-  const draftKey = `instructor-profile-draft:${profileId}`;
-  // Só instrutores donos do perfil chegam a editar — só aí vale a pena ler o
-  // rascunho (lazy init, uma vez só, também alimenta o banner "restaurámos").
+  const draftKey = `student-profile-draft:${profileId}`;
   const [draft] = useState(() => (isOwner ? loadDraft<ProfileDraft>(draftKey) : null));
   const [draftBannerVisible, setDraftBannerVisible] = useState(() => Boolean(draft));
 
@@ -117,9 +114,9 @@ export function InstructorProfileHero({
   const [bannerUrl, setBannerUrl] = useState(draft?.value.bannerUrl ?? initialBannerUrl);
   const [bannerType, setBannerType] = useState<BannerType | null>(draft?.value.bannerType ?? initialBannerType);
   const [bio, setBio] = useState(draft?.value.bio ?? initialBio);
-  const [expertise, setExpertise] = useState(draft?.value.expertise ?? initialExpertise);
-  const [yearsExperience, setYearsExperience] = useState(
-    draft?.value.yearsExperience ?? (initialYearsExperience !== null ? String(initialYearsExperience) : "")
+  const [interestArea, setInterestArea] = useState(draft?.value.interestArea ?? initialInterestArea);
+  const [yearsLearning, setYearsLearning] = useState(
+    draft?.value.yearsLearning ?? (initialYearsLearning !== null ? String(initialYearsLearning) : "")
   );
   const [values, setValues] = useState(draft?.value.values ?? initialValues);
   const [activeKeys, setActiveKeys] = useState<SocialPlatformKey[]>(
@@ -144,14 +141,14 @@ export function InstructorProfileHero({
       bannerUrl,
       bannerType,
       bio,
-      expertise,
-      yearsExperience,
+      interestArea,
+      yearsLearning,
       values,
       activeKeys,
       certifications,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, image, bannerUrl, bannerType, bio, expertise, yearsExperience, values, activeKeys, certifications]);
+  }, [name, image, bannerUrl, bannerType, bio, interestArea, yearsLearning, values, activeKeys, certifications]);
   useUnsavedChangesGuard(dirty);
 
   function discardDraft() {
@@ -171,8 +168,8 @@ export function InstructorProfileHero({
     setBannerUrl(initialBannerUrl);
     setBannerType(initialBannerType);
     setBio(initialBio);
-    setExpertise(initialExpertise);
-    setYearsExperience(initialYearsExperience !== null ? String(initialYearsExperience) : "");
+    setInterestArea(initialInterestArea);
+    setYearsLearning(initialYearsLearning !== null ? String(initialYearsLearning) : "");
     setValues(initialValues);
     setActiveKeys(SOCIAL_PLATFORMS.map((p) => p.key).filter((k) => (initialValues[k] ?? "").trim() !== ""));
     setCertifications(initialCertifications);
@@ -221,8 +218,8 @@ export function InstructorProfileHero({
         bannerUrl,
         bannerType,
         bio,
-        expertise,
-        yearsExperience: yearsExperience.trim() === "" ? null : Number(yearsExperience),
+        expertise: interestArea,
+        yearsExperience: yearsLearning.trim() === "" ? null : Number(yearsLearning),
         ...values,
         certifications: certifications
           .map((c) => ({ name: c.name.trim(), url: c.url.trim() }))
@@ -384,7 +381,7 @@ export function InstructorProfileHero({
         </div>
       )}
 
-      <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
+      <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-white/70">Aluno</p>
 
       {showInputs ? (
         <input
@@ -402,10 +399,10 @@ export function InstructorProfileHero({
           <span className="flex items-center gap-1.5">
             <Briefcase size={13} className="text-white/70" />
             <input
-              value={expertise}
-              onChange={(e) => setExpertise(e.target.value)}
+              value={interestArea}
+              onChange={(e) => setInterestArea(e.target.value)}
               maxLength={120}
-              placeholder="Área de especialização"
+              placeholder="Área de interesse"
               className={`${fieldClass} w-56`}
             />
           </span>
@@ -415,24 +412,24 @@ export function InstructorProfileHero({
               type="number"
               min={0}
               max={80}
-              value={yearsExperience}
-              onChange={(e) => setYearsExperience(e.target.value)}
-              placeholder="Anos de experiência"
+              value={yearsLearning}
+              onChange={(e) => setYearsLearning(e.target.value)}
+              placeholder="Anos a estudar"
               className={`${fieldClass} w-20`}
             />
           </span>
         </div>
       ) : (
-        (expertise || yearsExperience !== "") && (
+        (interestArea || yearsLearning !== "") && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {expertise && (
+            {interestArea && (
               <span className={pillClass}>
-                <Briefcase size={13} /> {expertise}
+                <Briefcase size={13} /> {interestArea}
               </span>
             )}
-            {yearsExperience !== "" && (
+            {yearsLearning !== "" && (
               <span className={pillClass}>
-                <Clock size={13} /> {yearsExperience} ano{yearsExperience !== "1" ? "s" : ""} de experiência
+                <Clock size={13} /> {yearsLearning} ano{yearsLearning !== "1" ? "s" : ""} a estudar online
               </span>
             )}
           </div>
@@ -446,7 +443,7 @@ export function InstructorProfileHero({
             maxLength={600}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="Conta um pouco sobre a tua experiência e o que ensinas..."
+            placeholder="Conta um pouco sobre ti e o que estás a aprender..."
             className={`${fieldClass} w-full`}
           />
           <p className="mt-1 text-xs text-white/60">{bio.length}/600</p>
@@ -555,33 +552,26 @@ export function InstructorProfileHero({
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/85">
-        {stats.avgRating !== null && (
-          <span className="flex items-center gap-1.5">
-            <Star size={15} className="fill-white text-white" /> {stats.avgRating.toFixed(1)} média
-          </span>
-        )}
-        {stats.totalReviews > 0 && (
-          <span className="flex items-center gap-1.5">
-            <MessageSquare size={15} /> {stats.totalReviews} avaliaç{stats.totalReviews !== 1 ? "ões" : "ão"}
-          </span>
-        )}
-        <span className="flex items-center gap-1.5">
-          <Users size={15} /> {stats.totalStudents} aluno{stats.totalStudents !== 1 ? "s" : ""}
-        </span>
         <span className="flex items-center gap-1.5">
           <BookOpen size={15} /> {stats.courseCount} curso{stats.courseCount !== 1 ? "s" : ""}
         </span>
+        <span className="flex items-center gap-1.5">
+          <Clock size={15} /> {stats.totalHours} hora{stats.totalHours !== 1 ? "s" : ""} assistida{stats.totalHours !== 1 ? "s" : ""}
+        </span>
+        {stats.reviewCount > 0 && (
+          <span className="flex items-center gap-1.5">
+            <MessageSquare size={15} /> {stats.reviewCount} avaliaç{stats.reviewCount !== 1 ? "ões" : "ão"}
+          </span>
+        )}
+        {stats.certificationCount > 0 && (
+          <span className="flex items-center gap-1.5">
+            <Award size={15} /> {stats.certificationCount} certificado{stats.certificationCount !== 1 ? "s" : ""}
+          </span>
+        )}
       </div>
     </div>
   );
 
-  // Com banner (imagem ou vídeo), este é que fica de fundo — o gradiente
-  // "color coded" (cores tiradas da foto de perfil) passa a exclusivo de
-  // quem não definiu banner, só para não deixar a tela lisa/sem cor
-  // nenhuma. Duas camadas de desvanecimento por cima do banner (vertical +
-  // horizontal), mesma técnica do HeroCarousel da home — só assim o texto
-  // branco por cima continua legível independentemente do que a imagem/vídeo
-  // tiver.
   const heroBox = bannerUrl ? (
     <div className="relative -mt-16 overflow-hidden pb-6 pt-[7.5rem] sm:pt-36">
       {bannerType === "VIDEO" ? (
@@ -611,9 +601,6 @@ export function InstructorProfileHero({
   return (
     <>
       {heroBox}
-      {/* A editar (fora do modo pré-visualização), tudo daqui pra baixo
-          (atalhos de dono, grelha de cursos, link do catálogo) some — só
-          volta ao sair do modo de edição ou ao pré-visualizar. */}
       {!showInputs && belowContent}
     </>
   );

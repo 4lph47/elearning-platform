@@ -48,9 +48,13 @@ const profileSchema = z
     }
   });
 
+// Partilhado por perfil público de instrutor e de aluno — os dois editam os
+// mesmos campos do User (bio, banner, redes sociais, certificações), só a
+// UI é que muda por papel. Único requisito é sessão válida a editar o
+// próprio perfil (session.user.id), não há restrição de role aqui.
 export async function PATCH(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN")) {
+  if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

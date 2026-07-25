@@ -1,0 +1,198 @@
+"use client";
+
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+
+export interface MentionInputHandle {
+  // Devolve o texto visível ("@Nome ") já convertido para o formato
+  // guardado em BD ("@[Nome](id)") — só chamado no submit, o utilizador
+  // nunca vê a marcação em si enquanto escreve.
+  encode: () => string;
+  focus: () => void;
+}
+
+interface MentionUser {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
+function initials(name: string) {
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("") || "?"
+  );
+}
+
+function detectTrigger(text: string, caret: number): { start: number; query: string } | null {
+  const upto = text.slice(0, caret);
+  const at = upto.lastIndexOf("@");
+  if (at === -1) return null;
+  if (at > 0 && !/\s/.test(upto[at - 1])) return null; // "@" tem de vir a seguir a espaço ou início do texto
+  const query = upto.slice(at + 1);
+  if (/\s/.test(query)) return null; // já saímos do token (espaço depois do @)
+  return { start: at, query };
+}
+
+// Input de linha única com autocomplete de @menção — usado na caixa de
+// comentário, resposta e edição do LessonComments. Mantém o valor visível
+// controlado pelo pai (mesmo padrão dos inputs que substitui); só o
+// mapeamento nome→id fica cá dentro, exposto via ref.encode() no submit.
+export const MentionInput = forwardRef<
+  MentionInputHandle,
+  {
+    lessonId: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    className: string;
+    autoFocus?: boolean;
+    // Menções já existentes ao abrir a caixa em modo de edição — re-semeia o
+    // mapeamento nome→id para o encode() converter de volta corretamente,
+    // mesmo sem o utilizador ter tocado no dropdown desta vez.
+    seedMentions?: { name: string; id: string }[];
+    onKeyDownCapture?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  }
+>(function MentionInput(
+  { lessonId, value, onChange, placeholder, className, autoFocus, seedMentions, onKeyDownCapture },
+  ref
+) {
+  const [suggestions, setSuggestions] = useState<MentionUser[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [triggerStart, setTriggerStart] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mentionQueueRef = useRef<{ name: string; id: string }[]>(seedMentions ? [...seedMentions] : []);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (value === "") mentionQueueRef.current = [];
+  }, [value]);
+
+  useImperativeHandle(ref, () => ({
+    encode() {
+      let result = value;
+      for (const m of mentionQueueRef.current) {
+        const token = `@${m.name}`;
+        const idx = result.indexOf(token);
+        if (idx === -1) continue;
+        result = result.slice(0, idx) + `@[${m.name}](${m.id})` + result.slice(idx + token.length);
+      }
+      return result;
+    },
+    focus() {
+      inputRef.current?.focus();
+    },
+  }));
+
+  function scheduleSearch(query: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/lessons/${lessonId}/mentionable?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestions(data.users);
+        setActiveIndex(0);
+      }
+    }, 150);
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    onChange(v);
+    const caret = e.target.selectionStart ?? v.length;
+    const trig = detectTrigger(v, caret);
+    if (trig) {
+      setTriggerStart(trig.start);
+      scheduleSearch(trig.query);
+    } else {
+      setTriggerStart(null);
+      setSuggestions([]);
+    }
+  }
+
+  function pick(user: MentionUser) {
+    if (triggerStart === null) return;
+    const caret = inputRef.current?.selectionStart ?? value.length;
+    const before = value.slice(0, triggerStart);
+    const after = value.slice(caret);
+    const inserted = `@${user.name} `;
+    mentionQueueRef.current.push({ name: user.name, id: user.id });
+    onChange(before + inserted + after);
+    setSuggestions([]);
+    setTriggerStart(null);
+    requestAnimationFrame(() => {
+      const pos = before.length + inserted.length;
+      inputRef.current?.setSelectionRange(pos, pos);
+      inputRef.current?.focus();
+    });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        pick(suggestions[activeIndex]);
+        return;
+      }
+      if (e.key === "Escape") {
+        setSuggestions([]);
+        return;
+      }
+    }
+    onKeyDownCapture?.(e);
+  }
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        className={className}
+      />
+      {suggestions.length > 0 && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-64 max-w-[80vw] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-neutral-900">
+          {suggestions.map((u, i) => (
+            <button
+              key={u.id}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(u);
+              }}
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
+                i === activeIndex ? "bg-slate-100 dark:bg-white/10" : ""
+              }`}
+            >
+              {u.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={u.image} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                  {initials(u.name)}
+                </span>
+              )}
+              <span className="truncate text-slate-800 dark:text-slate-100">{u.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});

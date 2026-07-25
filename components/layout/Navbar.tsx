@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, BookOpen, Menu, X, ArrowLeft, Mic } from "lucide-react";
+import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, BookOpen, Menu, X, ArrowLeft, Mic, Bell } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { FadeLink } from "@/components/course/FadeLink";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { getRecentCourseSearches, addRecentCourseSearch, type RecentCourseSearch } from "@/lib/recentCourseSearches";
 
 const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$/;
@@ -389,6 +390,8 @@ export function Navbar() {
             </button>
           )}
 
+          {status === "authenticated" && <NotificationBell />}
+
           {status === "authenticated" ? (
             <div className="relative" ref={menuRef}>
               <button
@@ -408,7 +411,7 @@ export function Navbar() {
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg dark:border-white/10 dark:bg-neutral-900">
                   <div className="border-b border-slate-100 px-3 py-2 dark:border-white/10">
                     <FadeLink
-                      href={`/instructors/${session.user.id}`}
+                      href={session.user.role === "STUDENT" ? `/students/${session.user.id}` : `/instructors/${session.user.id}`}
                       onClick={() => setMenuOpen(false)}
                       className="block truncate text-sm font-medium text-slate-900 hover:underline dark:text-white"
                     >
@@ -441,6 +444,14 @@ export function Navbar() {
                     className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                   >
                     <LayoutDashboard size={14} /> A minha aprendizagem
+                  </FadeLink>
+
+                  <FadeLink
+                    href="/notifications"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <Bell size={14} /> Notificações
                   </FadeLink>
 
                   <FadeLink

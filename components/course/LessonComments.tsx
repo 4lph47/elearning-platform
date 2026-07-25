@@ -1,19 +1,48 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ThumbsUp, MessageSquare, Trash2, ChevronDown, Loader2 } from "lucide-react";
+import { ThumbsUp, MessageSquare, Trash2, Pencil, Check, X, ChevronDown, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
+import { FadeLink } from "@/components/course/FadeLink";
+import { MentionInput, type MentionInputHandle } from "@/components/course/MentionInput";
+import { splitMentionContent, decodeMentionContent } from "@/lib/mentions";
 
 const PAGE_SIZE = 15;
+const mentionFieldClass =
+  "w-full border-b border-slate-300 bg-transparent pb-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:text-white dark:placeholder-slate-500";
 
 export interface CommentData {
   id: string;
   content: string;
   createdAt: string;
+  updatedAt: string;
   user: { id: string; name: string };
   likeCount: number;
   likedByMe: boolean;
   replies: CommentData[];
+}
+
+// Converte "@[Nome](id)" em link clicável pro perfil público — o resto do
+// texto passa tal e qual. Usado tanto no comentário normal como (com o
+// texto já descodificado) na prévia truncada do carrossel fechado.
+function MentionText({ content }: { content: string }) {
+  return (
+    <>
+      {splitMentionContent(content).map((p, i) =>
+        p.type === "mention" ? (
+          <FadeLink
+            key={i}
+            href={`/u/${p.userId}`}
+            className="font-medium text-blue-500 hover:underline dark:text-blue-400"
+          >
+            @{p.name}
+          </FadeLink>
+        ) : (
+          <span key={i}>{p.text}</span>
+        )
+      )}
+    </>
+  );
 }
 
 function initials(name: string) {
@@ -38,7 +67,9 @@ function CommentPreviewRow({ comment }: { comment: CommentData }) {
           <span className="font-medium text-slate-800 dark:text-slate-100">{comment.user.name}</span>{" "}
           <span className="text-xs text-slate-500">{timeAgo(comment.createdAt)}</span>
         </p>
-        <p className="mt-0.5 truncate text-sm text-slate-600 dark:text-slate-300">{comment.content}</p>
+        <p className="mt-0.5 truncate text-sm text-slate-600 dark:text-slate-300">
+          {decodeMentionContent(comment.content).display}
+        </p>
       </div>
       {comment.likeCount > 0 && (
         <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">
@@ -76,6 +107,55 @@ function CommentRow({
   const [likeBurst, setLikeBurst] = useState<number | null>(null);
   const replyBoxRef = useRef<HTMLFormElement>(null);
   const replyToggleRef = useRef<HTMLButtonElement>(null);
+  const replyMentionRef = useRef<MentionInputHandle>(null);
+  const pendingReplySeedRef = useRef<{ name: string; id: string }[] | undefined>(undefined);
+
+  const [content, setContent] = useState(comment.content);
+  const [updatedAt, setUpdatedAt] = useState(comment.updatedAt);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const editMentionRef = useRef<MentionInputHandle>(null);
+  const editSeedRef = useRef<{ name: string; id: string }[] | undefined>(undefined);
+  // >2s de folga entre createdAt/updatedAt — margem contra diferenças de
+  // arredondamento da própria escrita inicial, não uma edição real.
+  const isEdited = new Date(updatedAt).getTime() - new Date(comment.createdAt).getTime() > 2000;
+
+  function startEdit() {
+    const { display, mentions } = decodeMentionContent(content);
+    editSeedRef.current = mentions;
+    setEditText(display);
+    setEditError(null);
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setEditError(null);
+  }
+
+  async function saveEdit() {
+    const encoded = (editMentionRef.current?.encode() ?? editText).trim();
+    if (!encoded) return;
+    setEditSaving(true);
+    setEditError(null);
+    const res = await fetch(`/api/lessons/${lessonId}/comments/${comment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: encoded }),
+    });
+    setEditSaving(false);
+    if (res.ok) {
+      const data = await res.json();
+      setContent(data.content);
+      setUpdatedAt(data.updatedAt);
+      setEditing(false);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setEditError(data.error ?? "Erro ao guardar");
+    }
+  }
 
   // Clique fora da caixa de resposta fecha-a sozinha — não precisa de
   // clicar em "Responder" outra vez pra tirá-la da frente. O próprio botão
@@ -113,12 +193,13 @@ function CommentRow({
 
   async function submitReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    const encoded = (replyMentionRef.current?.encode() ?? replyText).trim();
+    if (!encoded) return;
     setPosting(true);
     const res = await fetch(`/api/lessons/${lessonId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: replyText, parentId: rootId }),
+      body: JSON.stringify({ content: encoded, parentId: rootId }),
     });
     setPosting(false);
     if (res.ok) {
@@ -140,6 +221,7 @@ function CommentRow({
 
   if (deleted) return null;
   const canDelete = currentUserId === comment.user.id || canModerate;
+  const canEdit = currentUserId === comment.user.id;
 
   return (
     <div className="flex gap-3">
@@ -149,53 +231,111 @@ function CommentRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm">
           <span className="font-medium text-slate-800 dark:text-slate-100">{comment.user.name}</span>{" "}
-          <span className="text-xs text-slate-500">{timeAgo(comment.createdAt)}</span>
+          <span className="text-xs text-slate-500">
+            {timeAgo(comment.createdAt)}
+            {isEdited && " · editado"}
+          </span>
         </p>
-        <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">{comment.content}</p>
 
-        <div className="mt-1.5 flex items-center gap-4 text-xs text-slate-500">
-          <button
-            onClick={toggleLike}
-            disabled={!currentUserId}
-            className={`relative flex items-center gap-1 outline-none [-webkit-tap-highlight-color:transparent] hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
-          >
-            <ThumbsUp size={13} className={liked ? "fill-blue-400" : ""} /> {likeCount > 0 ? likeCount : ""}
-            {likeBurst && (
-              <ThumbsUp
-                key={likeBurst}
-                size={26}
-                className="pointer-events-none absolute left-1/2 top-1/2 z-10 fill-blue-400 text-blue-400 animate-like-pop"
-              />
-            )}
-          </button>
-          {currentUserId && (
+        {editing ? (
+          <div className="mt-1.5">
+            <MentionInput
+              ref={editMentionRef}
+              lessonId={lessonId}
+              value={editText}
+              onChange={setEditText}
+              autoFocus
+              seedMentions={editSeedRef.current}
+              className={mentionFieldClass}
+            />
+            {editError && <p className="mt-1 text-xs text-red-500">{editError}</p>}
+            <div className="mt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={editSaving}
+                className="rounded-full px-3 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-white/5"
+              >
+                <X size={12} className="mr-1 inline" /> Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={editSaving || !editText.trim()}
+                className="rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+              >
+                {editSaving ? <Loader2 size={12} className="mr-1 inline animate-spin" /> : <Check size={12} className="mr-1 inline" />}
+                Guardar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
+            <MentionText content={content} />
+          </p>
+        )}
+
+        {!editing && (
+          <div className="mt-1.5 flex items-center gap-4 text-xs text-slate-500">
             <button
-              ref={replyToggleRef}
-              onClick={() => {
-                setReplying((v) => !v);
-                if (!replying && isReply) setReplyText(`@${comment.user.name} `);
-              }}
-              className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300"
+              onClick={toggleLike}
+              disabled={!currentUserId}
+              className={`relative flex items-center gap-1 outline-none [-webkit-tap-highlight-color:transparent] hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
             >
-              <MessageSquare size={13} /> Responder
+              <ThumbsUp size={13} className={liked ? "fill-blue-400" : ""} /> {likeCount > 0 ? likeCount : ""}
+              {likeBurst && (
+                <ThumbsUp
+                  key={likeBurst}
+                  size={26}
+                  className="pointer-events-none absolute left-1/2 top-1/2 z-10 fill-blue-400 text-blue-400 animate-like-pop"
+                />
+              )}
             </button>
-          )}
-          {canDelete && (
-            <button onClick={handleDelete} className="flex items-center gap-1 hover:text-red-400">
-              <Trash2 size={13} /> Eliminar
-            </button>
-          )}
-        </div>
+            {currentUserId && (
+              <button
+                ref={replyToggleRef}
+                onClick={() => {
+                  const opening = !replying;
+                  setReplying(opening);
+                  if (opening && isReply) {
+                    setReplyText(`@${comment.user.name} `);
+                    pendingReplySeedRef.current = [{ name: comment.user.name, id: comment.user.id }];
+                  } else if (opening) {
+                    pendingReplySeedRef.current = undefined;
+                  }
+                }}
+                className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                <MessageSquare size={13} /> Responder
+              </button>
+            )}
+            {canEdit && (
+              <button onClick={startEdit} className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300">
+                <Pencil size={13} /> Editar
+              </button>
+            )}
+            {canDelete && (
+              <button onClick={handleDelete} className="flex items-center gap-1 hover:text-red-400">
+                <Trash2 size={13} /> Eliminar
+              </button>
+            )}
+          </div>
+        )}
 
         {replying && (
           <form ref={replyBoxRef} onSubmit={submitReply} className="mt-2 flex gap-2">
-            <input
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Escreve uma resposta..."
-              autoFocus
-              className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-            />
+            <div className="flex-1">
+              <MentionInput
+                ref={replyMentionRef}
+                lessonId={lessonId}
+                value={replyText}
+                onChange={setReplyText}
+                placeholder="Escreve uma resposta..."
+                autoFocus
+                seedMentions={pendingReplySeedRef.current}
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+              />
+            </div>
             <button
               type="submit"
               disabled={posting || !replyText.trim()}
@@ -270,6 +410,7 @@ export function LessonComments({
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
   const fetchingRef = useRef(false);
+  const commentMentionRef = useRef<MentionInputHandle>(null);
 
   // Carrossel fechado: 1 comentário de cada vez, entre os N mais gostados,
   // esmorecendo/deslizando pra cima na troca — expande para a lista
@@ -369,12 +510,13 @@ export function LessonComments({
 
   async function submitComment(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
+    const encoded = (commentMentionRef.current?.encode() ?? text).trim();
+    if (!encoded) return;
     setPosting(true);
     const res = await fetch(`/api/lessons/${lessonId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text }),
+      body: JSON.stringify({ content: encoded }),
     });
     setPosting(false);
     if (res.ok) {
@@ -450,11 +592,13 @@ export function LessonComments({
             {currentUserName ? initials(currentUserName) : "?"}
           </span>
           <div className="flex-1">
-            <input
+            <MentionInput
+              ref={commentMentionRef}
+              lessonId={lessonId}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={setText}
               placeholder="Adiciona um comentário..."
-              className="w-full border-b border-slate-300 bg-transparent pb-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:text-white dark:placeholder-slate-500"
+              className={mentionFieldClass}
             />
             {text && (
               <div className="mt-2 flex justify-end gap-2">

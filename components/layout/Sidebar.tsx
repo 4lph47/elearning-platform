@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   BarChart3,
   UserCircle,
+  Bell,
   ChevronDown,
   type LucideIcon,
 } from "lucide-react";
@@ -70,6 +71,12 @@ export function Sidebar() {
     { href: "/courses", label: "Catálogo", icon: LayoutGrid },
     ...(status === "authenticated"
       ? [{ href: "/dashboard", label: "A minha aprendizagem", icon: BookOpen } as LeafItem]
+      : []),
+    ...(status === "authenticated"
+      ? [{ href: "/notifications", label: "Notificações", icon: Bell } as LeafItem]
+      : []),
+    ...(status === "authenticated" && session.user.role === "STUDENT"
+      ? [{ href: `/students/${session.user.id}`, label: "Perfil público", icon: UserCircle } as LeafItem]
       : []),
     ...(status === "authenticated"
       ? [{ href: "/cart", label: "Carrinho", icon: ShoppingCart } as LeafItem]

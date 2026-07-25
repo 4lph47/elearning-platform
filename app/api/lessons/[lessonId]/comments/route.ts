@@ -4,6 +4,8 @@ import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canAccessLesson, getMentionableUsers } from "@/lib/lessonAccess";
+import { extractMentionIds } from "@/lib/mentions";
 import {
   commentsTag,
   getLessonCommentsCounts,
@@ -17,23 +19,6 @@ const commentSchema = z.object({
   content: z.string().min(1, "Escreve um comentário").max(2000),
   parentId: z.string().optional().nullable(),
 });
-
-async function canAccessLesson(lessonId: string, userId: string) {
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
-    include: { module: { include: { course: { include: { collaborators: { select: { id: true } } } } } } },
-  });
-  if (!lesson) return null;
-
-  const course = lesson.module.course;
-  const isOwner = course.instructorId === userId || course.collaborators.some((c) => c.id === userId);
-  if (isOwner || lesson.isFreePreview) return lesson;
-
-  const enrollment = await prisma.enrollment.findUnique({
-    where: { userId_courseId: { userId, courseId: course.id } },
-  });
-  return enrollment ? lesson : null;
-}
 
 export async function GET(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -86,15 +71,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
     }
   }
 
+  // Só notifica quem realmente pode ver esta aula (participante do curso) —
+  // um id de menção fabricado à mão no pedido nunca chega a criar Notification.
+  const mentionable = await getMentionableUsers(lessonId);
+  const mentionableIds = new Set(mentionable.map((u) => u.id));
+  const mentionedUserIds = extractMentionIds(parsed.data.content).filter(
+    (id) => id !== session.user.id && mentionableIds.has(id)
+  );
+
   const comment = await prisma.lessonComment.create({
     data: {
       lessonId,
       userId: session.user.id,
       content: parsed.data.content,
       parentId: parsed.data.parentId ?? null,
+      mentionedUserIds,
     },
     include: { user: { select: { id: true, name: true } } },
   });
+
+  if (mentionedUserIds.length > 0) {
+    await prisma.notification.createMany({
+      data: mentionedUserIds.map((recipientId) => ({
+        type: "MENTION" as const,
+        recipientId,
+        actorId: session.user.id,
+        commentId: comment.id,
+        courseSlug: lesson.module.course.slug,
+        lessonId,
+      })),
+    });
+  }
 
   revalidateTag(commentsTag(lessonId));
   return NextResponse.json(comment, { status: 201 });

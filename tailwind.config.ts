@@ -40,9 +40,10 @@ const config: Config = {
         // do ponto de repouso (ease-in), volta a assentar a desacelerar
         // (ease-out) — só assim fica um movimento contínuo, não aos
         // solavancos.
-        // Scale-pop tipo Instagram/TikTok — começa nivelado (rotate 0), sobe
-        // até ao pico e volta a assentar nivelado, sem tilt inicial (não
-        // "vem de baixo"); wiggle leve só no fim de volta pra ficar vivo.
+        // Scale-pop tipo Instagram/TikTok — entra nivelado e já visível
+        // (0-20%, sem rotação nenhuma), só DEPOIS sobe até ao pico e volta a
+        // assentar nivelado. Rotação só começa quando já dá pra ver o
+        // ícone parado, senão o 1º frame visível já vinha inclinado.
         "like-pop": {
           "0%": {
             opacity: "0",
@@ -51,7 +52,7 @@ const config: Config = {
           },
           "20%": {
             opacity: "1",
-            transform: "translate(-50%, -50%) scale(1.4) rotate(14deg)",
+            transform: "translate(-50%, -50%) scale(1.4) rotate(0deg)",
             animationTimingFunction: "ease-in",
           },
           "35%": {
@@ -59,15 +60,15 @@ const config: Config = {
             animationTimingFunction: "ease-out",
           },
           "50%": {
-            transform: "translate(-50%, -50%) scale(1.15) rotate(3deg)",
+            transform: "translate(-50%, -50%) scale(1.15) rotate(14deg)",
             animationTimingFunction: "ease-in",
           },
           "63%": {
-            transform: "translate(-50%, -50%) scale(0.95) rotate(-2deg)",
+            transform: "translate(-50%, -50%) scale(0.95) rotate(6deg)",
             animationTimingFunction: "ease-out",
           },
           "75%": {
-            transform: "translate(-50%, -50%) scale(1.05) rotate(1deg)",
+            transform: "translate(-50%, -50%) scale(1.05) rotate(-2deg)",
             animationTimingFunction: "ease-in",
           },
           "87%": {

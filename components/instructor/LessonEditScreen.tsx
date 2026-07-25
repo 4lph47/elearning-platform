@@ -376,7 +376,7 @@ export function LessonEditScreen({
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {isEditing ? "Editar aula" : "Nova aula"}
           </p>
-          <h1 className="mt-2 truncate text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="mt-2 break-words text-2xl font-bold text-slate-900 dark:text-white">
             {title || "Sem título"}
           </h1>
         </div>

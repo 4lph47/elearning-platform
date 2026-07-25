@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { PersonTile } from "@/components/course/PersonTile";
 
 export interface PersonResult {
   id: string;
@@ -18,45 +19,19 @@ export interface BundleResult {
   href: string;
 }
 
-const ROLE_LABEL: Record<PersonResult["role"], string> = {
-  STUDENT: "Aluno",
-  INSTRUCTOR: "Instrutor",
-  ADMIN: "Admin",
-};
-
-// Resultados de pesquisa que não são cursos — pessoas e bundles. Visual
-// consistente com os tiles do catálogo/marketplace (aspect-video, ring,
-// hover) mesmo sem reaproveitar o PosterCard/CourseRow (esses são feitos à
-// medida de CourseCardData, não dá para forçar pessoas/bundles lá dentro).
+// Resultados de pesquisa que não são cursos — pessoas e bundles. Pessoas
+// usam a mesma estrutura/animação dos cards de curso (PersonTile reaproveita
+// o CardTransitionContext do CourseTile: avatar em cima, nome embaixo, voo
+// até à posição real no perfil). Bundles ficam com um tile mais simples
+// (sem voo — não têm uma página própria com hero pra aterrar).
 export function PeopleRow({ people }: { people: PersonResult[] }) {
   if (people.length === 0) return null;
   return (
     <section className="py-5">
       <h2 className="mb-3 px-4 text-lg font-semibold text-slate-900 dark:text-white sm:px-8 sm:text-xl">Pessoas</h2>
-      <div className="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3 sm:px-8 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 px-4 sm:grid-cols-4 sm:px-8 lg:grid-cols-6">
         {people.map((p) => (
-          <Link
-            key={p.id}
-            href={p.role === "STUDENT" ? `/students/${p.id}` : `/instructors/${p.id}`}
-            className="group flex items-center gap-3 rounded-lg p-2 ring-1 ring-transparent transition-colors hover:ring-slate-300 dark:hover:ring-white/20"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800 ring-1 ring-white/10">
-              {p.image ? (
-                <Image src={p.image} alt={p.name} width={48} height={48} className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-sm font-bold text-slate-400">{p.name.charAt(0).toUpperCase()}</span>
-              )}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-semibold text-slate-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
-                {p.name}
-              </span>
-              <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                {p.username ? `@${p.username} · ` : ""}
-                {ROLE_LABEL[p.role]}
-              </span>
-            </span>
-          </Link>
+          <PersonTile key={p.id} person={p} />
         ))}
       </div>
     </section>

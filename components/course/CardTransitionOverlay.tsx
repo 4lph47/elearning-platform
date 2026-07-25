@@ -155,10 +155,12 @@ export function CardTransitionOverlay() {
   // Duração muda por fase: sem transição enquanto nasce (0), 300ms a crescer
   // pro zoom (bate com a row), 450ms a voar pro alvo real (hero/aula).
   const transitionMs = !zoomed ? 0 : animate ? FLY_MS : ZOOM_MS;
-  // "hero" tem alvo real pro texto voar (CourseHero chama arrive() com as
-  // posições). "lesson-video"/"lesson-text" não têm onde o texto aterrar —
-  // fica no sítio (zoomado) e esmorece assim que o vídeo começa a voar.
-  const fliesToTarget = state.destinationKind === "hero";
+  // "hero"/"profile" têm alvo real pro texto voar (CourseHero/perfil chamam
+  // arrive() com as posições). "lesson-video"/"lesson-text" não têm onde o
+  // texto aterrar — fica no sítio (zoomado) e esmorece assim que o vídeo
+  // começa a voar.
+  const fliesToTarget = state.destinationKind === "hero" || state.destinationKind === "profile";
+  const isProfile = state.destinationKind === "profile";
   const textOpacity = animate && !fliesToTarget ? 0 : 1;
   const videoBox = !zoomed ? state.videoRawBox : animate ? state.videoTargetBox : state.videoBox;
   const titleBox = !zoomed
@@ -219,7 +221,7 @@ export function CardTransitionOverlay() {
       )}
       <div
         ref={videoWrapRef}
-        className="absolute overflow-hidden rounded-lg bg-black"
+        className={`absolute overflow-hidden bg-black ${isProfile ? "rounded-full" : "rounded-lg"}`}
         style={{ ...boxStyle(videoBox), transition: `all ${transitionMs}ms ease-out, transform 0s linear` }}
       >
         {state.youtubeId ? (
@@ -248,9 +250,18 @@ export function CardTransitionOverlay() {
         ) : state.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={state.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+        ) : isProfile ? (
+          <div className="flex h-full w-full items-center justify-center bg-white/15 text-lg font-bold text-white">
+            {state.title
+              .split(" ")
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((p) => p[0]?.toUpperCase())
+              .join("") || "?"}
+          </div>
         ) : null}
 
-        {state.titleBox && animate && fliesToTarget && (
+        {state.titleBox && animate && fliesToTarget && !isProfile && (
           <>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white via-white/70 to-white/30 dark:from-black dark:via-black/70 dark:to-black/30 transition-opacity duration-300" />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/85 via-white/20 to-transparent dark:from-black/85 dark:via-black/20 dark:to-transparent transition-opacity duration-300" />

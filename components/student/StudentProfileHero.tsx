@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { InstructorHeroGradient } from "@/components/instructor/InstructorHeroGradient";
+import { boxFromRect, textBoxFromElement, useCardTransition } from "@/components/course/CardTransitionContext";
 import { SOCIAL_PLATFORMS, matchesPlatformDomain, type SocialPlatformKey } from "@/lib/socialPlatforms";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/formDraft";
@@ -125,6 +126,26 @@ export function StudentProfileHero({
   const [certifications, setCertifications] = useState<CertificationInput[]>(
     draft?.value.certifications ?? initialCertifications
   );
+
+  // PersonTile (resultados de pesquisa) faz o avatar/nome voarem até aqui —
+  // mesmo mecanismo do CourseHero para o vídeo/título de um curso.
+  const avatarBoxRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const { state: transitionState, arrive } = useCardTransition();
+  const transitionPending = transitionState?.slug === profileId && !transitionState.arrived;
+  useEffect(() => {
+    if (!transitionPending) return;
+    const rect = avatarBoxRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    arrive(profileId, {
+      video: boxFromRect(rect),
+      title: nameRef.current ? textBoxFromElement(nameRef.current) : null,
+      category: null,
+      instructor: null,
+      rating: null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transitionPending, profileId]);
 
   const [dirty, setDirty] = useState(false);
   const skipDirtyRef = useRef(true);
@@ -362,18 +383,20 @@ export function StudentProfileHero({
         </div>
       )}
 
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image}
-          alt={name}
-          className="h-24 w-24 rounded-full object-cover shadow-lg shadow-black/30 ring-4 ring-white/30"
-        />
-      ) : (
-        <span className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-bold text-white shadow-lg shadow-black/30 ring-4 ring-white/30 backdrop-blur">
-          {initials(name)}
-        </span>
-      )}
+      <div ref={avatarBoxRef} className="h-24 w-24 shrink-0 rounded-full">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={name}
+            className="h-24 w-24 rounded-full object-cover shadow-lg shadow-black/30 ring-4 ring-white/30"
+          />
+        ) : (
+          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-bold text-white shadow-lg shadow-black/30 ring-4 ring-white/30 backdrop-blur">
+            {initials(name)}
+          </span>
+        )}
+      </div>
 
       {showInputs && (
         <div className="mt-2 max-w-xs">
@@ -391,7 +414,7 @@ export function StudentProfileHero({
           className="mt-1 w-full max-w-lg rounded-md border border-white/25 bg-white/10 px-3 py-1.5 text-3xl font-bold text-white placeholder-white/50 focus:border-white/50 focus:outline-none sm:text-5xl"
         />
       ) : (
-        <h1 className="mt-1 text-3xl font-bold text-white sm:text-5xl">{name}</h1>
+        <h1 ref={nameRef} className="mt-1 text-3xl font-bold text-white sm:text-5xl">{name}</h1>
       )}
 
       {showInputs ? (

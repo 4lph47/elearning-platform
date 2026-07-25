@@ -41,7 +41,14 @@ export function LessonEngagementBar({
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [reaction, setReaction] = useState(initialReaction);
   const [copied, setCopied] = useState(false);
+  const [likeBurst, setLikeBurst] = useState<number | null>(null);
   const primaryAuthor = authors[0];
+
+  function triggerLikeBurst() {
+    const id = Date.now();
+    setLikeBurst(id);
+    setTimeout(() => setLikeBurst((b) => (b === id ? null : b)), 700);
+  }
 
   async function applyReaction(next: "LIKE" | "DISLIKE" | null) {
     const prev = reaction;
@@ -64,6 +71,7 @@ export function LessonEngagementBar({
 
   async function react(type: "LIKE" | "DISLIKE") {
     if (!isAuthenticated) return;
+    if (type === "LIKE" && reaction !== "LIKE") triggerLikeBurst();
     await applyReaction(reaction === type ? null : type);
   }
 
@@ -123,12 +131,19 @@ export function LessonEngagementBar({
       <button
         onClick={() => react("LIKE")}
         disabled={!isAuthenticated}
-        className={`flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed ${
+        className={`relative flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed ${
           reaction === "LIKE" ? "text-blue-400" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
         }`}
       >
         <ThumbsUp size={19} className={reaction === "LIKE" ? "fill-blue-400" : ""} />
         {likeCount}
+        {likeBurst && (
+          <ThumbsUp
+            key={likeBurst}
+            size={38}
+            className="pointer-events-none absolute left-1/2 top-1/2 z-10 fill-blue-400 text-blue-400 animate-like-pop"
+          />
+        )}
       </button>
 
       <button

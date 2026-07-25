@@ -86,7 +86,7 @@ export function CourseChatbot({
     <>
       <button
         onClick={() => onOpenChange(true)}
-        className={`fixed right-6 top-20 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all duration-150 hover:bg-blue-500 ${
+        className={`hidden fixed right-6 top-20 z-40 h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all duration-150 hover:bg-blue-500 ${
           open ? "pointer-events-none scale-90 opacity-0" : "scale-100 opacity-100"
         }`}
         aria-label="Abrir assistente do curso"

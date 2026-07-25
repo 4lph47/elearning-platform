@@ -73,6 +73,7 @@ function CommentRow({
   const [showReplies, setShowReplies] = useState(false);
   const [posting, setPosting] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [likeBurst, setLikeBurst] = useState<number | null>(null);
   const replyBoxRef = useRef<HTMLFormElement>(null);
   const replyToggleRef = useRef<HTMLButtonElement>(null);
 
@@ -95,6 +96,11 @@ function CommentRow({
 
   async function toggleLike() {
     if (!currentUserId) return;
+    if (!liked) {
+      const id = Date.now();
+      setLikeBurst(id);
+      setTimeout(() => setLikeBurst((b) => (b === id ? null : b)), 700);
+    }
     setLiked((v) => !v);
     setLikeCount((c) => c + (liked ? -1 : 1));
     const res = await fetch(`/api/lessons/${lessonId}/comments/${comment.id}/like`, { method: "POST" });
@@ -151,9 +157,16 @@ function CommentRow({
           <button
             onClick={toggleLike}
             disabled={!currentUserId}
-            className={`flex items-center gap-1 outline-none [-webkit-tap-highlight-color:transparent] hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
+            className={`relative flex items-center gap-1 outline-none [-webkit-tap-highlight-color:transparent] hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
           >
             <ThumbsUp size={13} className={liked ? "fill-blue-400" : ""} /> {likeCount > 0 ? likeCount : ""}
+            {likeBurst && (
+              <ThumbsUp
+                key={likeBurst}
+                size={26}
+                className="pointer-events-none absolute left-1/2 top-1/2 z-10 fill-blue-400 text-blue-400 animate-like-pop"
+              />
+            )}
           </button>
           {currentUserId && (
             <button

@@ -102,23 +102,21 @@ async function withRetries<T>(fn: () => Promise<T>, attempts: number): Promise<T
 export async function transcribeFileToVtt(file: File, onProgress?: (phase: CaptionsPhase) => void): Promise<string> {
   onProgress?.("loading-model");
   const { pipeline } = await import(/* webpackIgnore: true */ TRANSFORMERS_CDN_URL);
-  // dtype explícito nos dois módulos — por omissão a lib escolhe q4 pro
-  // decoder deste modelo, e o ficheiro q4 atualmente servido pro
-  // Xenova/whisper-base vem sem o scale tensor que o próprio grafo ONNX
-  // exige ("Can't create a session... Missing required scale:
-  // model.decoder.embed_tokens.weight_merged_0_scale") — sessão nunca
-  // chega a criar-se. fp32 (tentado antes) evita o q4 quebrado mas é
-  // pesado a mais (encoder 82.5MB + decoder 209MB, ~291MB ao todo) —
-  // download longo o suficiente pra bater em ERR_HTTP2_PROTOCOL_ERROR a
-  // meio. q8 (quantização de 8-bit "clássica", ficheiros "_quantized" no
-  // repo) é bem mais leve (23.2MB + 53.7MB, ~77MB) e não tem o problema
-  // do q4 (esquema de quantização diferente, sem tensor de escala externo
-  // em falta).
+  // Bug conhecido do runtime v4 do onnxruntime-web (huggingface/
+  // transformers.js#1707): o otimizador novo reescreve o padrão QDQ em
+  // MatMulNBits e passa a exigir um scale tensor que os ficheiros
+  // quantizados (q4 E q8) do DECODER deste modelo não têm — exportados
+  // antes desse runtime existir ("Can't create a session... Missing
+  // required scale: model.decoder.embed_tokens.weight_merged_0_scale").
+  // Sem fix do lado da HF, só fp32 no decoder carrega. Encoder fica em q8
+  // (esse não tem o problema, poupa download) — total ainda uns 232MB
+  // (23.2MB + 209MB), por isso o retry acima importa: um download deste
+  // tamanho não é imune a um ERR_HTTP2_PROTOCOL_ERROR a meio.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const transcriber = await withRetries<any>(
     () =>
       pipeline("automatic-speech-recognition", MODEL_ID, {
-        dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
+        dtype: { encoder_model: "q8", decoder_model_merged: "fp32" },
       }),
     3
   );

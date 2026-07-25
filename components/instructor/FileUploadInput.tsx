@@ -435,6 +435,7 @@ export function FileUploadInput({
   compactMobile,
   resumeUpload,
   onFinalizePending,
+  onStageChange,
 }: {
   kind: Kind;
   // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
@@ -444,9 +445,13 @@ export function FileUploadInput({
   currentName?: string | null;
   onUploaded: (result: UploadResult) => void;
   // Ficheiro bruto assim que é escolhido, antes de qualquer envio — usado
-  // pela geração de legendas automáticas (lib/captions.ts), que corre em
-  // paralelo ao upload, direto no browser, sobre o MESMO ficheiro original.
+  // pela geração de legendas automáticas (lib/captions.ts), que arranca
+  // depois da compressão terminar, sobre o MESMO ficheiro original.
   onFileSelected?: (file: File) => void;
+  // Espelha o estado interno de uploading/compressing pro pai poder desenhar
+  // um indicador de etapas por cima (ver stepper em LessonEditScreen.tsx) —
+  // null quando não há nenhum envio em curso.
+  onStageChange?: (stage: "uploading" | "compressing" | null) => void;
   // Em espaços apertados no mobile (ex.: painel de banner com dois
   // uploaders lado a lado), o nome do ficheiro que o próprio browser
   // desenha ao lado do botão nativo não cabe — encolhe o input ao tamanho
@@ -475,6 +480,15 @@ export function FileUploadInput({
   // UI a mostrar o resultado do envio ANTIGO a chegar depois do novo já ter
   // começado.
   const generationRef = useRef(0);
+
+  // Deriva o stage reportado ao pai diretamente do estado interno, em vez de
+  // chamar onStageChange em cada ponto que mexe em uploading/compressing —
+  // um único sítio, nunca desalinha dos dois.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!uploading) onStageChange?.(null);
+    else onStageChange?.(compressing ? "compressing" : "uploading");
+  }, [uploading, compressing]);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

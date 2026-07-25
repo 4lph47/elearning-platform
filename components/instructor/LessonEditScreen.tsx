@@ -110,6 +110,10 @@ export function LessonEditScreen({
   // sobrevive a um refresh) — só reflete o progresso da geração em curso
   // nesta sessão do browser.
   const [captionsPhase, setCaptionsPhase] = useState<CaptionsPhase | "idle" | "done" | "error">("idle");
+  // Espelha o stage interno do FileUploadInput do vídeo (ver onStageChange)
+  // — só serve pro stepper de 3 etapas acima do input, não guarda mais
+  // nenhuma lógica própria.
+  const [videoStage, setVideoStage] = useState<"uploading" | "compressing" | null>(null);
   const [pendingVideoUpload, setPendingVideoUpload] = useState<ResumableFinalize | null>(
     draft?.value.pendingVideoUpload ?? null
   );
@@ -267,6 +271,15 @@ export function LessonEditScreen({
     done: "Legendas geradas automaticamente.",
     error: "Falha ao gerar legendas automáticas — a aula fica sem legendas.",
   };
+
+  // Pipeline do vídeo: enviar -> comprimir -> legendas (nessa ordem, ver
+  // handleGenerateCaptions chamado só no onUploaded). O stepper só aparece
+  // enquanto alguma destas 3 etapas está mesmo a decorrer — nada antes do
+  // upload arrancar, nada depois de legendas terminar (done/error já têm o
+  // próprio aviso, ver CAPTIONS_PHASE_LABEL acima).
+  const captionsRunning = captionsPhase === "loading-model" || captionsPhase === "decoding-audio" || captionsPhase === "transcribing";
+  const videoPipelineStep = videoStage === "uploading" ? 1 : videoStage === "compressing" ? 2 : captionsRunning ? 3 : null;
+  const VIDEO_PIPELINE_STEPS = ["Enviar vídeo", "Comprimir vídeo", "Gerar legendas"];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -485,10 +498,36 @@ export function LessonEditScreen({
             {type === "VIDEO" ? (
               <div id="contentUrl" className="space-y-2">
                 <Label>Vídeo da aula (obrigatório)</Label>
+                {videoPipelineStep !== null && (
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    {VIDEO_PIPELINE_STEPS.map((stepLabel, i) => {
+                      const stepNumber = i + 1;
+                      const isDone = stepNumber < videoPipelineStep;
+                      const isCurrentStep = stepNumber === videoPipelineStep;
+                      return (
+                        <div key={stepLabel} className="flex items-center gap-2">
+                          {i > 0 && <span className="text-slate-300 dark:text-white/20">→</span>}
+                          <span
+                            className={
+                              isCurrentStep
+                                ? "font-medium text-blue-600 dark:text-blue-400"
+                                : isDone
+                                  ? "text-slate-400 line-through dark:text-slate-500"
+                                  : ""
+                            }
+                          >
+                            {stepNumber}. {stepLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <FileUploadInput
                   kind="VIDEO"
                   currentUrl={contentUrl}
                   currentName={contentName}
+                  onStageChange={setVideoStage}
                   onUploaded={(r) => {
                     if (localPreviewUrlRef.current) {
                       URL.revokeObjectURL(localPreviewUrlRef.current);

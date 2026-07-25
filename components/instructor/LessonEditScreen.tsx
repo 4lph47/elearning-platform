@@ -370,7 +370,7 @@ export function LessonEditScreen({
       </CornerCardStack>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {isEditing ? "Editar aula" : "Nova aula"}
           </p>

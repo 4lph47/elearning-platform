@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const wantsToTeach = role === "instrutor";
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [bio, setBio] = useState("");
@@ -56,6 +57,7 @@ export default function RegisterPage() {
       if (name.trim().length < 2) return "Nome deve ter pelo menos 2 caracteres";
       if (!email.trim()) return "Indica o teu email";
       if (password.length < 6) return "A password deve ter pelo menos 6 caracteres";
+      if (password !== confirmPassword) return "As passwords não coincidem";
       return null;
     }
     if (idx === 1) {
@@ -114,6 +116,12 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("As passwords não coincidem");
+      return;
+    }
+
     setLoading(true);
 
     const res = await fetch("/api/auth/register", {
@@ -250,7 +258,7 @@ export default function RegisterPage() {
           </ol>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className={`${wantsToTeach ? "grid grid-cols-1 gap-4 sm:grid-cols-3" : "space-y-4"} ${stepClass(0)}`}>
+          <div className={`${wantsToTeach ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" : "space-y-4"} ${stepClass(0)}`}>
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
                 Nome
@@ -298,6 +306,26 @@ export default function RegisterPage() {
                   className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                 />
               </div>
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                Confirmar password
+              </label>
+              <div className="relative">
+                <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                />
+              </div>
+              {confirmPassword && password !== confirmPassword && (
+                <p className="mt-1 text-xs text-red-500 dark:text-red-400">As passwords não coincidem</p>
+              )}
             </div>
           </div>
 

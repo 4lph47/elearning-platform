@@ -264,7 +264,7 @@ export function Navbar() {
         <div
           ref={searchRef}
           className={`relative ml-auto w-full min-w-0 overflow-visible transition-all duration-[900ms] ease-in-out sm:max-w-lg sm:opacity-100 ${
-            mobileSearchOpen ? "max-w-full opacity-100" : "max-w-0 opacity-0"
+            mobileSearchOpen ? "max-w-full opacity-100" : "max-w-0 opacity-0 pointer-events-none sm:pointer-events-auto"
           }`}
         >
           <form onSubmit={handleSearch}>

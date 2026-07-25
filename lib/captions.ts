@@ -82,21 +82,21 @@ const MODEL_ID = "Xenova/whisper-base";
 
 // As duas falhas vistas até agora neste carregamento (ERR_HTTP2_PROTOCOL_ERROR,
 // "Failed to fetch") são de rede/CDN a meio de um download de ~77MB — não
-// falhas permanentes. Repete pra sempre (backoff cresce até um teto, nunca
-// martela sem parar) em vez de desistir depois de um nº fixo de tentativas —
-// mesmo princípio do upload de vídeo (withUploadRetries em
-// FileUploadInput.tsx): numa ligação instável, quem está a apanhar sinal
-// intermitente não devia ter de voltar a escolher o ficheiro só porque
-// desistimos cedo de mais.
-async function withRetries<T>(fn: () => Promise<T>): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
+// falhas permanentes. Teto de tentativas de propósito (ao contrário do
+// upload de vídeo): se o erro NÃO for de rede mas sim permanente (ex.: o
+// bug do q4 já visto antes), repetir pra sempre nunca ia conseguir, e sem
+// teto não dava pra distinguir "ainda a tentar" de "preso".
+async function withRetries<T>(fn: () => Promise<T>, attempts: number): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (err) {
-      console.warn(`[captions] carregamento do modelo falhou, a repetir:`, err);
-      await new Promise((r) => setTimeout(r, Math.min(1500 * attempt, 15000)));
+      lastErr = err;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
     }
   }
+  throw lastErr;
 }
 
 export async function transcribeFileToVtt(file: File, onProgress?: (phase: CaptionsPhase) => void): Promise<string> {
@@ -119,7 +119,8 @@ export async function transcribeFileToVtt(file: File, onProgress?: (phase: Capti
     () =>
       pipeline("automatic-speech-recognition", MODEL_ID, {
         dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
-      })
+      }),
+    3
   );
 
   onProgress?.("decoding-audio");

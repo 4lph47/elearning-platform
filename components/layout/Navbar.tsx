@@ -20,6 +20,8 @@ interface BundleSuggestion {
   id: string;
   name: string;
   thumbnailUrl: string | null;
+  kind: "resale" | "instructor";
+  instructorId: string | null;
 }
 
 interface UserSuggestion {
@@ -34,9 +36,19 @@ interface SearchSuggestions {
   courses: RecentCourseSearch[];
   bundles: BundleSuggestion[];
   users: UserSuggestion[];
+  instructors: UserSuggestion[];
 }
 
-const EMPTY_SUGGESTIONS: SearchSuggestions = { courses: [], bundles: [], users: [] };
+interface BestDeal {
+  slug: string;
+  title: string;
+  thumbnailUrl: string | null;
+  price: number;
+  originalPrice: number;
+  discountPct: number;
+}
+
+const EMPTY_SUGGESTIONS: SearchSuggestions = { courses: [], bundles: [], users: [], instructors: [] };
 
 interface MinimalSpeechRecognition {
   lang: string;
@@ -71,10 +83,12 @@ export function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [suggestions, setSuggestions] = useState<SearchSuggestions>(EMPTY_SUGGESTIONS);
   const [recents, setRecents] = useState<RecentCourseSearch[]>([]);
+  const [bestDeals, setBestDeals] = useState<BestDeal[]>([]);
   const [desktopFocused, setDesktopFocused] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const bestDealsLoaded = useRef(false);
 
   const hasHero = HERO_PATH.test(pathname);
   const transparent = hasHero && !scrolled;
@@ -89,6 +103,15 @@ export function Navbar() {
 
   useEffect(() => {
     if (dropdownOpen) setRecents(getRecentCourseSearches());
+  }, [dropdownOpen]);
+
+  useEffect(() => {
+    if (!dropdownOpen || bestDealsLoaded.current) return;
+    bestDealsLoaded.current = true;
+    fetch("/api/courses/best-deals")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setBestDeals)
+      .catch(() => {});
   }, [dropdownOpen]);
 
   useEffect(() => {
@@ -210,7 +233,9 @@ export function Navbar() {
     setMobileSearchOpen(false);
     setDesktopFocused(false);
     setQ("");
-    fadeNavigate(`/resale/bundles/${item.id}/checkout`);
+    fadeNavigate(
+      item.kind === "resale" ? `/resale/bundles/${item.id}/checkout` : `/instructors/${item.instructorId}`
+    );
     (document.activeElement as HTMLElement | null)?.blur();
   }
 
@@ -219,6 +244,14 @@ export function Navbar() {
     setDesktopFocused(false);
     setQ("");
     fadeNavigate(item.role === "STUDENT" ? `/students/${item.id}` : `/instructors/${item.id}`);
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  function selectBestDeal(item: BestDeal) {
+    setMobileSearchOpen(false);
+    setDesktopFocused(false);
+    setQ("");
+    fadeNavigate(`/courses/${item.slug}`);
     (document.activeElement as HTMLElement | null)?.blur();
   }
 
@@ -258,10 +291,10 @@ export function Navbar() {
   const isUserSearch = trimmedQ.startsWith("@");
   const showRecents = !trimmedQ;
   const hasDropdownResults = showRecents
-    ? recents.length > 0
+    ? recents.length > 0 || bestDeals.length > 0
     : isUserSearch
     ? suggestions.users.length > 0
-    : suggestions.courses.length > 0 || suggestions.bundles.length > 0;
+    : suggestions.courses.length > 0 || suggestions.bundles.length > 0 || suggestions.instructors.length > 0;
 
   return (
     <>
@@ -363,24 +396,64 @@ export function Navbar() {
 
           {dropdownOpen && hasDropdownResults && (
             <div className="absolute inset-x-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg transition-opacity duration-300 dark:border-white/10 dark:bg-neutral-900">
-              {showRecents &&
-                recents.map((item) => (
-                  <button
-                    key={item.slug}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => selectCourse(item)}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
-                  >
-                    <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
-                      {item.thumbnailUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                      )}
-                    </span>
-                    <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
-                  </button>
-                ))}
+              {showRecents && recents.length > 0 && (
+                <>
+                  {bestDeals.length > 0 && (
+                    <p className="px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                      Pesquisas recentes
+                    </p>
+                  )}
+                  {recents.map((item) => (
+                    <button
+                      key={item.slug}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectCourse(item)}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                      <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
+                        {item.thumbnailUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                        )}
+                      </span>
+                      <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {showRecents && bestDeals.length > 0 && (
+                <>
+                  {recents.length > 0 && (
+                    <p className="border-t border-slate-100 px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:border-white/10 dark:text-slate-500">
+                      Melhores ofertas
+                    </p>
+                  )}
+                  {bestDeals.map((item) => (
+                    <button
+                      key={item.slug}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectBestDeal(item)}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                      <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
+                        {item.thumbnailUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
+                        <span className="block truncate text-xs text-emerald-600 dark:text-emerald-400">
+                          -{item.discountPct}%
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
 
               {!showRecents && isUserSearch &&
                 suggestions.users.map((u) => (
@@ -429,6 +502,30 @@ export function Navbar() {
                       <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
                     </button>
                   ))}
+                  {suggestions.instructors.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectUser(u)}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                        {u.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.image} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                            {u.name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}
+                          </span>
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{u.name}</span>
+                        <span className="block truncate text-xs text-slate-400 dark:text-slate-500">Instrutor</span>
+                      </span>
+                    </button>
+                  ))}
                   {suggestions.bundles.map((b) => (
                     <button
                       key={b.id}
@@ -445,7 +542,9 @@ export function Navbar() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{b.name}</span>
-                        <span className="block truncate text-xs text-slate-400 dark:text-slate-500">Bundle à venda</span>
+                        <span className="block truncate text-xs text-slate-400 dark:text-slate-500">
+                          {b.kind === "resale" ? "Bundle à venda" : "Pacote do instrutor"}
+                        </span>
                       </span>
                     </button>
                   ))}

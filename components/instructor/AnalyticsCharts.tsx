@@ -70,6 +70,7 @@ export interface HourPoint {
 interface Totals {
   enrollments: number;
   revenue: number;
+  resaleEarnings: number;
   lessons: number;
   views: number;
   likes: number;
@@ -375,7 +376,10 @@ export function AnalyticsCharts({
       icon: Wallet,
       label: "Receita",
       value: `${totals.revenue.toFixed(2)}€`,
-      hint: "estimativa total",
+      hint:
+        totals.resaleEarnings > 0
+          ? `estimativa total · +${totals.resaleEarnings.toFixed(2)}€ em comissões de revenda`
+          : "estimativa total",
       chartTitle: "Receita por semana",
       chartHint: "Últimas 12 semanas, somando todos os cursos.",
       render: () => (

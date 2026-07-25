@@ -35,6 +35,7 @@ interface CourseData {
   slug: string;
   price: number;
   originalPrice: number | null;
+  resaleMinCommission: number | null;
   rating: number;
   ratingCount: number;
   trailerUrl: string | null;
@@ -109,6 +110,7 @@ interface CourseDraft {
   level: string;
   price: string;
   originalPrice: string;
+  resaleMinCommission: string;
   trailerUrl: string | null;
   trailerName: string | null;
   learningOutcomes: string[];
@@ -137,6 +139,9 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
   const [price, setPrice] = useState(draft?.value.price ?? String(course.price));
   const [originalPrice, setOriginalPrice] = useState(
     draft?.value.originalPrice ?? (course.originalPrice != null ? String(course.originalPrice) : "")
+  );
+  const [resaleMinCommission, setResaleMinCommission] = useState(
+    draft?.value.resaleMinCommission ?? (course.resaleMinCommission != null ? String(course.resaleMinCommission) : "")
   );
   const [trailerUrl, setTrailerUrl] = useState(sanitizeUploadedUrl(draft?.value.trailerUrl ?? course.trailerUrl));
   const [trailerName, setTrailerName] = useState<string | null>(draft?.value.trailerName ?? null);
@@ -170,6 +175,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
       level,
       price,
       originalPrice,
+      resaleMinCommission,
       trailerUrl,
       trailerName,
       learningOutcomes: outcomes.items,
@@ -188,6 +194,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
     level,
     price,
     originalPrice,
+    resaleMinCommission,
     trailerUrl,
     trailerName,
     outcomes.items,
@@ -235,6 +242,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
         level,
         price: Number(price) || 0,
         originalPrice: originalPrice.trim() === "" ? null : Number(originalPrice) || 0,
+        resaleMinCommission: resaleMinCommission.trim() === "" ? null : Number(resaleMinCommission) || 0,
         trailerUrl,
         learningOutcomes: outcomes.items.map((o) => o.trim()).filter(Boolean),
         requirements: requirements.items.map((r) => r.trim()).filter(Boolean),
@@ -389,6 +397,18 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
                 placeholder="Ex.: 59.99"
                 value={originalPrice}
                 onChange={(e) => setOriginalPrice(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="resaleMinCommission">Comissão mínima de revenda (€, vazio = revenda desligada)</Label>
+              <Input
+                id="resaleMinCommission"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Ex.: 10"
+                value={resaleMinCommission}
+                onChange={(e) => setResaleMinCommission(e.target.value)}
               />
             </div>
           </div>

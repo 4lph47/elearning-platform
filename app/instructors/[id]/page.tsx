@@ -8,6 +8,7 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { InstructorCourseGrid } from "@/components/instructor/InstructorCourseGrid";
 import { InstructorProfileHero } from "@/components/instructor/InstructorProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
+import { ManageResaleSection } from "@/components/resale/ManageResaleSection";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,15 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       mediumUrl: true,
       twitchUrl: true,
       certifications: { orderBy: { order: "asc" }, select: { id: true, name: true, url: true } },
+      resaleListingsSold: {
+        where: { active: true, resaleBundleId: null },
+        orderBy: { createdAt: "desc" },
+        include: { course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } } },
+      },
+      resaleBundlesSold: {
+        orderBy: { createdAt: "desc" },
+        include: { listings: { include: { course: { select: { title: true } } } } },
+      },
       coursesTaught: {
         where: { published: true },
         orderBy: { createdAt: "desc" },
@@ -123,6 +133,76 @@ export default async function InstructorProfilePage({ params }: { params: Promis
     };
   });
 
+  const resaleListings = instructor.resaleListingsSold.map((listing) => ({
+    id: listing.id,
+    price: listing.price,
+    courseSlug: listing.course.slug,
+    courseTitle: listing.course.title,
+    courseThumbnailUrl: listing.course.thumbnailUrl,
+    courseCategory: listing.course.category,
+    courseLevel: listing.course.level,
+    sellerId: instructor.id,
+    sellerName: instructor.name,
+  }));
+  const resaleBundles = instructor.resaleBundlesSold.map((bundle) => ({
+    id: bundle.id,
+    name: bundle.name,
+    price: bundle.listings.reduce((sum, l) => sum + l.price, 0),
+    listingCount: bundle.listings.length,
+    courseTitles: bundle.listings.map((l) => l.course.title),
+    sellerId: instructor.id,
+    sellerName: instructor.name,
+  }));
+
+  // Painel de gestão só para o dono — inclui cursos de OUTROS instrutores em
+  // que este se inscreveu e já terminou (nunca os seus próprios, ver exclusão
+  // instructorId/collaborators abaixo, mesma regra de lib/resale.ts).
+  let manageResaleProps: {
+    eligibleCourses: { id: string; title: string; minCommission: number }[];
+    listings: { id: string; price: number; active: boolean; courseId: string; courseTitle: string; bundleId: string | null }[];
+    bundles: { id: string; name: string; listingIds: string[] }[];
+  } | null = null;
+  if (isOwner) {
+    const [completedCourses, ownListings] = await Promise.all([
+      prisma.enrollment.findMany({
+        where: {
+          userId: instructor.id,
+          completedAt: { not: null },
+          course: {
+            resaleMinCommission: { not: null },
+            instructorId: { not: instructor.id },
+            collaborators: { none: { id: instructor.id } },
+          },
+        },
+        select: { course: { select: { id: true, title: true, resaleMinCommission: true } } },
+      }),
+      prisma.resaleListing.findMany({
+        where: { sellerId: instructor.id },
+        orderBy: { createdAt: "desc" },
+        include: { course: { select: { id: true, title: true } } },
+      }),
+    ]);
+    const listedCourseIds = new Set(ownListings.map((l) => l.courseId));
+    manageResaleProps = {
+      eligibleCourses: completedCourses
+        .filter((e) => !listedCourseIds.has(e.course.id))
+        .map((e) => ({ id: e.course.id, title: e.course.title, minCommission: e.course.resaleMinCommission! })),
+      listings: ownListings.map((l) => ({
+        id: l.id,
+        price: l.price,
+        active: l.active,
+        courseId: l.courseId,
+        courseTitle: l.course.title,
+        bundleId: l.resaleBundleId,
+      })),
+      bundles: resaleBundles.map((b, i) => ({
+        id: b.id,
+        name: b.name,
+        listingIds: instructor.resaleBundlesSold[i].listings.map((l) => l.id),
+      })),
+    };
+  }
+
   const belowContent = (
     <div className="mx-auto max-w-5xl px-4 pb-10 pt-4 sm:px-8">
       {isOwner && (
@@ -141,10 +221,17 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           </FadeLink>
         </div>
       )}
+      {manageResaleProps && (
+        <div className="mb-4">
+          <ManageResaleSection {...manageResaleProps} />
+        </div>
+      )}
       <InstructorCourseGrid
         instructorFirstName={instructorFirstName}
         courses={courseCards}
         hidePriceBySlug={hidePriceBySlug}
+        resaleListings={resaleListings}
+        resaleBundles={resaleBundles}
       />
 
       <FadeLink href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">

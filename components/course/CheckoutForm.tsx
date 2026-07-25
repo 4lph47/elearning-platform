@@ -22,9 +22,20 @@ function randomReference() {
 export function CheckoutForm({
   items,
   firstLessonHref,
+  purchaseEndpoint = "/api/enroll",
+  buildRequestBody,
+  confirmTitle = "Pagamento confirmado",
+  confirmSubtitle = "Já tens acesso ao curso. Bons estudos!",
 }: {
   items: { id: string; title: string; price: number }[];
   firstLessonHref: string;
+  // Fluxo de compra de revenda usa outro endpoint (POST sem courseIds — o
+  // servidor já sabe a listagem/bundle pelo URL) e outra mensagem de
+  // confirmação, mas a mesma UX de pagamento fake — ver components/resale/ResaleTile.tsx.
+  purchaseEndpoint?: string;
+  buildRequestBody?: () => Record<string, unknown>;
+  confirmTitle?: string;
+  confirmSubtitle?: string;
 }) {
   const price = items.reduce((sum, item) => sum + item.price, 0);
   const router = useRouter();
@@ -52,10 +63,10 @@ export function CheckoutForm({
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1200));
 
-    const res = await fetch("/api/enroll", {
+    const res = await fetch(purchaseEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ courseIds: items.map((item) => item.id) }),
+      body: JSON.stringify(buildRequestBody ? buildRequestBody() : { courseIds: items.map((item) => item.id) }),
     });
 
     setLoading(false);
@@ -75,8 +86,8 @@ export function CheckoutForm({
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600">
           <Check size={26} className="text-white" />
         </span>
-        <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Pagamento confirmado</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Já tens acesso ao curso. Bons estudos!</p>
+        <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{confirmTitle}</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{confirmSubtitle}</p>
 
         <dl className="mx-auto mt-6 max-w-xs space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm dark:border-white/10 dark:bg-white/5">
           <div className="flex justify-between">

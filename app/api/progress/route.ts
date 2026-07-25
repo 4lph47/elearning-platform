@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { progressSchema } from "@/lib/validations";
 import { maybeCreateAutoReview } from "@/lib/autoReview";
+import { maybeMarkEnrollmentCompleted } from "@/lib/courseCompletion";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
 
   if (completed) {
     await maybeCreateAutoReview(session.user.id, course.id);
+    await maybeMarkEnrollmentCompleted(session.user.id, course.id);
   }
 
   return NextResponse.json(progress);

@@ -7,6 +7,7 @@ import { StarRating } from "@/components/ui/StarRating";
 import { textBoxFromElement } from "@/components/course/CardTransitionContext";
 import { ReviewForm } from "@/components/course/ReviewForm";
 import { useTextFly } from "@/components/course/TextFlyContext";
+import { CourseComments, type CourseCommentData } from "@/components/course/CourseComments";
 
 interface LessonItem {
   id: string;
@@ -84,6 +85,12 @@ export function CourseDetailTabs({
   myReview,
   completion,
   studentName,
+  comments,
+  commentsTotal,
+  commentsHasMore,
+  currentUserId,
+  currentUserName,
+  isAuthenticated,
 }: {
   courseId: string;
   courseSlug: string;
@@ -95,8 +102,14 @@ export function CourseDetailTabs({
   myReview: { rating: number; comment: string } | null;
   completion: { percent: number; completedCount: number; totalItems: number } | null;
   studentName: string | null;
+  comments: CourseCommentData[];
+  commentsTotal: number;
+  commentsHasMore: boolean;
+  currentUserId: string | null;
+  currentUserName: string | null;
+  isAuthenticated: boolean;
 }) {
-  const [tab, setTab] = useState<"programa" | "avaliacoes" | "certificado">("programa");
+  const [tab, setTab] = useState<"programa" | "avaliacoes" | "certificado" | "comentarios">("programa");
   const [visibleReviewCount, setVisibleReviewCount] = useState(REVIEWS_PAGE_SIZE);
   const allLessons = modules.flatMap((m) => m.lessons);
   const totalDuration = allLessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
@@ -143,6 +156,16 @@ export function CourseDetailTabs({
           }`}
         >
           Certificado
+        </button>
+        <button
+          onClick={() => setTab("comentarios")}
+          className={`border-b-2 px-1 py-2 text-sm font-medium ${
+            tab === "comentarios"
+              ? "border-blue-500 text-slate-900 dark:text-white"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+          }`}
+        >
+          Comentários {commentsTotal > 0 && `(${commentsTotal})`}
         </button>
       </div>
 
@@ -420,6 +443,19 @@ export function CourseDetailTabs({
               )}
             </div>
           ))}
+
+        {tab === "comentarios" && (
+          <CourseComments
+            courseId={courseId}
+            comments={comments}
+            initialTotal={commentsTotal}
+            initialHasMore={commentsHasMore}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            canModerate={isOwner}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
       </div>
     </div>
   );

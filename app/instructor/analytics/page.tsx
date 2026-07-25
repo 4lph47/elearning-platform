@@ -79,6 +79,15 @@ export default async function InstructorAnalyticsPage() {
     0
   );
 
+  // Comissão que os teus cursos geraram quando outros os revenderam — ver
+  // lib/resale.ts (splitResalePrice) para como instructorCut é calculado.
+  // Só bookkeeping/exibição, sem payout real (pagamento é 100% simulado).
+  const resaleEarningsAgg = await prisma.resaleSale.aggregate({
+    where: { listing: { courseId: { in: courses.map((c) => c.id) } } },
+    _sum: { instructorCut: true },
+  });
+  const resaleEarnings = resaleEarningsAgg._sum.instructorCut ?? 0;
+
   // Matrículas E receita por semana (últimas 12) — tendência de crescimento,
   // somando todos os cursos. Sem `order`/sequência aqui, é só uma data
   // bucketada. Duas séries à parte (contagem vs. €) para cada card (Matrículas/
@@ -292,6 +301,7 @@ export default async function InstructorAnalyticsPage() {
             totals={{
               enrollments: totalEnrollments,
               revenue: totalRevenue,
+              resaleEarnings,
               lessons: totalLessons,
               views: totalViews,
               likes: totalLikes,

@@ -149,6 +149,7 @@ export const courseSchema = z.object({
   published: z.boolean().optional().default(false),
   price: z.number().min(0, "Preço não pode ser negativo").optional().default(0),
   originalPrice: z.number().min(0, "Preço original não pode ser negativo").optional().nullable(),
+  resaleMinCommission: z.number().min(0, "Não pode ser negativo").optional().nullable(),
   learningOutcomes: z.array(z.string().min(1)).optional().default([]),
   requirements: z.array(z.string().min(1)).optional().default([]),
   targetAudience: z.array(z.string().min(1)).optional().default([]),
@@ -212,6 +213,30 @@ export const quizSchema = z.object({
     .min(1, "O quiz precisa de pelo menos 1 pergunta"),
 });
 export type QuizInput = z.infer<typeof quizSchema>;
+
+export const resaleListingSchema = z.object({
+  courseId: z.string().min(1),
+  price: z.number().min(0.01, "Preço tem de ser maior que zero"),
+});
+export type ResaleListingInput = z.infer<typeof resaleListingSchema>;
+
+export const resaleListingUpdateSchema = z.object({
+  price: z.number().min(0.01, "Preço tem de ser maior que zero").optional(),
+  active: z.boolean().optional(),
+});
+export type ResaleListingUpdateInput = z.infer<typeof resaleListingUpdateSchema>;
+
+export const resaleBundleSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  listingIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos uma listagem"),
+});
+export type ResaleBundleInput = z.infer<typeof resaleBundleSchema>;
+
+export const resaleBundleUpdateSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
+  listingIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos uma listagem").optional(),
+});
+export type ResaleBundleUpdateInput = z.infer<typeof resaleBundleUpdateSchema>;
 
 export const progressSchema = z.object({
   lessonId: z.string().min(1),

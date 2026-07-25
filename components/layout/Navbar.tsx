@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, BookOpen, Menu, X, ArrowLeft, Mic, Bell } from "lucide-react";
+import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, ShoppingBag, BookOpen, Menu, X, ArrowLeft, Mic, Bell } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useFadeNav } from "@/components/course/FadeNavContext";
@@ -15,6 +15,28 @@ import { getRecentCourseSearches, addRecentCourseSearch, type RecentCourseSearch
 
 const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$|^\/students\/[^/]+$/;
 const SUGGEST_DEBOUNCE_MS = 250;
+
+interface BundleSuggestion {
+  id: string;
+  name: string;
+  thumbnailUrl: string | null;
+}
+
+interface UserSuggestion {
+  id: string;
+  name: string;
+  username: string | null;
+  image: string | null;
+  role: "STUDENT" | "INSTRUCTOR" | "ADMIN";
+}
+
+interface SearchSuggestions {
+  courses: RecentCourseSearch[];
+  bundles: BundleSuggestion[];
+  users: UserSuggestion[];
+}
+
+const EMPTY_SUGGESTIONS: SearchSuggestions = { courses: [], bundles: [], users: [] };
 
 interface MinimalSpeechRecognition {
   lang: string;
@@ -47,7 +69,7 @@ export function Navbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  const [suggestions, setSuggestions] = useState<RecentCourseSearch[]>([]);
+  const [suggestions, setSuggestions] = useState<SearchSuggestions>(EMPTY_SUGGESTIONS);
   const [recents, setRecents] = useState<RecentCourseSearch[]>([]);
   const [desktopFocused, setDesktopFocused] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -73,14 +95,14 @@ export function Navbar() {
     if (!dropdownOpen) return;
     const query = q.trim();
     if (!query) {
-      setSuggestions([]);
+      setSuggestions(EMPTY_SUGGESTIONS);
       return;
     }
     const t = setTimeout(() => {
       fetch(`/api/courses/search?q=${encodeURIComponent(query)}`)
-        .then((res) => (res.ok ? res.json() : []))
+        .then((res) => (res.ok ? res.json() : EMPTY_SUGGESTIONS))
         .then(setSuggestions)
-        .catch(() => setSuggestions([]));
+        .catch(() => setSuggestions(EMPTY_SUGGESTIONS));
     }, SUGGEST_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [q, dropdownOpen]);
@@ -139,7 +161,7 @@ export function Navbar() {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setMobileSearchOpen(false);
         setQ("");
-        setSuggestions([]);
+        setSuggestions(EMPTY_SUGGESTIONS);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -155,6 +177,14 @@ export function Navbar() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
+    const trimmed = q.trim();
+    if (trimmed.startsWith("@")) {
+      // Sem página de resultados dedicada a pessoas — Enter só serve pra
+      // ir direto ao primeiro resultado do dropdown, se houver algum.
+      const first = suggestions.users[0];
+      if (first) selectUser(first);
+      return;
+    }
     fadeNavigate(q ? `/courses?q=${encodeURIComponent(q)}` : "/courses");
     setMenuOpen(false);
     setMobileSearchOpen(false);
@@ -164,7 +194,7 @@ export function Navbar() {
   function closeMobileSearch() {
     setMobileSearchOpen(false);
     setQ("");
-    setSuggestions([]);
+    setSuggestions(EMPTY_SUGGESTIONS);
   }
 
   function selectCourse(item: RecentCourseSearch) {
@@ -173,6 +203,22 @@ export function Navbar() {
     setDesktopFocused(false);
     setQ("");
     fadeNavigate(`/courses/${item.slug}`);
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  function selectBundle(item: BundleSuggestion) {
+    setMobileSearchOpen(false);
+    setDesktopFocused(false);
+    setQ("");
+    fadeNavigate(`/resale/bundles/${item.id}/checkout`);
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  function selectUser(item: UserSuggestion) {
+    setMobileSearchOpen(false);
+    setDesktopFocused(false);
+    setQ("");
+    fadeNavigate(item.role === "STUDENT" ? `/students/${item.id}` : `/instructors/${item.id}`);
     (document.activeElement as HTMLElement | null)?.blur();
   }
 
@@ -207,6 +253,15 @@ export function Navbar() {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
     .join("") ?? "?";
+
+  const trimmedQ = q.trim();
+  const isUserSearch = trimmedQ.startsWith("@");
+  const showRecents = !trimmedQ;
+  const hasDropdownResults = showRecents
+    ? recents.length > 0
+    : isUserSearch
+    ? suggestions.users.length > 0
+    : suggestions.courses.length > 0 || suggestions.bundles.length > 0;
 
   return (
     <>
@@ -277,7 +332,7 @@ export function Navbar() {
                 onChange={(e) => setQ(e.target.value)}
                 onFocus={() => setDesktopFocused(true)}
                 onBlur={() => setDesktopFocused(false)}
-                placeholder="Procurar cursos..."
+                placeholder="Procurar cursos ou @pessoa..."
                 className={`w-full select-text rounded-full border py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-1 ${
                   transparent
                     ? "border-slate-900/20 bg-slate-900/10 text-slate-900 placeholder-slate-600 focus:border-slate-900/40 focus:ring-slate-900/30 dark:border-white/20 dark:bg-white/10 dark:text-white dark:placeholder-slate-300 dark:focus:border-white/40 dark:focus:ring-white/30"
@@ -306,25 +361,96 @@ export function Navbar() {
             </div>
           </form>
 
-          {dropdownOpen && (q.trim() ? suggestions : recents).length > 0 && (
+          {dropdownOpen && hasDropdownResults && (
             <div className="absolute inset-x-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg transition-opacity duration-300 dark:border-white/10 dark:bg-neutral-900">
-              {(q.trim() ? suggestions : recents).map((item) => (
-                <button
-                  key={item.slug}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectCourse(item)}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
-                >
-                  <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
-                    {item.thumbnailUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                    )}
-                  </span>
-                  <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
-                </button>
-              ))}
+              {showRecents &&
+                recents.map((item) => (
+                  <button
+                    key={item.slug}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectCourse(item)}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                  >
+                    <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
+                      {item.thumbnailUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                      )}
+                    </span>
+                    <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
+                  </button>
+                ))}
+
+              {!showRecents && isUserSearch &&
+                suggestions.users.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectUser(u)}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                      {u.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.image} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                          {u.name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{u.name}</span>
+                      {u.username && (
+                        <span className="block truncate text-xs text-slate-400 dark:text-slate-500">@{u.username}</span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+
+              {!showRecents && !isUserSearch && (
+                <>
+                  {suggestions.courses.map((item) => (
+                    <button
+                      key={item.slug}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectCourse(item)}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                      <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
+                        {item.thumbnailUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                        )}
+                      </span>
+                      <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
+                    </button>
+                  ))}
+                  {suggestions.bundles.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectBundle(b)}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                      <span className="h-10 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-white/10">
+                        {b.thumbnailUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={b.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{b.name}</span>
+                        <span className="block truncate text-xs text-slate-400 dark:text-slate-500">Bundle à venda</span>
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -390,7 +516,11 @@ export function Navbar() {
             </button>
           )}
 
-          {status === "authenticated" && <NotificationBell />}
+          {status === "authenticated" && (
+            <div className="hidden sm:block">
+              <NotificationBell />
+            </div>
+          )}
 
           {status === "authenticated" ? (
             <div className="relative" ref={menuRef}>
@@ -431,6 +561,14 @@ export function Navbar() {
                     className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                   >
                     <LayoutGrid size={14} /> Catálogo
+                  </FadeLink>
+
+                  <FadeLink
+                    href="/marketplace"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <ShoppingBag size={14} /> Marketplace de revenda
                   </FadeLink>
 
                   {session.user.role !== "STUDENT" && (

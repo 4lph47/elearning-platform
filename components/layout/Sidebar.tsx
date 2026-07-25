@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   BookOpen,
   ShoppingCart,
+  ShoppingBag,
   GraduationCap,
   LayoutDashboard,
   BarChart3,
@@ -69,6 +70,7 @@ export function Sidebar() {
   const items: NavItem[] = [
     { href: "/", label: "Início", icon: Home },
     { href: "/courses", label: "Catálogo", icon: LayoutGrid },
+    { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
     ...(status === "authenticated"
       ? [{ href: "/dashboard", label: "A minha aprendizagem", icon: BookOpen } as LeafItem]
       : []),

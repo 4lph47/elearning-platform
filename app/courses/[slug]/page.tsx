@@ -13,6 +13,8 @@ import { CourseDetailTabs } from "@/components/course/CourseDetailTabs";
 import { CourseHero } from "@/components/course/CourseHero";
 import { CourseRow } from "@/components/course/CourseRow";
 import { FrequentlyBoughtTogether } from "@/components/course/FrequentlyBoughtTogether";
+import { FadeLink } from "@/components/course/FadeLink";
+import { getRawCourseComments, getCourseCommentsCounts, toCourseCommentTree, COURSE_COMMENTS_PAGE_SIZE } from "@/lib/courseComments";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +26,15 @@ function formatDuration(totalSeconds: number) {
   return `${hours}h ${minutes}min`;
 }
 
-export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CourseDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ resale?: string }>;
+}) {
   const { slug } = await params;
+  const { resale: resaleListingId } = await searchParams;
   const session = await getServerSession(authOptions);
 
   const course = await getCachedCourseBySlug(slug);
@@ -33,6 +42,18 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   if (!course || (!course.published && course.instructorId !== session?.user.id)) {
     notFound();
   }
+
+  // Chegou aqui a partir de uma listagem de revenda no marketplace — mostra
+  // quem está a vender (avatar+username) e um CTA de compra próprio, além do
+  // normal (ver components/resale/ResaleTile.tsx, que já linka assim).
+  // Ignora silenciosamente se o parâmetro for inválido/inativo, em vez de dar 404
+  // — a página do curso continua válida sem ele.
+  const resaleListing = resaleListingId
+    ? await prisma.resaleListing.findFirst({
+        where: { id: resaleListingId, courseId: course.id, active: true },
+        include: { seller: { select: { id: true, name: true, image: true } } },
+      })
+    : null;
 
   const authors = [course.instructor, ...course.collaborators];
   const isOwner =
@@ -53,6 +74,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     doneQuizzes,
     { relatedCourses, instructorCourses, instructorOtherCourses, recommendedCourses },
     bundleEnrollments,
+    rawComments,
+    commentsCounts,
   ] = await Promise.all([
     session
       ? prisma.enrollment.findUnique({
@@ -78,7 +101,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           select: { courseId: true },
         })
       : Promise.resolve([]),
+    getRawCourseComments(course.id, 0, COURSE_COMMENTS_PAGE_SIZE),
+    getCourseCommentsCounts(course.id),
   ]);
+
+  const commentsTree = toCourseCommentTree(rawComments, session?.user.id ?? null);
+  const commentsHasMore = rawComments.length < commentsCounts.topLevel;
 
   const sideRailCourseIds = [...relatedCourses, ...instructorOtherCourses, ...recommendedCourses].map((c) => c.id);
   const sideRailEnrollments = session && sideRailCourseIds.length > 0
@@ -295,6 +323,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
               myReview={myReview ? { rating: myReview.rating, comment: myReview.comment } : null}
               completion={completion}
               studentName={session?.user.name ?? null}
+              comments={commentsTree}
+              commentsTotal={commentsCounts.all}
+              commentsHasMore={commentsHasMore}
+              currentUserId={session?.user.id ?? null}
+              currentUserName={session?.user.name ?? null}
+              isAuthenticated={Boolean(session)}
             />
           </div>
 
@@ -307,6 +341,44 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
               <div className="p-4">
                 <h2 className="mb-3 line-clamp-2 font-semibold text-slate-900 dark:text-white">{course.title}</h2>
+
+                {resaleListing && (
+                  <FadeLink
+                    href={`/students/${resaleListing.seller.id}`}
+                    className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-600/10 px-3 py-2"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {resaleListing.seller.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={resaleListing.seller.image}
+                          alt={resaleListing.seller.name}
+                          className="h-8 w-8 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                          {resaleListing.seller.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="min-w-0 truncate text-xs text-slate-600 dark:text-slate-300">
+                        Revendido por <span className="font-medium text-slate-900 dark:text-white">{resaleListing.seller.name}</span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {resaleListing.price.toFixed(2)}€
+                    </span>
+                  </FadeLink>
+                )}
+
+                {resaleListing && !isEnrolled && !isOwner && (
+                  <Link
+                    href={`/resale/${resaleListing.id}/checkout`}
+                    className="mb-3 block rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500"
+                  >
+                    Comprar por {resaleListing.price.toFixed(2)}€ a {resaleListing.seller.name}
+                  </Link>
+                )}
+
                 {isOwner ? (
                   <Link href={`/instructor/courses/${course.id}`}>
                     <p className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5">

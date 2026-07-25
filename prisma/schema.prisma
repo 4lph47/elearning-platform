@@ -99,10 +99,15 @@ model User {
   reviews               Review[]
   lessonComments        LessonComment[]
   commentLikes          CommentLike[]
+  courseComments        CourseComment[]
+  courseCommentLikes    CourseCommentLike[]
   lessonReactions       LessonReaction[]
   watchEvents           WatchEvent[]
   notificationsReceived Notification[]   @relation("NotificationRecipient")
   notificationsSent     Notification[]   @relation("NotificationActor")
+  resaleListingsSold    ResaleListing[]  @relation("ResaleListingsSold")
+  resaleBundlesSold     ResaleBundle[]   @relation("ResaleBundlesSold")
+  resalePurchases       ResaleSale[]     @relation("ResalePurchases")
 }
 
 model Certification {
@@ -213,15 +218,91 @@ model Course {
   bundleId String?
   bundle   Bundle? @relation(fields: [bundleId], references: [id], onDelete: SetNull)
 
-  modules     Module[]
-  enrollments Enrollment[]
-  cartItems   CartItem[]
-  quiz        Quiz?
-  reviews     Review[]
+  // null = revenda desligada para este curso. Definido pelo próprio
+  // instrutor — é o mínimo que ele exige por cada revenda; o revendedor
+  // não pode listar abaixo disto (ver lib/resale.ts). Só é mostrado a quem
+  // já está inscrito, nunca no catálogo público.
+  resaleMinCommission Float?
+
+  modules        Module[]
+  enrollments    Enrollment[]
+  cartItems      CartItem[]
+  quiz           Quiz?
+  reviews        Review[]
+  comments       CourseComment[]
+  resaleListings ResaleListing[]
 
   @@index([instructorId])
   @@index([published])
   @@index([bundleId])
+}
+
+// Um aluno (ou instrutor, para cursos de outros em que se inscreveu) a
+// revender o acesso a um curso que já tem — não transfere/retira o acesso
+// de quem vende, só concede uma nova inscrição a quem compra (ver
+// ResaleSale). Preço definido pelo revendedor, nunca abaixo do
+// Course.resaleMinCommission do momento em que foi criado.
+model ResaleListing {
+  id        String   @id @default(cuid())
+  price     Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sellerId String
+  seller   User   @relation("ResaleListingsSold", fields: [sellerId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  resaleBundleId String?
+  resaleBundle   ResaleBundle? @relation(fields: [resaleBundleId], references: [id], onDelete: SetNull)
+
+  sales ResaleSale[]
+
+  @@unique([sellerId, courseId])
+  @@index([courseId])
+  @@index([resaleBundleId])
+}
+
+// Agrupa listagens do mesmo vendedor — preço sempre a soma dos listings
+// (mesma convenção do Bundle de instrutor, sem desconto próprio), nunca
+// guardado à parte.
+model ResaleBundle {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sellerId String
+  seller   User   @relation("ResaleBundlesSold", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  listings ResaleListing[]
+  sales    ResaleSale[]
+
+  @@index([sellerId])
+}
+
+// Um curso vendido através de uma listagem — quer avulso quer dentro de um
+// bundle (resaleBundleId preenchido só agrupa o recibo, o split é sempre
+// por listing individual). instructorCut+sellerCut = price sempre.
+model ResaleSale {
+  id            String   @id @default(cuid())
+  price         Float
+  instructorCut Float
+  sellerCut     Float
+  createdAt     DateTime @default(now())
+
+  listingId String
+  listing   ResaleListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId   String
+  buyer     User          @relation("ResalePurchases", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  resaleBundleId String?
+  resaleBundle   ResaleBundle? @relation(fields: [resaleBundleId], references: [id], onDelete: SetNull)
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([resaleBundleId])
 }
 
 model Module {
@@ -311,6 +392,45 @@ model CommentLike {
 
   commentId String
   comment   LessonComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+}
+
+// Comentários ao nível do CURSO (não da aula) — mostrados na página pública
+// do curso (app/courses/[slug]/page.tsx), incluindo quando se chega lá a
+// partir de uma revenda no marketplace. Mais simples que LessonComment: sem
+// @menções/notificações (não há "participantes da aula" aqui, é uma página
+// pública).
+model CourseComment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   CourseComment?  @relation("CourseCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  CourseComment[] @relation("CourseCommentReplies")
+
+  likes CourseCommentLike[]
+
+  @@index([courseId])
+  @@index([parentId])
+}
+
+model CourseCommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  commentId String
+  comment   CourseComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -412,8 +532,9 @@ model LessonVideoRendition {
 }
 
 model Enrollment {
-  id         String   @id @default(cuid())
-  enrolledAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
 
   userId   String
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, ShoppingBag } from "lucide-react";
 import { CourseTile } from "@/components/course/CourseTile";
 import type { CourseCardData } from "@/components/course/CourseCard";
 import { useInstructorAccent } from "@/components/instructor/InstructorAccentContext";
+import { ResaleListingTile, ResaleBundleTile } from "@/components/resale/ResaleTile";
+import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
+
+type Tab = "cursos" | "venda";
 
 const HEADER_HEIGHT = 64;
 const SCROLL_GAP = 12;
@@ -35,11 +39,16 @@ export function InstructorCourseGrid({
   instructorFirstName,
   courses,
   hidePriceBySlug,
+  resaleListings = [],
+  resaleBundles = [],
 }: {
   instructorFirstName: string;
   courses: CourseCardData[];
   hidePriceBySlug: Record<string, boolean>;
+  resaleListings?: ResaleListingCardData[];
+  resaleBundles?: ResaleBundleCardData[];
 }) {
+  const [tab, setTab] = useState<Tab>("cursos");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<(typeof SORT_OPTIONS)[number]["value"]>("");
   const [categories, setCategories] = useState<string[]>([]);
@@ -98,6 +107,19 @@ export function InstructorCourseGrid({
     return list;
   }, [courses, query, categories, level, sort]);
 
+  const filteredResaleListings = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return resaleListings;
+    return resaleListings.filter((l) => l.courseTitle.toLowerCase().includes(q) || l.courseCategory.toLowerCase().includes(q));
+  }, [resaleListings, query]);
+  const filteredResaleBundles = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return resaleBundles;
+    return resaleBundles.filter(
+      (b) => b.name.toLowerCase().includes(q) || b.courseTitles.some((t) => t.toLowerCase().includes(q))
+    );
+  }, [resaleBundles, query]);
+
   // Mobile: tocar no campo traz o teclado, que come metade do ecrã — sem
   // aproximar a barra do header primeiro, ela ficava escondida atrás dele.
   // Só no mobile (desktop já tem espaço de sobra e hover, não precisa disto).
@@ -118,13 +140,15 @@ export function InstructorCourseGrid({
     window.scrollTo({ top: targetY, behavior: "smooth" });
   }
 
+  const hasResale = resaleListings.length > 0 || resaleBundles.length > 0;
+
   return (
     <div>
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="order-2 text-lg font-semibold text-slate-900 dark:text-white sm:order-1">
           Cursos de {instructorFirstName}
         </h2>
-        {courses.length > 0 && (
+        {(courses.length > 0 || hasResale) && (
           <div className="relative order-1 flex w-full gap-2 sm:order-2 sm:w-auto sm:max-w-xl">
             <div
               ref={searchWrapRef}
@@ -141,104 +165,152 @@ export function InstructorCourseGrid({
               <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
             </div>
 
-            <div ref={panelRef} className="relative shrink-0">
-              <button
-                type="button"
-                onClick={handleFilterToggle}
-                className={`flex h-full shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                  activeFilters.length > 0
-                    ? "border-slate-400 bg-slate-200 text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"
-                    : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-                }`}
-              >
-                <SlidersHorizontal size={15} />
-                Filtros
-                {activeFilters.length > 0 && (
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">
-                    {activeFilters.length}
-                  </span>
-                )}
-              </button>
+            {tab === "cursos" && (
+              <div ref={panelRef} className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={handleFilterToggle}
+                  className={`flex h-full shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    activeFilters.length > 0
+                      ? "border-slate-400 bg-slate-200 text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"
+                      : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                  }`}
+                >
+                  <SlidersHorizontal size={15} />
+                  Filtros
+                  {activeFilters.length > 0 && (
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">
+                      {activeFilters.length}
+                    </span>
+                  )}
+                </button>
 
-              {panelOpen && (
-                <div className="absolute right-0 top-full z-20 mt-2 w-72 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-white/10 dark:bg-neutral-900">
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ordenar por</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SORT_OPTIONS.map((o) => (
-                        <button key={o.value} type="button" onClick={() => setSort(o.value)} className={pillClass(sort === o.value)}>
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {allCategories.length > 1 && (
+                {panelOpen && (
+                  <div className="absolute right-0 top-full z-20 mt-2 w-72 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-white/10 dark:bg-neutral-900">
                     <div>
-                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Categoria</h3>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ordenar por</h3>
                       <div className="flex flex-wrap gap-1.5">
-                        {allCategories.map((c) => (
-                          <button key={c} type="button" onClick={() => toggleCategory(c)} className={pillClass(categories.includes(c))}>
-                            {c}
+                        {SORT_OPTIONS.map((o) => (
+                          <button key={o.value} type="button" onClick={() => setSort(o.value)} className={pillClass(sort === o.value)}>
+                            {o.label}
                           </button>
                         ))}
                       </div>
                     </div>
-                  )}
 
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Nível</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      <button type="button" onClick={() => setLevel("")} className={pillClass(level === "")}>
-                        Todos
-                      </button>
-                      {LEVEL_OPTIONS.map((l) => (
-                        <button key={l.value} type="button" onClick={() => setLevel(l.value)} className={pillClass(level === l.value)}>
-                          {l.label}
+                    {allCategories.length > 1 && (
+                      <div>
+                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Categoria</h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          {allCategories.map((c) => (
+                            <button key={c} type="button" onClick={() => toggleCategory(c)} className={pillClass(categories.includes(c))}>
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Nível</h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button type="button" onClick={() => setLevel("")} className={pillClass(level === "")}>
+                          Todos
                         </button>
-                      ))}
+                        {LEVEL_OPTIONS.map((l) => (
+                          <button key={l.value} type="button" onClick={() => setLevel(l.value)} className={pillClass(level === l.value)}>
+                            {l.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {activeFilters.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {activeFilters.map((f) => (
+      {hasResale && (
+        <div className="mb-4 flex gap-2">
+          {(
+            [
+              { id: "cursos" as const, label: "Cursos" },
+              { id: "venda" as const, label: "À venda" },
+            ]
+          ).map((t) => (
             <button
-              key={f.key}
+              key={t.id}
               type="button"
-              onClick={() => removeFilter(f.key)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-400 bg-slate-200 px-3 py-1 text-xs font-medium text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"
+              onClick={() => setTab(t.id)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                tab === t.id
+                  ? "border-slate-400 bg-slate-200 text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"
+                  : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-400 hover:bg-slate-200 hover:text-slate-900 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
+              }`}
             >
-              {f.label}
-              <X size={12} />
+              {t.id === "venda" && <ShoppingBag size={14} />}
+              {t.label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-          >
-            Limpar tudo
-          </button>
         </div>
       )}
 
-      {courses.length === 0 ? (
-        <p className="text-slate-500 dark:text-slate-400">Ainda não tem cursos publicados.</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-slate-500 dark:text-slate-400">Nenhum curso encontrado.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((course) => (
-            <CourseTile key={course.slug} course={course} hidePrice={hidePriceBySlug[course.slug]} />
-          ))}
+      {tab === "venda" ? (
+        <div>
+          {filteredResaleBundles.length === 0 && filteredResaleListings.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400">
+              {resaleListings.length === 0 && resaleBundles.length === 0 ? "Nada à venda de momento." : "Nenhum resultado encontrado."}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredResaleBundles.map((bundle) => (
+                <ResaleBundleTile key={bundle.id} bundle={bundle} />
+              ))}
+              {filteredResaleListings.map((listing) => (
+                <ResaleListingTile key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
         </div>
+      ) : (
+        <>
+          {activeFilters.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {activeFilters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => removeFilter(f.key)}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-400 bg-slate-200 px-3 py-1 text-xs font-medium text-slate-900 dark:border-white/30 dark:bg-white/15 dark:text-white"
+                >
+                  {f.label}
+                  <X size={12} />
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              >
+                Limpar tudo
+              </button>
+            </div>
+          )}
+
+          {courses.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400">Ainda não tem cursos publicados.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400">Nenhum curso encontrado.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((course) => (
+                <CourseTile key={course.slug} course={course} hidePrice={hidePriceBySlug[course.slug]} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

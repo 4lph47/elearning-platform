@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { maybeCreateAutoReview } from "@/lib/autoReview";
+import { maybeMarkEnrollmentCompleted } from "@/lib/courseCompletion";
 
 export async function POST(request: Request, { params }: { params: Promise<{ quizId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -108,6 +109,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ qui
   });
 
   await maybeCreateAutoReview(session.user.id, course.id);
+  await maybeMarkEnrollmentCompleted(session.user.id, course.id);
 
   return NextResponse.json({ scorePercent, correctOptionByQuestion });
 }

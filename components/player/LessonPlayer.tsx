@@ -592,7 +592,7 @@ export function LessonPlayer({
     const id = gestureIdRef.current;
     setLikeBurst({ x, y, id });
     onDoubleTapLike?.();
-    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 400);
+    setTimeout(() => setLikeBurst((b) => (b?.id === id ? null : b)), 700);
   }
 
   function triggerSeekFlash(dir: "back" | "fwd") {
@@ -1446,7 +1446,7 @@ export function LessonPlayer({
               {likeBurst && (
                 <div
                   key={likeBurst.id}
-                  className="pointer-events-none absolute z-[25] animate-like-swing"
+                  className="pointer-events-none absolute z-[25] animate-like-pop"
                   style={{ left: likeBurst.x, top: likeBurst.y }}
                 >
                   <ThumbsUp size={72} className="fill-blue-400 text-blue-400 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" />

@@ -40,30 +40,49 @@ const config: Config = {
         // do ponto de repouso (ease-in), volta a assentar a desacelerar
         // (ease-out) — só assim fica um movimento contínuo, não aos
         // solavancos.
-        "like-swing": {
+        // Scale-pop tipo Instagram/TikTok, com overshoot e um wiggle leve de
+        // rotação nos dois primeiros trambolhões pra ficar mais "vivo" —
+        // cada troço com a sua curva (mesma lógica do antigo like-swing).
+        "like-pop": {
           "0%": {
             opacity: "0",
-            transform: "translate(-50%, -50%) rotate(30deg)",
+            transform: "translate(-50%, -50%) scale(0.3) rotate(-12deg)",
             animationTimingFunction: "ease-out",
           },
-          "40%": {
+          "20%": {
             opacity: "1",
-            transform: "translate(-50%, -50%) rotate(0deg)",
+            transform: "translate(-50%, -50%) scale(1.4) rotate(10deg)",
             animationTimingFunction: "ease-in",
           },
-          "65%": {
-            opacity: "1",
-            transform: "translate(-50%, -50%) rotate(-15deg)",
+          "35%": {
+            transform: "translate(-50%, -50%) scale(0.85) rotate(-10deg)",
             animationTimingFunction: "ease-out",
           },
-          "100%": { opacity: "0", transform: "translate(-50%, -50%) rotate(0deg)" },
+          "50%": {
+            transform: "translate(-50%, -50%) scale(1.15) rotate(8deg)",
+            animationTimingFunction: "ease-in",
+          },
+          "63%": {
+            transform: "translate(-50%, -50%) scale(0.95) rotate(-6deg)",
+            animationTimingFunction: "ease-out",
+          },
+          "75%": {
+            transform: "translate(-50%, -50%) scale(1.05) rotate(4deg)",
+            animationTimingFunction: "ease-in",
+          },
+          "87%": {
+            opacity: "1",
+            transform: "translate(-50%, -50%) scale(1) rotate(-2deg)",
+            animationTimingFunction: "ease-out",
+          },
+          "100%": { opacity: "0", transform: "translate(-50%, -50%) scale(1) rotate(0deg)" },
         },
       },
       animation: {
         "seek-flash": "seek-flash 500ms ease-out forwards",
         "corner-card-in": "corner-card-in 220ms ease-out",
         "center-pop": "center-pop 700ms ease-out forwards",
-        "like-swing": "like-swing 400ms linear forwards",
+        "like-pop": "like-pop 700ms linear forwards",
       },
     },
   },

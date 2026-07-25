@@ -83,6 +83,31 @@ export const registerSchema = z
   });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
+// Completar perfil de instrutor depois de entrar com Google em
+// /register/complete — sem nome/email/password (já vêm da conta Google).
+export const becomeInstructorSchema = z
+  .object({
+    acceptedTerms: z.literal(true, { message: "Tens de aceitar os Termos e Serviços" }),
+    bio: z.string().min(50, "Conta-nos a tua experiência com pelo menos 50 caracteres").max(600, "Bio deve ter no máximo 600 caracteres"),
+    expertise: z.string().min(2, "Indica a tua área de especialização").max(120, "Área de especialização deve ter no máximo 120 caracteres"),
+    yearsExperience: z.number().int().min(0, "Não pode ser negativo").max(80, "Valor inválido"),
+    certifications: z.array(registerCertificationSchema).max(30, "Máximo de 30 certificações").optional().default([]),
+    ...Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, httpUrlField])),
+  })
+  .superRefine((data, ctx) => {
+    for (const platform of SOCIAL_PLATFORMS) {
+      const value = (data as unknown as Record<SocialPlatformKey, string | null | undefined>)[platform.key];
+      if (value && value.trim() && !matchesPlatformDomain(platform, value.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [platform.key],
+          message: `Este link não parece ser do ${platform.label} (${platform.hostnames?.join(" ou ")})`,
+        });
+      }
+    }
+  });
+export type BecomeInstructorInput = z.infer<typeof becomeInstructorSchema>;
+
 export const loginSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(1, "Password é obrigatória"),

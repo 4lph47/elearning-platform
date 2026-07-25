@@ -182,23 +182,6 @@ export default function RegisterPage() {
           </>
         }
       >
-        <div className="mb-5 space-y-2">
-          <button
-            type="button"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-          >
-            <GoogleIcon /> Continuar com Google
-          </button>
-          <p className="text-center text-xs text-slate-400 dark:text-slate-500">Cria conta de aluno. Para ensinar, regista-te abaixo.</p>
-        </div>
-
-        <div className="mb-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-          <span className="text-xs text-slate-400 dark:text-slate-500">ou</span>
-          <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-        </div>
-
         <div className="space-y-3">
           <button
             type="button"
@@ -275,6 +258,20 @@ export default function RegisterPage() {
           </ol>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className={stepClass(0)}>
+            <button
+              type="button"
+              onClick={() => signIn("google", { callbackUrl: `/register/complete?role=${role}` })}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+            >
+              <GoogleIcon /> Continuar com Google
+            </button>
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+              <span className="text-xs text-slate-400 dark:text-slate-500">ou preenche os dados</span>
+              <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+            </div>
+          </div>
           <div className={`${wantsToTeach ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" : "space-y-4"} ${stepClass(0)}`}>
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">

@@ -58,10 +58,19 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role: string }).role;
+      } else if (trigger === "update" && token.id) {
+        // Sessão já aberta (ex.: conta Google que acabou de virar
+        // instrutor em /register/complete) — o JWT só refaz este pedido
+        // à BD quando o cliente chama update() explicitamente.
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        });
+        if (dbUser) token.role = dbUser.role;
       }
       return token;
     },

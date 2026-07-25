@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { registerSchema } from "@/lib/validations";
 import { getClientIp, isRateLimited } from "@/lib/rateLimit";
+import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/socialPlatforms";
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 8;
@@ -20,7 +21,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { name, email, password, wantsToTeach, bio, expertise, yearsExperience, linkedinUrl } = parsed.data;
+  const { name, email, password, wantsToTeach, bio, expertise, yearsExperience, certifications } = parsed.data;
+  const socialData = Object.fromEntries(
+    SOCIAL_PLATFORMS.map((p) => [p.key, (parsed.data as unknown as Record<SocialPlatformKey, string | null | undefined>)[p.key]?.trim() || null])
+  );
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -40,7 +44,10 @@ export async function POST(request: Request) {
             bio: bio?.trim() || null,
             expertise: expertise?.trim() || null,
             yearsExperience: yearsExperience ?? null,
-            linkedinUrl: linkedinUrl?.trim() || null,
+            ...socialData,
+            certifications: {
+              create: certifications.map((c, i) => ({ name: c.name.trim(), url: c.url.trim(), order: i })),
+            },
           }
         : {}),
     },

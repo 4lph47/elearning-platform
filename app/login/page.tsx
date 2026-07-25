@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -18,8 +18,19 @@ export default function LoginPage() {
 
 function LoginForm() {
   const router = useRouter();
+  const { status } = useSession();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+
+  // Já tinha sessão (voltou atrás pro /login, ou entrou pelo link direto
+  // com o browser a reaproveitar uma sessão antiga) — o formulário nunca
+  // ia disparar de novo o router.push de handleSubmit, por isso ficava
+  // preso aqui mesmo com a navbar já a mostrar o perfil.
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(callbackUrl);
+    }
+  }, [status, callbackUrl, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,6 +77,8 @@ function LoginForm() {
 
     setMagicLinkSent(true);
   }
+
+  if (status === "authenticated") return null;
 
   return (
     <AuthLayout

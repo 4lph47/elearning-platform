@@ -12,11 +12,16 @@ export function AuthLayout({
   subtitle,
   children,
   footer,
+  wide,
 }: {
   title: string;
   subtitle: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  // Formulário de registo de instrutor tem campos a mais pra caber na
+  // coluna estreita padrão sem scroll infinito no desktop — alarga o
+  // conteúdo (o painel decorativo à esquerda mantém-se do mesmo jeito).
+  wide?: boolean;
 }) {
   return (
     <div className="flex min-h-[calc(100vh-57px)] w-full">
@@ -60,7 +65,7 @@ export function AuthLayout({
           <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-blue-900/20 blur-3xl dark:bg-blue-900/30" />
         </div>
 
-        <div className="relative w-full max-w-sm">
+        <div className={`relative w-full ${wide ? "max-w-3xl" : "max-w-sm"}`}>
           <div className="mb-8 text-center">
             <Link
               href="/"

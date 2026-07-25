@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SOCIAL_PLATFORMS, matchesPlatformDomain, type SocialPlatformKey } from "@/lib/socialPlatforms";
 
 // javascript:/data: URLs stored here get rendered unescaped as <a href>/<img src>/
 // <video src>/<iframe src> for every student that opens the course — must be http(s).
@@ -24,6 +25,15 @@ const uploadedFileUrlField = z
   .optional()
   .nullable();
 
+const registerCertificationSchema = z.object({
+  name: z.string().min(1, "Nome da certificação é obrigatório").max(120, "Nome deve ter no máximo 120 caracteres"),
+  url: z
+    .string()
+    .min(1, "Link da certificação é obrigatório")
+    .max(300, "Link deve ter no máximo 300 caracteres")
+    .refine((v) => HTTP_URL_REGEX.test(v), "Link deve começar com http:// ou https://"),
+});
+
 export const registerSchema = z
   .object({
     name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -34,7 +44,8 @@ export const registerSchema = z
     bio: z.string().max(600, "Bio deve ter no máximo 600 caracteres").optional().nullable(),
     expertise: z.string().max(120, "Área de especialização deve ter no máximo 120 caracteres").optional().nullable(),
     yearsExperience: z.number().int().min(0, "Não pode ser negativo").max(80, "Valor inválido").optional().nullable(),
-    linkedinUrl: httpUrlField,
+    certifications: z.array(registerCertificationSchema).max(30, "Máximo de 30 certificações").optional().default([]),
+    ...Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, httpUrlField])),
   })
   .superRefine((data, ctx) => {
     if (!data.wantsToTeach) return;
@@ -58,6 +69,16 @@ export const registerSchema = z
         path: ["yearsExperience"],
         message: "Indica os teus anos de experiência",
       });
+    }
+    for (const platform of SOCIAL_PLATFORMS) {
+      const value = (data as unknown as Record<SocialPlatformKey, string | null | undefined>)[platform.key];
+      if (value && value.trim() && !matchesPlatformDomain(platform, value.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [platform.key],
+          message: `Este link não parece ser do ${platform.label} (${platform.hostnames?.join(" ou ")})`,
+        });
+      }
     }
   });
 export type RegisterInput = z.infer<typeof registerSchema>;

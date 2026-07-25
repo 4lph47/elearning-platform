@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type Kind = "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE";
@@ -109,6 +109,20 @@ async function uploadDirect(kind: Kind, file: File): Promise<UploadResult> {
 interface WorkerAuth {
   uploadUrl: string;
   token: string;
+  assetId: string;
+}
+
+// O que basta pra retomar uma compressão em curso sem o ficheiro original
+// (ver PendingVideoUpload em LessonEditScreen.tsx) — guardado no rascunho
+// assim que a compressão arranca, limpo quando acaba (sucesso ou falha
+// definitiva). totalBytes/fileName só servem pra reconstruir o
+// UploadResult no fim, o worker já tem os bytes todos há muito.
+export interface ResumableFinalize {
+  assetId: string;
+  token: string;
+  uploadUrl: string;
+  totalBytes: number;
+  fileName: string;
 }
 
 // Deriva um assetId sempre igual pro mesmo ficheiro (nome+tamanho+data de
@@ -350,7 +364,8 @@ async function uploadToWorker(
   onProgress: (percent: number) => void,
   onPhaseChange: (phase: "uploading" | "compressing") => void,
   isCurrent: () => boolean,
-  onCompressionProgress: (completed: number, total: number | null) => void
+  onCompressionProgress: (completed: number, total: number | null) => void,
+  onFinalizePending: (resume: ResumableFinalize | null) => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
   const noop = () => {};
@@ -368,11 +383,40 @@ async function uploadToWorker(
   }
 
   onPhaseChange("compressing");
+  // A partir daqui já não é preciso o ficheiro original — só o assetId/token
+  // guardam o que basta pra retomar isto (ver resumeWorkerFinalize) mesmo
+  // que a pessoa feche a aba a meio da compressão.
+  onFinalizePending({
+    assetId: auth.assetId,
+    token: auth.token,
+    uploadUrl: auth.uploadUrl,
+    totalBytes: file.size,
+    fileName: file.name,
+  });
   const url = await withUploadRetries(
     () => postFinalize(auth, file.size, xhrRef, isCurrent, onCompressionProgress),
     noop
   );
   return { url, sizeBytes: file.size, name: file.name, mimeType: file.type };
+}
+
+// Idêntico à cauda de uploadToWorker (a partir da compressão) — só que sem
+// nenhum ficheiro nem fase de envio, porque quando isto corre já não há
+// ficheiro nenhum (a página foi reaberta): o worker já tinha os bytes todos
+// há muito, só falta continuar a acompanhar/retomar a compressão.
+async function resumeWorkerFinalize(
+  resume: ResumableFinalize,
+  xhrRef: XhrRef,
+  isCurrent: () => boolean,
+  onCompressionProgress: (completed: number, total: number | null) => void
+): Promise<UploadResult> {
+  const auth: WorkerAuth = { uploadUrl: resume.uploadUrl, token: resume.token, assetId: resume.assetId };
+  const noop = () => {};
+  const url = await withUploadRetries(
+    () => postFinalize(auth, resume.totalBytes, xhrRef, isCurrent, onCompressionProgress),
+    noop
+  );
+  return { url, sizeBytes: resume.totalBytes, name: resume.fileName, mimeType: "video/mp4" };
 }
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -389,6 +433,8 @@ export function FileUploadInput({
   onUploaded,
   onFileSelected,
   compactMobile,
+  resumeUpload,
+  onFinalizePending,
 }: {
   kind: Kind;
   // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
@@ -407,6 +453,13 @@ export function FileUploadInput({
   // do botão só até ao breakpoint sm, cortando esse texto pelo overflow
   // (o botão em si, sendo um pseudo-elemento, continua sempre visível).
   compactMobile?: boolean;
+  // Compressão em curso duma sessão anterior (rascunho, ver
+  // LessonEditScreen.tsx) — se vier preenchido, retoma sozinho no mount,
+  // sem esperar nenhuma escolha de ficheiro. Só faz sentido pra kind="VIDEO".
+  resumeUpload?: ResumableFinalize | null;
+  // Chamado assim que a compressão arranca (guardar no rascunho) e de novo
+  // com null quando acaba/falha em definitivo (limpar do rascunho).
+  onFinalizePending?: (resume: ResumableFinalize | null) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -466,12 +519,14 @@ export function FileUploadInput({
           (completed, total) => {
             if (!isCurrent()) return;
             setCompressionPercent(total ? Math.round((completed / total) * 100) : null);
-          }
+          },
+          (resume) => onFinalizePending?.(resume)
         );
         if (!isCurrent()) return;
         setUploading(false);
         setCompressing(false);
         setUploadedName(data.name);
+        onFinalizePending?.(null);
         onUploaded(data);
         return;
       }
@@ -510,9 +565,54 @@ export function FileUploadInput({
       setIndeterminate(false);
       setCompressing(false);
       setCompressionPercent(null);
+      onFinalizePending?.(null);
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     }
   }
+
+  // Havia uma compressão em curso doutra sessão (rascunho) quando esta
+  // página abriu? Retoma sozinho — sem esperar nenhuma escolha de ficheiro
+  // — só acompanhando/continuando o que o worker já tinha (ver
+  // resumeWorkerFinalize). Só corre uma vez: se entretanto for escolhido um
+  // ficheiro novo à mão, handleChange já aborta e assume via generationRef,
+  // tal como cortaria qualquer outro envio em curso.
+  useEffect(() => {
+    if (!resumeUpload) return;
+    const myGeneration = ++generationRef.current;
+    const isCurrent = () => generationRef.current === myGeneration;
+
+    setUploading(true);
+    setCompressing(true);
+    setCompressionPercent(null);
+    setError(null);
+
+    resumeWorkerFinalize(
+      resumeUpload,
+      xhrRef,
+      isCurrent,
+      (completed, total) => {
+        if (!isCurrent()) return;
+        setCompressionPercent(total ? Math.round((completed / total) * 100) : null);
+      }
+    )
+      .then((data) => {
+        if (!isCurrent()) return;
+        setUploading(false);
+        setCompressing(false);
+        setUploadedName(data.name);
+        onFinalizePending?.(null);
+        onUploaded(data);
+      })
+      .catch((err) => {
+        if (!isCurrent() || err instanceof UploadAbortedError) return;
+        setUploading(false);
+        setCompressing(false);
+        setCompressionPercent(null);
+        onFinalizePending?.(null);
+        setError(err instanceof Error ? err.message : "Erro ao retomar compressão");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>

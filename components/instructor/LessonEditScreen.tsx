@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/CornerCard";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { Input, Label, Textarea } from "@/components/ui/Input";
-import { FileUploadInput } from "@/components/instructor/FileUploadInput";
+import { FileUploadInput, type ResumableFinalize } from "@/components/instructor/FileUploadInput";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { QuizEditor } from "@/components/instructor/QuizEditor";
 import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard";
@@ -51,6 +51,13 @@ interface LessonDraft {
   captionsUrl: string | null;
   textContent: string;
   contributorIds: string[];
+  // Compressão de vídeo ainda em curso no worker quando este rascunho foi
+  // gravado (ver onFinalizePending em FileUploadInput.tsx) — se presente,
+  // reabrir esta aula retoma sozinho o acompanhamento, sem pedir o
+  // ficheiro outra vez (o worker continua a comprimir independentemente
+  // da aba estar aberta ou não; isto só serve pro CLIENTE voltar a saber
+  // disso).
+  pendingVideoUpload: ResumableFinalize | null;
 }
 
 // Tela dedicada (não painel a expandir por baixo da aula na lista) — conteúdo
@@ -101,6 +108,9 @@ export function LessonEditScreen({
   // sobrevive a um refresh) — só reflete o progresso da geração em curso
   // nesta sessão do browser.
   const [captionsPhase, setCaptionsPhase] = useState<CaptionsPhase | "idle" | "done" | "error">("idle");
+  const [pendingVideoUpload, setPendingVideoUpload] = useState<ResumableFinalize | null>(
+    draft?.value.pendingVideoUpload ?? null
+  );
   const [textContent, setTextContent] = useState(draft?.value.textContent ?? lesson?.textContent ?? "");
   const [contributorIds, setContributorIds] = useState<string[]>(
     draft?.value.contributorIds ?? lesson?.contributors?.map((c) => c.id) ?? []
@@ -128,6 +138,7 @@ export function LessonEditScreen({
       captionsUrl,
       textContent,
       contributorIds,
+      pendingVideoUpload,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -141,6 +152,7 @@ export function LessonEditScreen({
     thumbnailName,
     captionsUrl,
     textContent,
+    pendingVideoUpload,
     contributorIds,
   ]);
   useUnsavedChangesGuard(dirty);
@@ -159,6 +171,30 @@ export function LessonEditScreen({
 
   function toggleContributor(id: string) {
     setContributorIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  // URL local (blob) do ficheiro escolhido — dá pra tocar no preview
+  // enquanto o upload/compressão ainda vão a caminho, sem esperar pelo
+  // vídeo comprimido do worker. Só existe na memória desta aba (não é
+  // persistido em rascunho nenhum, ao contrário de pendingVideoUpload) —
+  // some com um refresh, altura em que o preview volta a ficar em branco
+  // até o vídeo real (contentUrl) ficar pronto.
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const localPreviewUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
+    };
+  }, []);
+  function handleVideoFileSelected(file: File) {
+    if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
+    const url = URL.createObjectURL(file);
+    localPreviewUrlRef.current = url;
+    setLocalPreviewUrl(url);
+    // Mesmo ficheiro, corre em paralelo — ver comentários em
+    // handleGenerateCaptions/handleGenerateThumbnail abaixo.
+    handleGenerateCaptions(file);
+    handleGenerateThumbnail(file);
   }
 
   // Corre em paralelo ao upload do vídeo (assim que o ficheiro é escolhido,
@@ -429,13 +465,17 @@ export function LessonEditScreen({
                   currentUrl={contentUrl}
                   currentName={contentName}
                   onUploaded={(r) => {
+                    if (localPreviewUrlRef.current) {
+                      URL.revokeObjectURL(localPreviewUrlRef.current);
+                      localPreviewUrlRef.current = null;
+                    }
+                    setLocalPreviewUrl(null);
                     setContentUrl(r.url);
                     setContentName(r.name);
                   }}
-                  onFileSelected={(file) => {
-                    handleGenerateCaptions(file);
-                    handleGenerateThumbnail(file);
-                  }}
+                  onFileSelected={handleVideoFileSelected}
+                  resumeUpload={pendingVideoUpload}
+                  onFinalizePending={setPendingVideoUpload}
                 />
                 {captionsPhase !== "idle" && (
                   <p
@@ -449,7 +489,7 @@ export function LessonEditScreen({
                     de qualidade, tudo igual), só que a largura fica fluida
                     (fluidWidth) em vez das larguras fixas da página da aula,
                     que não cabiam nesta card mais estreita. */}
-                {contentUrl && (
+                {contentUrl ? (
                   <div className="mt-2 overflow-hidden rounded-md bg-black">
                     <LessonPlayer
                       lessonId={lesson?.id ?? "preview"}
@@ -462,6 +502,16 @@ export function LessonEditScreen({
                       fluidWidth
                     />
                   </div>
+                ) : (
+                  localPreviewUrl && (
+                    // Vídeo comprimido ainda não está pronto — toca o
+                    // ficheiro local diretamente (sem hls.js, é o
+                    // ficheiro bruto tal como escolhido) em vez de
+                    // deixar o preview em branco até o worker acabar.
+                    <div className="mt-2 overflow-hidden rounded-md bg-black">
+                      <video src={localPreviewUrl} controls className="aspect-video w-full" />
+                    </div>
+                  )
                 )}
               </div>
             ) : (

@@ -186,7 +186,13 @@ export function LessonEditScreen({
       if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
     };
   }, []);
+  // Guardado só pra "Tentar novamente" (ver botão junto ao erro de
+  // legendas) poder repetir a transcrição sem obrigar a reescolher o
+  // vídeo — o ficheiro em si já está na memória da aba, não há razão pra
+  // pedir de novo só porque o CDN do modelo teve um soluço.
+  const lastVideoFileRef = useRef<File | null>(null);
   function handleVideoFileSelected(file: File) {
+    lastVideoFileRef.current = file;
     if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
     const url = URL.createObjectURL(file);
     localPreviewUrlRef.current = url;
@@ -482,6 +488,15 @@ export function LessonEditScreen({
                     className={`text-xs ${captionsPhase === "error" ? "text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
                   >
                     {CAPTIONS_PHASE_LABEL[captionsPhase]}
+                    {captionsPhase === "error" && lastVideoFileRef.current && (
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateCaptions(lastVideoFileRef.current!)}
+                        className="ml-2 underline hover:no-underline"
+                      >
+                        Tentar novamente
+                      </button>
+                    )}
                   </p>
                 )}
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —

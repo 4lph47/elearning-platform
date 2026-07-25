@@ -80,6 +80,23 @@ function chunksToVtt(chunks: WhisperChunk[]): string {
 // CPU ainda razoável para correr no browser de quem está a fazer upload.
 const MODEL_ID = "Xenova/whisper-base";
 
+// As duas falhas vistas até agora neste carregamento (ERR_HTTP2_PROTOCOL_ERROR,
+// "Failed to fetch") são de rede/CDN a meio de um download de ~77MB — não
+// falhas permanentes. 3 tentativas com espera crescente antes de desistir
+// de vez, em vez de morrer à primeira soluço de rede.
+async function withRetries<T>(fn: () => Promise<T>, attempts: number): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 export async function transcribeFileToVtt(file: File, onProgress?: (phase: CaptionsPhase) => void): Promise<string> {
   onProgress?.("loading-model");
   const { pipeline } = await import(/* webpackIgnore: true */ TRANSFORMERS_CDN_URL);
@@ -95,9 +112,14 @@ export async function transcribeFileToVtt(file: File, onProgress?: (phase: Capti
   // repo) é bem mais leve (23.2MB + 53.7MB, ~77MB) e não tem o problema
   // do q4 (esquema de quantização diferente, sem tensor de escala externo
   // em falta).
-  const transcriber = await pipeline("automatic-speech-recognition", MODEL_ID, {
-    dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const transcriber = await withRetries<any>(
+    () =>
+      pipeline("automatic-speech-recognition", MODEL_ID, {
+        dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
+      }),
+    3
+  );
 
   onProgress?.("decoding-audio");
   const audio = await decodeAudioFromFile(file);

@@ -67,6 +67,12 @@ model User {
   mediumUrl       String?
   twitchUrl       String?
   certifications  Certification[]
+  // null = conta criada (Google/link mágico) mas ainda não passou pelo
+  // ecrã de aceitar termos em /register/complete — o middleware tranca a
+  // navegação até isto ficar preenchido. Contas por credenciais já ficam
+  // com isto definido na criação, porque o formulário exige aceitar os
+  // termos antes de submeter.
+  termsAcceptedAt DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

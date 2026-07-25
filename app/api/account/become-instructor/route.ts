@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     where: { id: session.user.id },
     data: {
       role: "INSTRUCTOR",
+      termsAcceptedAt: new Date(),
       bio: bio.trim(),
       expertise: expertise.trim(),
       yearsExperience,

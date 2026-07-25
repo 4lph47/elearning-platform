@@ -73,6 +73,18 @@ function CompleteForm() {
 
   async function handleStudentSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const res = await fetch("/api/account/complete-registration", { method: "POST" });
+    if (!res.ok) {
+      setError("Erro ao concluir registo");
+      setLoading(false);
+      return;
+    }
+
+    await update();
+    setLoading(false);
     router.push("/");
     router.refresh();
   }
@@ -132,8 +144,9 @@ function CompleteForm() {
               />
               <span>Concordo com os Termos e Serviços e a Política de Privacidade</span>
             </label>
-            <Button type="submit" variant="accent" className="w-full">
-              Concluir registo
+            {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+            <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+              {loading ? "A concluir..." : "Concluir registo"}
             </Button>
           </form>
         </div>

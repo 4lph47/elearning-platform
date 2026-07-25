@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       email,
       passwordHash,
       role: wantsToTeach ? "INSTRUCTOR" : "STUDENT",
+      termsAcceptedAt: new Date(),
       ...(wantsToTeach
         ? {
             bio: bio?.trim() || null,

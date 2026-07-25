@@ -45,6 +45,7 @@ export const authOptions: AuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
+          termsAcceptedAt: user.termsAcceptedAt,
         };
       },
     }),
@@ -62,15 +63,19 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as { role: string }).role;
+        token.registered = Boolean((user as { termsAcceptedAt?: Date | null }).termsAcceptedAt);
       } else if (trigger === "update" && token.id) {
         // Sessão já aberta (ex.: conta Google que acabou de virar
-        // instrutor em /register/complete) — o JWT só refaz este pedido
-        // à BD quando o cliente chama update() explicitamente.
+        // instrutor, ou aceitou os termos, em /register/complete) — o JWT
+        // só refaz este pedido à BD quando o cliente chama update() explicitamente.
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true },
+          select: { role: true, termsAcceptedAt: true },
         });
-        if (dbUser) token.role = dbUser.role;
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.registered = Boolean(dbUser.termsAcceptedAt);
+        }
       }
       return token;
     },
@@ -78,6 +83,7 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.registered = Boolean(token.registered);
       }
       return session;
     },

@@ -444,12 +444,7 @@ export function Navbar() {
                           <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
                         )}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
-                        <span className="block truncate text-xs text-emerald-600 dark:text-emerald-400">
-                          -{item.discountPct}%
-                        </span>
-                      </span>
+                      <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.title}</span>
                     </button>
                   ))}
                 </>

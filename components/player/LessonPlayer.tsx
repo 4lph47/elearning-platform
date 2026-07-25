@@ -1347,7 +1347,7 @@ export function LessonPlayer({
             >
               <video
                 ref={videoRef}
-                className="h-full w-full object-contain"
+                className="lesson-video h-full w-full object-contain"
                 src={usingHls ? undefined : activeSrc ?? undefined}
                 playsInline
                 crossOrigin="anonymous"
@@ -1408,20 +1408,18 @@ export function LessonPlayer({
                     onClick={toggleCaptions}
                     aria-label={captionsOn ? "Desativar legendas" : "Ativar legendas"}
                     aria-pressed={captionsOn}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm ${
-                      captionsOn ? "bg-blue-500" : "bg-black/40"
-                    }`}
+                    className="flex h-9 w-9 items-center justify-center text-white"
                   >
-                    {captionsOn ? <Captions size={18} /> : <CaptionsOff size={18} />}
+                    {captionsOn ? <Captions size={23} /> : <CaptionsOff size={23} />}
                   </button>
                 )}
                 <div ref={mobileMenuBtnRef} className="relative">
                   <button type="button"
                     onClick={toggleSettingsMenu}
                     aria-label="Definições"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
                   >
-                    <Settings size={18} />
+                    <Settings size={21} />
                   </button>
                 </div>
               </div>
@@ -1437,9 +1435,9 @@ export function LessonPlayer({
                 <button type="button"
                   onClick={toggleFullscreen}
                   aria-label={isFullscreen ? "Sair de ecrã inteiro" : "Ecrã inteiro"}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
                 >
-                  {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                  {isFullscreen ? <Minimize size={21} /> : <Maximize size={21} />}
                 </button>
               </div>
 
@@ -1678,7 +1676,7 @@ export function LessonPlayer({
                     />
                   </div>
 
-                  <span className="text-xs tabular-nums text-slate-200">
+                  <span className="text-sm tabular-nums text-slate-200">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
 

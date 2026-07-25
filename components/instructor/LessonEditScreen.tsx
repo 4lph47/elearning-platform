@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { Eye, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   CornerCard,
@@ -70,6 +70,7 @@ export function LessonEditScreen({
   initialType,
   nextOrder,
   courseAuthors,
+  stats,
 }: {
   courseId: string;
   moduleId: string;
@@ -77,6 +78,7 @@ export function LessonEditScreen({
   initialType?: "VIDEO" | "TEXT";
   nextOrder: number;
   courseAuthors: { id: string; name: string }[];
+  stats?: { viewCount: number; commentsCount: number };
 }) {
   const router = useRouter();
   const { fadeNavigate, setNavigationGuard } = useFadeNav();
@@ -369,8 +371,8 @@ export function LessonEditScreen({
         )}
       </CornerCardStack>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-white/10">
-        <div className="min-w-0 flex-1">
+      <div className="space-y-3 border-b border-slate-200 pb-4 dark:border-white/10">
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {isEditing ? "Editar aula" : "Nova aula"}
           </p>
@@ -378,9 +380,25 @@ export function LessonEditScreen({
             {title || "Sem título"}
           </h1>
         </div>
-        <Button type="submit" form="lesson-form" variant="premium" disabled={saving}>
-          {saving ? "A guardar..." : "Guardar aula"}
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            {stats && (
+              <>
+                <span className="flex items-center gap-1">
+                  <Eye size={12} />
+                  {stats.viewCount} visualizações
+                </span>
+                <span className="flex items-center gap-1">
+                  <MessageCircle size={12} />
+                  {stats.commentsCount} comentários
+                </span>
+              </>
+            )}
+          </div>
+          <Button type="submit" form="lesson-form" variant="premium" disabled={saving}>
+            {saving ? "A guardar..." : "Guardar aula"}
+          </Button>
+        </div>
       </div>
 
       {/* Colunas independentes (flex, não grid) — Recursos/Quiz continuam

@@ -19,13 +19,14 @@ export default async function EditLessonPage({
   const lesson = await getOwnedLesson(lessonId, session);
   if (!lesson || lesson.moduleId !== moduleId || lesson.module.courseId !== courseId) notFound();
 
-  const [resources, quiz, contributors, course] = await Promise.all([
+  const [resources, quiz, contributors, commentsCount, course] = await Promise.all([
     prisma.lessonResource.findMany({ where: { lessonId }, orderBy: { createdAt: "asc" } }),
     prisma.quiz.findUnique({
       where: { lessonId },
       include: { questions: { include: { options: { orderBy: { order: "asc" } } }, orderBy: { order: "asc" } } },
     }),
     prisma.lesson.findUnique({ where: { id: lessonId } }).contributors({ select: { id: true } }),
+    prisma.lessonComment.count({ where: { lessonId } }),
     prisma.course.findUnique({
       where: { id: courseId },
       select: {
@@ -43,6 +44,7 @@ export default async function EditLessonPage({
       moduleId={moduleId}
       nextOrder={lesson.order}
       courseAuthors={courseAuthors}
+      stats={{ viewCount: lesson.viewCount, commentsCount }}
       lesson={{
         id: lesson.id,
         title: lesson.title,

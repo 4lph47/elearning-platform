@@ -256,7 +256,7 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <GraduationCap className="h-4.5 w-4.5" size={18} />
               </span>
-              <span>E-Learn</span>
+              <span>Moz Academy</span>
             </FadeLink>
           </div>
         </div>

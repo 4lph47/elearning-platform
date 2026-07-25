@@ -80,7 +80,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(payload, null, 2), {
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="e-learn-dados-${userId}.json"`,
+      "Content-Disposition": `attachment; filename="moz-academy-dados-${userId}.json"`,
     },
   });
 }

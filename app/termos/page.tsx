@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Termos e Serviços — E-Learn" };
+export const metadata = { title: "Termos e Serviços — Moz Academy" };
 
 export default function TermsPage() {
   return (
@@ -56,7 +56,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">6. Contacto</h2>
-          <p>Dúvidas sobre estes termos: suporte@e-learn.example</p>
+          <p>Dúvidas sobre estes termos: suporte@mozacademy.example</p>
         </section>
       </div>
     </div>

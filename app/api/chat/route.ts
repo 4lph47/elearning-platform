@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     })
     .join("\n\n");
 
-  const systemPrompt = `És um assistente de apoio ao aluno dentro da plataforma de e-learning "E-Learn". Respondes SÓ a perguntas relacionadas com o curso abaixo — o teu contexto é exclusivo deste curso.
+  const systemPrompt = `És um assistente de apoio ao aluno dentro da plataforma de e-learning "Moz Academy". Respondes SÓ a perguntas relacionadas com o curso abaixo — o teu contexto é exclusivo deste curso.
 
 Curso: ${course.title}
 Categoria: ${course.category} · Nível: ${course.level}

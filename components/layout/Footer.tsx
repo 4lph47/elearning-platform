@@ -69,7 +69,7 @@ export async function Footer() {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <GraduationCap size={18} />
               </span>
-              E-Learn
+              Moz Academy
             </Link>
             <p className="mt-3 max-w-xs text-sm text-slate-500 dark:text-slate-400">
               Aprende ao teu ritmo com cursos criados por instrutores reais.
@@ -96,7 +96,7 @@ export async function Footer() {
         </div>
 
         <div className="mt-10 border-t border-slate-200 pt-6 text-sm text-slate-500 dark:border-white/10">
-          © {year} E-Learn. Todos os direitos reservados.
+          © {year} Moz Academy. Todos os direitos reservados.
         </div>
       </div>
     </footer>

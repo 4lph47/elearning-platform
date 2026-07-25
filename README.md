@@ -1,4 +1,4 @@
-# E-Learn — Plataforma de Cursos Online
+# Moz Academy — Plataforma de Cursos Online
 
 Plataforma de e-learning estilo Udemy construída com Next.js 14 (App Router), TypeScript, Tailwind CSS, Prisma + PostgreSQL e NextAuth. Suporta duas áreas de utilizador — **instrutores** (criam cursos, módulos e aulas) e **alunos** (matriculam-se e consomem conteúdo). Toda aula tem **vídeo obrigatório**; documentos e imagens são anexos extra (materiais de apoio). Design minimalista, paleta monotone (escala de cinzentos) e ícones profissionais (lucide).
 

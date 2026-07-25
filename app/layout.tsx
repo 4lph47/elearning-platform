@@ -29,7 +29,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "E-Learn — Plataforma de Cursos Online",
+  title: "Moz Academy — Plataforma de Cursos Online",
   description: "Aprende novas competências com cursos criados por instrutores reais.",
 };
 

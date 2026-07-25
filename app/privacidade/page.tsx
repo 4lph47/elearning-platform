@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Política de Privacidade — E-Learn" };
+export const metadata = { title: "Política de Privacidade — Moz Academy" };
 
 export default function PrivacyPage() {
   return (
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">5. Contacto</h2>
-          <p>Dúvidas sobre privacidade: suporte@e-learn.example</p>
+          <p>Dúvidas sobre privacidade: suporte@mozacademy.example</p>
         </section>
       </div>
     </div>

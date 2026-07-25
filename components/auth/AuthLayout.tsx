@@ -35,7 +35,7 @@ export function AuthLayout({
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-950/40">
             <GraduationCap size={20} />
           </span>
-          E-Learn
+          Moz Academy
         </Link>
 
         <div className="relative">
@@ -55,7 +55,7 @@ export function AuthLayout({
         </div>
 
         <p className="relative text-xs text-slate-500">
-          © {new Date().getFullYear()} E-Learn. Todos os direitos reservados.
+          © {new Date().getFullYear()} Moz Academy. Todos os direitos reservados.
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export function AuthLayout({
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
                 <GraduationCap size={22} />
               </span>
-              E-Learn
+              Moz Academy
             </Link>
             <h1 className="mt-5 text-2xl font-bold text-slate-900 dark:text-white lg:mt-0">{title}</h1>
             <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>

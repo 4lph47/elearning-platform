@@ -13,7 +13,7 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { getRecentCourseSearches, addRecentCourseSearch, type RecentCourseSearch } from "@/lib/recentCourseSearches";
 
-const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$/;
+const HERO_PATH = /^\/$|^\/courses\/[^/]+$|^\/instructors\/[^/]+$|^\/students\/[^/]+$/;
 const SUGGEST_DEBOUNCE_MS = 250;
 
 interface MinimalSpeechRecognition {

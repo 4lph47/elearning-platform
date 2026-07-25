@@ -56,19 +56,19 @@ const config: Config = {
             animationTimingFunction: "ease-in",
           },
           "35%": {
-            transform: "translate(-50%, -50%) scale(0.85) rotate(8deg)",
+            transform: "translate(-50%, -50%) scale(0.85) rotate(-8deg)",
             animationTimingFunction: "ease-out",
           },
           "50%": {
-            transform: "translate(-50%, -50%) scale(1.15) rotate(14deg)",
+            transform: "translate(-50%, -50%) scale(1.15) rotate(-14deg)",
             animationTimingFunction: "ease-in",
           },
           "63%": {
-            transform: "translate(-50%, -50%) scale(0.95) rotate(6deg)",
+            transform: "translate(-50%, -50%) scale(0.95) rotate(-6deg)",
             animationTimingFunction: "ease-out",
           },
           "75%": {
-            transform: "translate(-50%, -50%) scale(1.05) rotate(-2deg)",
+            transform: "translate(-50%, -50%) scale(1.05) rotate(2deg)",
             animationTimingFunction: "ease-in",
           },
           "87%": {

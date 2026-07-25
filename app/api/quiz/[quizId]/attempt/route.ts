@@ -20,8 +20,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ qui
     include: {
       questions: { include: { options: true }, orderBy: { order: "asc" } },
       lesson: { include: { module: { include: { course: true } } } },
-      module: { include: { course: true } },
-      course: true,
+      module: { include: { course: true, lessons: { select: { id: true, order: true } } } },
+      course: { include: { modules: { include: { lessons: { select: { id: true } } } } } },
     },
   });
   if (!quiz) return NextResponse.json({ error: "Quiz não encontrado" }, { status: 404 });
@@ -38,6 +38,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ qui
     isOwner || isEnrolled || (quiz.scope === "LESSON" && quiz.lesson?.isFreePreview === true);
 
   if (!hasAccess) return NextResponse.json({ error: "Sem acesso a este quiz" }, { status: 403 });
+
+  // Quiz só pode ser submetido depois das aulas anteriores concluídas (quiz
+  // de aula: essa aula; de módulo: aulas do módulo com order menor; exame
+  // final: todas as aulas do curso) — dono do curso ignora este bloqueio.
+  if (!isOwner) {
+    const prerequisiteLessonIds =
+      quiz.scope === "LESSON" && quiz.lessonId
+        ? [quiz.lessonId]
+        : quiz.scope === "MODULE" && quiz.module
+          ? quiz.module.lessons.filter((l) => l.order < quiz.order).map((l) => l.id)
+          : quiz.scope === "COURSE" && quiz.course
+            ? quiz.course.modules.flatMap((m) => m.lessons.map((l) => l.id))
+            : [];
+    if (prerequisiteLessonIds.length > 0) {
+      const doneCount = await prisma.lessonProgress.count({
+        where: { userId: session.user.id, lessonId: { in: prerequisiteLessonIds }, completed: true },
+      });
+      if (doneCount < prerequisiteLessonIds.length) {
+        return NextResponse.json({ error: "Termina as aulas anteriores primeiro" }, { status: 403 });
+      }
+    }
+  }
 
   if (quiz.maxAttempts !== null) {
     const attemptsUsed = await prisma.quizAttempt.count({

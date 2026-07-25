@@ -103,6 +103,9 @@ export default async function LessonPage({
     redirect(`/courses/${slug}`);
   }
 
+  const progressByLessonId = Object.fromEntries(progressRows.map((p) => [p.lessonId, p.completed]));
+  const completedLessonsCount = Object.values(progressByLessonId).filter(Boolean).length;
+
   const sequence = buildCourseSequence(
     course.modules.map((m) => ({
       title: m.title,
@@ -116,16 +119,14 @@ export default async function LessonPage({
       })),
     })),
     course.quiz ? { id: course.quiz.id } : null,
-    { isOwner, isEnrolled }
+    { isOwner, isEnrolled },
+    progressByLessonId
   );
   const currentSeqIndex = sequence.findIndex((it) => it.type === "lesson" && it.id === lesson.id);
   const previousItem = currentSeqIndex > 0 ? sequence[currentSeqIndex - 1] : null;
   const nextItem = currentSeqIndex >= 0 ? sequence[currentSeqIndex + 1] : null;
   const previousHref = previousItem?.accessible ? hrefFor(slug, previousItem) : null;
   const nextHref = nextItem?.accessible ? hrefFor(slug, nextItem) : null;
-
-  const progressByLessonId = Object.fromEntries(progressRows.map((p) => [p.lessonId, p.completed]));
-  const completedLessonsCount = Object.values(progressByLessonId).filter(Boolean).length;
   const doneQuizIds = new Set(doneQuizAttempts.map((a) => a.quizId));
 
   const authors = [course.instructor, ...course.collaborators];

@@ -86,8 +86,9 @@ export function CourseProgressSidebar({
   completedCount: number;
   totalLessons: number;
 }) {
-  const quizAccessible = isOwner || isEnrolled;
+  const baseQuizAccessible = isOwner || isEnrolled;
   const doneQuizIdSet = new Set(doneQuizIds);
+  const allLessonsDone = modules.every((m) => m.lessons.every((l) => progressByLessonId[l.id]));
   const { state: textFlyState, start: startTitleFly } = useTextFly();
   const titleRefs = useRef(new Map<string, HTMLSpanElement>());
 
@@ -131,6 +132,10 @@ export function CourseProgressSidebar({
                 {mergeModuleItems(module).map((entry) => {
                   if (entry.kind === "quiz") {
                     const quiz = entry.quiz;
+                    const priorModuleLessonsDone = module.lessons
+                      .filter((l) => l.order < quiz.order)
+                      .every((l) => progressByLessonId[l.id]);
+                    const quizAccessible = baseQuizAccessible && (isOwner || priorModuleLessonsDone);
                     return (
                       <li key={quiz.id}>
                         {quizAccessible ? (
@@ -171,6 +176,7 @@ export function CourseProgressSidebar({
                   const accessible = isOwner || isEnrolled || l.isFreePreview;
                   const isCurrent = l.id === currentLessonId;
                   const isDone = progressByLessonId[l.id];
+                  const lessonQuizAccessible = accessible && (isOwner || isDone);
                   return (
                     <Fragment key={l.id}>
                       <li>
@@ -210,7 +216,7 @@ export function CourseProgressSidebar({
                       </li>
                       {l.quizId && (
                         <li>
-                          {accessible ? (
+                          {lessonQuizAccessible ? (
                             <Link
                               href={`/courses/${slug}/quiz/${l.quizId}`}
                               prefetch
@@ -253,7 +259,7 @@ export function CourseProgressSidebar({
 
         {finalQuizId && (
           <div className="border-b border-slate-200 dark:border-white/10 last:border-0">
-            {quizAccessible ? (
+            {baseQuizAccessible && (isOwner || allLessonsDone) ? (
               <Link
                 href={`/courses/${slug}/quiz/${finalQuizId}`}
                 prefetch

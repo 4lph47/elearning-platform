@@ -70,6 +70,23 @@ export default async function CourseQuizPage({
   const completedLessonsCount = Object.values(progressByLessonId).filter(Boolean).length;
   const doneQuizIds = new Set(doneQuizAttempts.map((a) => a.quizId));
 
+  // Quiz só fica acessível depois das aulas anteriores concluídas (quiz de
+  // aula: essa aula; de módulo: aulas do módulo com order menor; exame
+  // final: todas as aulas do curso) — dono do curso ignora este bloqueio.
+  if (!isOwner) {
+    const parentModule = quiz.moduleId ? course.modules.find((m) => m.id === quiz.moduleId) : null;
+    const prerequisiteLessons =
+      quiz.scope === "LESSON"
+        ? allLessons.filter((l) => l.id === quiz.lessonId)
+        : quiz.scope === "MODULE"
+          ? (parentModule?.lessons.filter((l) => l.order < quiz.order) ?? [])
+          : allLessons;
+    const prerequisitesComplete = prerequisiteLessons.every((l) => progressByLessonId[l.id]);
+    if (!prerequisitesComplete) {
+      redirect(`/courses/${slug}`);
+    }
+  }
+
   const totalItems = allLessons.length + allQuizIds.length;
   const completedCount = completedLessonsCount + doneQuizIds.size;
   const percent = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
@@ -87,7 +104,8 @@ export default async function CourseQuizPage({
       })),
     })),
     course.quiz ? { id: course.quiz.id } : null,
-    { isOwner, isEnrolled }
+    { isOwner, isEnrolled },
+    progressByLessonId
   );
   const currentSeqIndex = sequence.findIndex((it) => it.type === "quiz" && it.id === quiz.id);
   const previousItem = currentSeqIndex > 0 ? sequence[currentSeqIndex - 1] : null;

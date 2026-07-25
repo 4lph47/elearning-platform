@@ -1403,36 +1403,28 @@ export function LessonPlayer({
                   controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
-                <div ref={mobileMenuBtnRef} className="relative">
-                  <button type="button"
-                    onClick={toggleSettingsMenu}
-                    aria-label="Definições"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
-                  >
-                    <Settings size={21} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Legendas: acima da barra de baixo (mesmo nível do maximizar/tempo),
-                  não mais junto às definições no canto superior. Some quando a barra
-                  está expandida, tal como o maximizar. */}
-              {captionsUrl && (
-                <div
-                  className={`absolute bottom-7 left-2 z-30 text-white transition-opacity duration-150 lg:hidden ${
-                    controlsShown && !barExpanded ? "opacity-100" : "pointer-events-none opacity-0"
-                  }`}
-                >
+                {captionsUrl && (
                   <button type="button"
                     onClick={toggleCaptions}
                     aria-label={captionsOn ? "Desativar legendas" : "Ativar legendas"}
                     aria-pressed={captionsOn}
-                    className={`flex h-9 w-9 items-center justify-center ${captionsOn ? "text-blue-400" : "text-white"}`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm ${
+                      captionsOn ? "bg-blue-500" : "bg-black/40"
+                    }`}
                   >
-                    {captionsOn ? <Captions size={23} /> : <CaptionsOff size={23} />}
+                    {captionsOn ? <Captions size={18} /> : <CaptionsOff size={18} />}
+                  </button>
+                )}
+                <div ref={mobileMenuBtnRef} className="relative">
+                  <button type="button"
+                    onClick={toggleSettingsMenu}
+                    aria-label="Definições"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  >
+                    <Settings size={18} />
                   </button>
                 </div>
-              )}
+              </div>
 
               {/* Maximizar: no mobile fica no canto inferior direito, mas acima da barra
                   (mesmo nível do tempo do vídeo), não sobre ela. Some quando a barra está
@@ -1445,9 +1437,9 @@ export function LessonPlayer({
                 <button type="button"
                   onClick={toggleFullscreen}
                   aria-label={isFullscreen ? "Sair de ecrã inteiro" : "Ecrã inteiro"}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
                 >
-                  {isFullscreen ? <Minimize size={21} /> : <Maximize size={21} />}
+                  {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
                 </button>
               </div>
 
@@ -1686,7 +1678,7 @@ export function LessonPlayer({
                     />
                   </div>
 
-                  <span className="text-sm tabular-nums text-slate-200">
+                  <span className="text-xs tabular-nums text-slate-200">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
 

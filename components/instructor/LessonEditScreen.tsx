@@ -199,17 +199,18 @@ export function LessonEditScreen({
     const url = URL.createObjectURL(file);
     localPreviewUrlRef.current = url;
     setLocalPreviewUrl(url);
-    // Mesmo ficheiro, corre em paralelo — ver comentários em
-    // handleGenerateCaptions/handleGenerateThumbnail abaixo.
-    handleGenerateCaptions(file);
+    // Thumbnail corre já (não depende da compressão). Legendas só arrancam
+    // quando a compressão do vídeo terminar (ver onUploaded/handleVideoUploaded
+    // abaixo) — antes corriam em paralelo com a compressão e disputavam CPU
+    // com ela no mesmo browser.
     handleGenerateThumbnail(file);
   }
 
-  // Corre em paralelo ao upload do vídeo (assim que o ficheiro é escolhido,
-  // ver onFileSelected em FileUploadInput), não depois dele — os dois usam
-  // o MESMO ficheiro local, um não precisa de esperar pelo outro.
-  // generationRef evita que o resultado de uma transcrição ANTIGA (ficheiro
-  // trocado a meio) sobrescreva o estado depois de já não ser relevante.
+  // Disparado só depois da compressão do vídeo terminar (onUploaded do
+  // FileUploadInput) — usa o MESMO ficheiro local guardado em
+  // lastVideoFileRef (setado em handleVideoFileSelected). generationRef
+  // evita que o resultado de uma transcrição ANTIGA (ficheiro trocado a
+  // meio) sobrescreva o estado depois de já não ser relevante.
   const captionsGenerationRef = useRef(0);
   async function handleGenerateCaptions(file: File) {
     const myGeneration = ++captionsGenerationRef.current;
@@ -496,6 +497,7 @@ export function LessonEditScreen({
                     setLocalPreviewUrl(null);
                     setContentUrl(r.url);
                     setContentName(r.name);
+                    if (lastVideoFileRef.current) handleGenerateCaptions(lastVideoFileRef.current);
                   }}
                   onFileSelected={handleVideoFileSelected}
                   resumeUpload={pendingVideoUpload}

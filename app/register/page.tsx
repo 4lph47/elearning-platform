@@ -45,6 +45,51 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Só o formulário de instrutor (bem mais longo) usa isto — passos
+  // visíveis um de cada vez só a partir do lg; abaixo disso continua tudo
+  // empilhado na mesma página, scroll normal.
+  const STEP_LABELS = ["Conta", "Perfil", "Redes & Certificações"];
+  const [step, setStep] = useState(0);
+
+  function validateStep(idx: number): string | null {
+    if (idx === 0) {
+      if (name.trim().length < 2) return "Nome deve ter pelo menos 2 caracteres";
+      if (!email.trim()) return "Indica o teu email";
+      if (password.length < 6) return "A password deve ter pelo menos 6 caracteres";
+      return null;
+    }
+    if (idx === 1) {
+      if (bio.trim().length < 50) return "Conta-nos a tua experiência com pelo menos 50 caracteres";
+      if (expertise.trim().length < 2) return "Indica a tua área de especialização";
+      if (yearsExperience === "") return "Indica os teus anos de experiência";
+      return null;
+    }
+    return null;
+  }
+
+  function goNext() {
+    const err = validateStep(step);
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
+  }
+
+  function goPrev() {
+    setError(null);
+    setStep((s) => Math.max(s - 1, 0));
+  }
+
+  // Desktop: só a secção do passo atual fica visível (lg:hidden nas
+  // outras). Mobile ignora step de todo — tudo continua sempre visível,
+  // como já estava.
+  function stepClass(idx: number) {
+    if (!wantsToTeach) return "";
+    return step === idx ? "" : "lg:hidden";
+  }
+
   function addSocialPlatform(key: SocialPlatformKey) {
     setActiveSocialKeys((prev) => [...prev, key]);
   }
@@ -145,7 +190,7 @@ export default function RegisterPage() {
           </button>
           <button
             type="button"
-            onClick={() => setRole("instrutor")}
+            onClick={() => { setRole("instrutor"); setStep(0); }}
             className="flex w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-500 hover:shadow-md dark:border-white/10 dark:bg-neutral-900 dark:hover:border-blue-500"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
@@ -177,14 +222,35 @@ export default function RegisterPage() {
     >
       <button
         type="button"
-        onClick={() => setRole(null)}
+        onClick={() => { setRole(null); setStep(0); }}
         className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
       >
         <ArrowLeft size={14} /> Voltar
       </button>
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
+        {wantsToTeach && (
+          <ol className="mb-6 hidden items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 lg:flex">
+            {STEP_LABELS.map((label, i) => (
+              <li key={label} className="flex items-center gap-2">
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] ${
+                    step === i
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : step > i
+                        ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                        : "border-slate-300 text-slate-400 dark:border-white/20 dark:text-slate-500"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span className={step === i ? "text-slate-900 dark:text-white" : ""}>{label}</span>
+                {i < STEP_LABELS.length - 1 && <span className="mx-1 h-px w-6 bg-slate-200 dark:bg-white/10" />}
+              </li>
+            ))}
+          </ol>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className={wantsToTeach ? "grid grid-cols-1 gap-4 sm:grid-cols-3" : "space-y-4"}>
+          <div className={`${wantsToTeach ? "grid grid-cols-1 gap-4 sm:grid-cols-3" : "space-y-4"} ${stepClass(0)}`}>
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
                 Nome
@@ -236,67 +302,70 @@ export default function RegisterPage() {
           </div>
 
           {wantsToTeach && (
-            <div className="rounded-md border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
+            <div className={`rounded-md border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5 ${stepClass(1)}`}>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Conta-nos um pouco sobre ti — isto ajuda os alunos a confiarem nos teus cursos.
               </p>
 
-              <div className="mt-4 grid gap-x-6 gap-y-4 lg:grid-cols-2">
-                <div className="space-y-4">
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label htmlFor="bio" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                    A tua experiência
+                  </label>
+                  <Textarea
+                    id="bio"
+                    required
+                    minLength={50}
+                    rows={5}
+                    placeholder="Ex: Sou engenheiro de software há 8 anos, especializado em..."
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="bio" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                      A tua experiência
+                    <label htmlFor="expertise" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Área de especialização
                     </label>
-                    <Textarea
-                      id="bio"
-                      required
-                      minLength={50}
-                      rows={5}
-                      placeholder="Ex: Sou engenheiro de software há 8 anos, especializado em..."
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="expertise" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                        Área de especialização
-                      </label>
-                      <div className="relative">
-                        <Briefcase size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          id="expertise"
-                          required
-                          placeholder="Ex: Desenvolvimento Web"
-                          value={expertise}
-                          onChange={(e) => setExpertise(e.target.value)}
-                          className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label htmlFor="yearsExperience" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                        Anos de experiência
-                      </label>
+                    <div className="relative">
+                      <Briefcase size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                       <input
-                        id="yearsExperience"
-                        type="number"
+                        id="expertise"
                         required
-                        min={0}
-                        max={80}
-                        value={yearsExperience}
-                        onChange={(e) => setYearsExperience(e.target.value)}
-                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                        placeholder="Ex: Desenvolvimento Web"
+                        value={expertise}
+                        onChange={(e) => setExpertise(e.target.value)}
+                        className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                       />
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4">
                   <div>
-                    <p className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                      Redes sociais e site <span className="font-normal text-slate-400">(opcional)</span>
-                    </p>
+                    <label htmlFor="yearsExperience" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Anos de experiência
+                    </label>
+                    <input
+                      id="yearsExperience"
+                      type="number"
+                      required
+                      min={0}
+                      max={80}
+                      value={yearsExperience}
+                      onChange={(e) => setYearsExperience(e.target.value)}
+                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {wantsToTeach && (
+            <div className={`rounded-md border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5 ${stepClass(2)}`}>
+              <div className="grid gap-x-6 gap-y-4 lg:grid-cols-2">
+                <div>
+                  <p className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                    Redes sociais e site <span className="font-normal text-slate-400">(opcional)</span>
+                  </p>
                     <div className="space-y-2">
                       {SOCIAL_PLATFORMS.filter((p) => activeSocialKeys.includes(p.key)).map((p) => {
                         const value = socialValues[p.key];
@@ -388,9 +457,33 @@ export default function RegisterPage() {
                   </div>
                 </div>
               </div>
+          )}
+
+          {wantsToTeach && (
+            <div className="hidden items-center justify-between lg:flex">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={step === 0}
+                className="flex items-center gap-1.5 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+              >
+                <ArrowLeft size={14} /> Anterior
+              </button>
+              {step < STEP_LABELS.length - 1 && (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                >
+                  Seguinte <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           )}
 
+          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+
+          <div className={stepClass(2)}>
           <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
             <input
               type="checkbox"
@@ -411,7 +504,6 @@ export default function RegisterPage() {
             </span>
           </label>
 
-          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
           <Button type="submit" variant="accent" className="w-full" disabled={loading}>
             {loading ? "A criar conta..." : (
               <>
@@ -419,6 +511,7 @@ export default function RegisterPage() {
               </>
             )}
           </Button>
+          </div>
         </form>
       </div>
     </AuthLayout>

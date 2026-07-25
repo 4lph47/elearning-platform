@@ -1347,7 +1347,7 @@ export function LessonPlayer({
             >
               <video
                 ref={videoRef}
-                className="lesson-video h-full w-full object-contain"
+                className={`lesson-video h-full w-full object-contain ${controlsShown ? "captions-lifted" : ""}`}
                 src={usingHls ? undefined : activeSrc ?? undefined}
                 playsInline
                 crossOrigin="anonymous"

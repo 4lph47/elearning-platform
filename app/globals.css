@@ -38,7 +38,10 @@ body {
 /* Legendas nativas do <track> renderizam coladas ao fundo do vídeo por
    defeito, por baixo da barra de controlos sobreposta do LessonPlayer.
    Não há propriedade CSS padrão para reposicionar cues; ::-webkit-...
-   é a única forma (Chrome/Blink e Safari partilham este pseudo-elemento). */
-.lesson-video::-webkit-media-text-track-display {
+   é a única forma (Chrome/Blink e Safari partilham este pseudo-elemento).
+   Só sobe enquanto a barra está visível (.captions-lifted) — some a
+   barra, as legendas descem para a posição normal. */
+.lesson-video.captions-lifted::-webkit-media-text-track-display {
   transform: translateY(-3.25rem) !important;
+  transition: transform 150ms ease-out;
 }

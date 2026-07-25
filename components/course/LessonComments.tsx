@@ -149,10 +149,7 @@ function CommentRow({
 
         <div className="mt-1.5 flex items-center gap-4 text-xs text-slate-500">
           <button
-            onClick={(e) => {
-              e.currentTarget.blur();
-              toggleLike();
-            }}
+            onClick={toggleLike}
             disabled={!currentUserId}
             className={`flex items-center gap-1 hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
           >

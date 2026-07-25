@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, Briefcase } from "lucide-react";
 
 export default function AccountPage() {
+  const { data: session } = useSession();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,23 @@ export default function AccountPage() {
       )}
 
       <div className="mt-8 space-y-4">
+        {session?.user.role === "STUDENT" && (
+          <div className="rounded-lg border border-blue-200 p-4 dark:border-blue-500/20">
+            <h2 className="flex items-center gap-2 font-medium text-slate-900 dark:text-white">
+              <Briefcase size={16} className="text-blue-600 dark:text-blue-400" /> Tornar-me instrutor
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Cria e vende os teus próprios cursos na plataforma.
+            </p>
+            <Link
+              href="/register/complete?role=instrutor"
+              className="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+            >
+              Continuar
+            </Link>
+          </div>
+        )}
+
         <div className="rounded-lg border border-slate-200 p-4 dark:border-white/10">
           <h2 className="font-medium text-slate-900 dark:text-white">Exportar os meus dados</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">

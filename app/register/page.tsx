@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { User, Mail, Lock, Briefcase, Link2, ArrowRight } from "lucide-react";
+import { User, Mail, Lock, Briefcase, Link2, ArrowRight, GraduationCap, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
@@ -12,10 +12,11 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 export default function RegisterPage() {
   const router = useRouter();
 
+  const [role, setRole] = useState<"aluno" | "instrutor" | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [wantsToTeach, setWantsToTeach] = useState(false);
+  const wantsToTeach = role === "instrutor";
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [bio, setBio] = useState("");
   const [expertise, setExpertise] = useState("");
@@ -68,9 +69,55 @@ export default function RegisterPage() {
     router.refresh();
   }
 
+  if (!role) {
+    return (
+      <AuthLayout
+        title="Cria a tua conta"
+        subtitle="Como queres usar a plataforma?"
+        footer={
+          <>
+            Já tens conta?{" "}
+            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+              Entra
+            </Link>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setRole("aluno")}
+            className="flex w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-500 hover:shadow-md dark:border-white/10 dark:bg-neutral-900 dark:hover:border-blue-500"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+              <GraduationCap size={20} />
+            </span>
+            <span>
+              <span className="block font-medium text-slate-900 dark:text-white">Quero aprender</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">Criar uma conta de aluno para me inscrever em cursos</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole("instrutor")}
+            className="flex w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-500 hover:shadow-md dark:border-white/10 dark:bg-neutral-900 dark:hover:border-blue-500"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+              <Briefcase size={20} />
+            </span>
+            <span>
+              <span className="block font-medium text-slate-900 dark:text-white">Quero ensinar</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">Criar uma conta de instrutor para criar e vender cursos</span>
+            </span>
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
-      title="Cria a tua conta"
+      title={wantsToTeach ? "Cria a tua conta de instrutor" : "Cria a tua conta de aluno"}
       subtitle="Começa a aprender ou a ensinar hoje mesmo"
       footer={
         <>
@@ -81,6 +128,13 @@ export default function RegisterPage() {
         </>
       }
     >
+      <button
+        type="button"
+        onClick={() => setRole(null)}
+        className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+      >
+        <ArrowLeft size={14} /> Voltar
+      </button>
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -131,16 +185,6 @@ export default function RegisterPage() {
               />
             </div>
           </div>
-
-          <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-white/10 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={wantsToTeach}
-              onChange={(e) => setWantsToTeach(e.target.checked)}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            Quero criar e vender cursos (conta de instrutor)
-          </label>
 
           {wantsToTeach && (
             <div className="space-y-4 rounded-md border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">

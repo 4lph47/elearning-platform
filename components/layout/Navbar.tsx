@@ -235,7 +235,7 @@ export function Navbar() {
 
           <div
             className={`flex items-center gap-7 overflow-hidden transition-all duration-[900ms] ease-in-out ${
-              mobileSearchOpen ? "max-w-0 opacity-0 sm:max-w-none sm:opacity-100" : "max-w-[260px] opacity-100"
+              mobileSearchOpen ? "max-w-0 opacity-0 sm:max-w-none sm:opacity-100" : "max-w-[220px] opacity-100"
             }`}
           >
             <button
@@ -263,7 +263,7 @@ export function Navbar() {
 
         <div
           ref={searchRef}
-          className={`relative ml-auto w-full min-w-0 overflow-visible transition-all duration-[900ms] ease-in-out sm:max-w-lg sm:opacity-100 ${
+          className={`relative mx-auto w-full min-w-0 overflow-visible transition-all duration-[900ms] ease-in-out sm:max-w-lg sm:opacity-100 ${
             mobileSearchOpen ? "max-w-full opacity-100" : "max-w-0 opacity-0"
           }`}
         >

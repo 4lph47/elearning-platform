@@ -46,6 +46,10 @@ export const authOptions: AuthOptions = {
           email: user.email,
           role: user.role,
           termsAcceptedAt: user.termsAcceptedAt,
+          emailVerified: user.emailVerified,
+          // Nunca a hash em si no objeto de sessão — só esta flag, o jwt()
+          // reduz logo a seguir a um boolean antes de ir para o token.
+          hasPassword: true,
         };
       },
     }),
@@ -61,20 +65,38 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger }) {
       if (user) {
+        // Para OAuth/link mágico, `user` é a linha real do Prisma (o
+        // adapter devolve-a tal e qual) — tem passwordHash de verdade
+        // (null nesses casos). Para credenciais, authorize() já mandou uma
+        // flag hasPassword em vez da hash, nunca a hash em si por aqui.
+        const raw = user as unknown as {
+          role: string;
+          termsAcceptedAt?: Date | null;
+          emailVerified?: Date | null;
+          hasPassword?: boolean;
+          passwordHash?: string | null;
+        };
+        const hasPassword = raw.hasPassword ?? Boolean(raw.passwordHash);
         token.id = user.id;
-        token.role = (user as { role: string }).role;
-        token.registered = Boolean((user as { termsAcceptedAt?: Date | null }).termsAcceptedAt);
+        token.role = raw.role;
+        token.hasPassword = hasPassword;
+        // Contas com password só contam como registadas depois de
+        // confirmar o código por email — Google/link mágico já provam
+        // dono do email só por completarem o respetivo fluxo.
+        token.registered = Boolean(raw.termsAcceptedAt) && (hasPassword ? Boolean(raw.emailVerified) : true);
       } else if (trigger === "update" && token.id) {
-        // Sessão já aberta (ex.: conta Google que acabou de virar
-        // instrutor, ou aceitou os termos, em /register/complete) — o JWT
-        // só refaz este pedido à BD quando o cliente chama update() explicitamente.
+        // Sessão já aberta (ex.: acabou de aceitar termos, verificar o
+        // email, ou virar instrutor) — o JWT só refaz este pedido à BD
+        // quando o cliente chama update() explicitamente.
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, termsAcceptedAt: true },
+          select: { role: true, termsAcceptedAt: true, emailVerified: true, passwordHash: true },
         });
         if (dbUser) {
+          const hasPassword = Boolean(dbUser.passwordHash);
           token.role = dbUser.role;
-          token.registered = Boolean(dbUser.termsAcceptedAt);
+          token.hasPassword = hasPassword;
+          token.registered = Boolean(dbUser.termsAcceptedAt) && (hasPassword ? Boolean(dbUser.emailVerified) : true);
         }
       }
       return token;
@@ -84,6 +106,7 @@ export const authOptions: AuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.registered = Boolean(token.registered);
+        session.user.hasPassword = Boolean(token.hasPassword);
       }
       return session;
     },

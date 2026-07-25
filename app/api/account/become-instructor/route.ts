@@ -22,15 +22,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { bio, expertise, yearsExperience, certifications } = parsed.data;
+  const { username, bio, expertise, yearsExperience, certifications } = parsed.data;
   const socialData = Object.fromEntries(
     SOCIAL_PLATFORMS.map((p) => [p.key, (parsed.data as unknown as Record<SocialPlatformKey, string | null | undefined>)[p.key]?.trim() || null])
   );
+
+  const usernameTaken = await prisma.user.findFirst({ where: { username, id: { not: session.user.id } } });
+  if (usernameTaken) {
+    return NextResponse.json({ error: "Esse username já está em uso" }, { status: 409 });
+  }
 
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
       role: "INSTRUCTOR",
+      username,
       termsAcceptedAt: new Date(),
       bio: bio.trim(),
       expertise: expertise.trim(),

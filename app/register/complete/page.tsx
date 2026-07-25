@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Briefcase, Globe, Link2, Plus, X } from "lucide-react";
+import { AtSign, Briefcase, Globe, Link2, Plus, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
@@ -35,11 +35,20 @@ function CompleteForm() {
       router.replace("/register");
       return;
     }
-    if (status === "authenticated" && (session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN")) {
+    if (status !== "authenticated") return;
+    if (session.user.registered) {
+      router.replace(session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN" ? "/instructor" : "/");
+      return;
+    }
+    if (session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN") {
       router.replace("/instructor");
     }
   }, [status, session, router]);
 
+  const [username, setUsername] = useState("");
+  const [code, setCode] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
   const [bio, setBio] = useState("");
   const [expertise, setExpertise] = useState("");
   const [yearsExperience, setYearsExperience] = useState("");
@@ -76,9 +85,14 @@ function CompleteForm() {
     setError(null);
     setLoading(true);
 
-    const res = await fetch("/api/account/complete-registration", { method: "POST" });
+    const res = await fetch("/api/account/complete-registration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, acceptedTerms }),
+    });
     if (!res.ok) {
-      setError("Erro ao concluir registo");
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Erro ao concluir registo");
       setLoading(false);
       return;
     }
@@ -87,6 +101,43 @@ function CompleteForm() {
     setLoading(false);
     router.push("/");
     router.refresh();
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const res = await fetch("/api/account/verify-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Código inválido");
+      setLoading(false);
+      return;
+    }
+
+    await update();
+    setLoading(false);
+    router.push("/");
+    router.refresh();
+  }
+
+  async function handleResendCode() {
+    setError(null);
+    setResending(true);
+    const res = await fetch("/api/account/resend-verification-email", { method: "POST" });
+    setResending(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Erro ao reenviar código");
+      return;
+    }
+    setResent(true);
+    setTimeout(() => setResent(false), 4000);
   }
 
   async function handleInstructorSubmit(e: React.FormEvent) {
@@ -98,6 +149,7 @@ function CompleteForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        username,
         acceptedTerms,
         bio,
         expertise,
@@ -122,8 +174,55 @@ function CompleteForm() {
     router.refresh();
   }
 
-  if (status !== "authenticated" || session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN") {
+  if (status !== "authenticated" || session.user.registered) {
     return null;
+  }
+
+  // Conta por password (independentemente de ser aluno ou instrutor — o
+  // role já ficou definido no /register) só falta confirmar o código
+  // enviado por email; Google/link mágico já prova dono do email sozinho,
+  // por isso nunca cai aqui.
+  if (session.user.hasPassword) {
+    return (
+      <AuthLayout title="Confirma o teu email" subtitle="Enviámos um código de 6 dígitos para o teu email">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Enviámos um código para <strong>{session.user.email}</strong>.
+          </p>
+          <form onSubmit={handleVerifyCode} className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="code" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                Código de verificação
+              </label>
+              <input
+                id="code"
+                required
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-center text-lg font-semibold tracking-[0.3em] text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+              />
+            </div>
+            {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+            {resent && <p className="text-sm text-emerald-600 dark:text-emerald-400">Novo código enviado.</p>}
+            <Button type="submit" variant="accent" className="w-full" disabled={loading || code.length !== 6}>
+              {loading ? "A confirmar..." : "Confirmar"}
+            </Button>
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={resending}
+              className="flex w-full items-center justify-center gap-1.5 text-center text-sm text-blue-600 hover:underline disabled:opacity-50 dark:text-blue-400"
+            >
+              {resending && <Loader2 size={13} className="animate-spin" />} Reenviar código
+            </button>
+          </form>
+        </div>
+      </AuthLayout>
+    );
   }
 
   if (!wantsToTeach) {
@@ -134,6 +233,24 @@ function CompleteForm() {
             Conta ligada a <strong>{session.user.email}</strong>.
           </p>
           <form onSubmit={handleStudentSubmit} className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                Username
+              </label>
+              <div className="relative">
+                <AtSign size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                <input
+                  id="username"
+                  required
+                  pattern="[a-z][a-z0-9_]{2,19}"
+                  title="3-20 caracteres: letras minúsculas, números e _, a começar por letra"
+                  placeholder="ex: joao_silva"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                  className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                />
+              </div>
+            </div>
             <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
               <input
                 type="checkbox"
@@ -161,6 +278,24 @@ function CompleteForm() {
           Conta ligada a <strong>{session.user.email}</strong>.
         </p>
         <form onSubmit={handleInstructorSubmit} className="mt-4 space-y-4">
+          <div>
+            <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+              Username
+            </label>
+            <div className="relative max-w-xs">
+              <AtSign size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+              <input
+                id="username"
+                required
+                pattern="[a-z][a-z0-9_]{2,19}"
+                title="3-20 caracteres: letras minúsculas, números e _, a começar por letra"
+                placeholder="ex: joao_silva"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+              />
+            </div>
+          </div>
           <div className="rounded-md border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Conta-nos um pouco sobre ti — isto ajuda os alunos a confiarem nos teus cursos.

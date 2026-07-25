@@ -46,7 +46,7 @@ export async function PATCH(
   const updated = await prisma.lessonComment.update({
     where: { id: commentId },
     data: { content: parsed.data.content, mentionedUserIds },
-    include: { user: { select: { id: true, name: true } } },
+    include: { user: { select: { id: true, name: true, username: true } } },
   });
 
   if (newlyMentioned.length > 0) {

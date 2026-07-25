@@ -25,6 +25,21 @@ const uploadedFileUrlField = z
   .optional()
   .nullable();
 
+// @tag único usado nas @menções e no perfil público — minúsculas por
+// convenção (guardado já em lowercase), letras/números/underscore, tem de
+// começar por letra para nunca ser confundido com um id/número puro.
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Username deve ter pelo menos 3 caracteres")
+  .max(20, "Username deve ter no máximo 20 caracteres")
+  .regex(/^[a-z][a-z0-9_]*$/, "Username só pode ter letras minúsculas, números e _, e começar por uma letra");
+
+export const verifyEmailCodeSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "O código tem de ter 6 dígitos"),
+});
+
 const registerCertificationSchema = z.object({
   name: z.string().min(1, "Nome da certificação é obrigatório").max(120, "Nome deve ter no máximo 120 caracteres"),
   url: z
@@ -37,6 +52,7 @@ const registerCertificationSchema = z.object({
 export const registerSchema = z
   .object({
     name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+    username: usernameSchema,
     email: z.string().email("Email inválido"),
     password: z.string().min(6, "A password deve ter pelo menos 6 caracteres"),
     wantsToTeach: z.boolean().optional().default(false),
@@ -87,6 +103,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 // /register/complete — sem nome/email/password (já vêm da conta Google).
 export const becomeInstructorSchema = z
   .object({
+    username: usernameSchema,
     acceptedTerms: z.literal(true, { message: "Tens de aceitar os Termos e Serviços" }),
     bio: z.string().min(50, "Conta-nos a tua experiência com pelo menos 50 caracteres").max(600, "Bio deve ter no máximo 600 caracteres"),
     expertise: z.string().min(2, "Indica a tua área de especialização").max(120, "Área de especialização deve ter no máximo 120 caracteres"),
@@ -107,6 +124,14 @@ export const becomeInstructorSchema = z
     }
   });
 export type BecomeInstructorInput = z.infer<typeof becomeInstructorSchema>;
+
+// Completar registo de aluno vindo de Google/link mágico em /register/complete
+// — só falta o username (nome/email já vêm da conta, termos aceites aqui).
+export const completeStudentSchema = z.object({
+  username: usernameSchema,
+  acceptedTerms: z.literal(true, { message: "Tens de aceitar os Termos e Serviços" }),
+});
+export type CompleteStudentInput = z.infer<typeof completeStudentSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email("Email inválido"),

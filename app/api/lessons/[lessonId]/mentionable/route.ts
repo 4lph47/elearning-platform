@@ -16,7 +16,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ less
   const query = new URL(request.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
   const candidates = await getMentionableUsers(lessonId);
   const users = candidates
-    .filter((u) => u.id !== session.user.id && (query === "" || u.name.toLowerCase().includes(query)))
+    .filter(
+      (u) =>
+        u.id !== session.user.id &&
+        (query === "" || u.name.toLowerCase().includes(query) || u.username.toLowerCase().includes(query))
+    )
     .slice(0, MAX_RESULTS);
 
   return NextResponse.json({ users });

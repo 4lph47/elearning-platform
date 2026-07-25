@@ -16,7 +16,7 @@ export interface CommentData {
   content: string;
   createdAt: string;
   updatedAt: string;
-  user: { id: string; name: string };
+  user: { id: string; name: string; username: string | null };
   likeCount: number;
   likedByMe: boolean;
   replies: CommentData[];
@@ -108,7 +108,7 @@ function CommentRow({
   const replyBoxRef = useRef<HTMLFormElement>(null);
   const replyToggleRef = useRef<HTMLButtonElement>(null);
   const replyMentionRef = useRef<MentionInputHandle>(null);
-  const pendingReplySeedRef = useRef<{ name: string; id: string }[] | undefined>(undefined);
+  const pendingReplySeedRef = useRef<{ tag: string; id: string }[] | undefined>(undefined);
 
   const [content, setContent] = useState(comment.content);
   const [updatedAt, setUpdatedAt] = useState(comment.updatedAt);
@@ -117,14 +117,14 @@ function CommentRow({
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const editMentionRef = useRef<MentionInputHandle>(null);
-  const editSeedRef = useRef<{ name: string; id: string }[] | undefined>(undefined);
+  const editSeedRef = useRef<{ tag: string; id: string }[] | undefined>(undefined);
   // >2s de folga entre createdAt/updatedAt — margem contra diferenças de
   // arredondamento da própria escrita inicial, não uma edição real.
   const isEdited = new Date(updatedAt).getTime() - new Date(comment.createdAt).getTime() > 2000;
 
   function startEdit() {
     const { display, mentions } = decodeMentionContent(content);
-    editSeedRef.current = mentions;
+    editSeedRef.current = mentions.map((m) => ({ tag: m.name, id: m.id }));
     setEditText(display);
     setEditError(null);
     setEditing(true);
@@ -298,8 +298,9 @@ function CommentRow({
                   const opening = !replying;
                   setReplying(opening);
                   if (opening && isReply) {
-                    setReplyText(`@${comment.user.name} `);
-                    pendingReplySeedRef.current = [{ name: comment.user.name, id: comment.user.id }];
+                    const tag = comment.user.username ?? comment.user.name;
+                    setReplyText(`@${tag} `);
+                    pendingReplySeedRef.current = [{ tag, id: comment.user.id }];
                   } else if (opening) {
                     pendingReplySeedRef.current = undefined;
                   }

@@ -29,12 +29,12 @@ export async function getRawLessonComments(lessonId: string, skip = 0, take = CO
         skip,
         take,
         include: {
-          user: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true, username: true } },
           likes: { select: { userId: true } },
           replies: {
             orderBy: { createdAt: "asc" },
             take: REPLIES_LIMIT,
-            include: { user: { select: { id: true, name: true } }, likes: { select: { userId: true } } },
+            include: { user: { select: { id: true, name: true, username: true } }, likes: { select: { userId: true } } },
           },
         },
       }),
@@ -54,12 +54,12 @@ export async function getTopLessonComments(lessonId: string, limit = 5) {
         orderBy: { likes: { _count: "desc" } },
         take: limit,
         include: {
-          user: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true, username: true } },
           likes: { select: { userId: true } },
           replies: {
             orderBy: { createdAt: "asc" },
             take: REPLIES_LIMIT,
-            include: { user: { select: { id: true, name: true } }, likes: { select: { userId: true } } },
+            include: { user: { select: { id: true, name: true, username: true } }, likes: { select: { userId: true } } },
           },
         },
       }),

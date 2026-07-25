@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
-import { User, Mail, Lock, Briefcase, Link2, ArrowRight, GraduationCap, ArrowLeft, Globe, Plus, X } from "lucide-react";
+import { User, AtSign, Mail, Lock, Briefcase, Link2, ArrowRight, GraduationCap, ArrowLeft, Globe, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
@@ -32,6 +32,7 @@ export default function RegisterPage() {
 
   const [role, setRole] = useState<"aluno" | "instrutor" | null>(null);
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -55,6 +56,8 @@ export default function RegisterPage() {
   function validateStep(idx: number): string | null {
     if (idx === 0) {
       if (name.trim().length < 2) return "Nome deve ter pelo menos 2 caracteres";
+      if (!/^[a-z][a-z0-9_]{2,19}$/.test(username.trim().toLowerCase()))
+        return "Username deve ter 3-20 caracteres (letras minúsculas, números e _), a começar por letra";
       if (!email.trim()) return "Indica o teu email";
       if (password.length < 6) return "A password deve ter pelo menos 6 caracteres";
       if (password !== confirmPassword) return "As passwords não coincidem";
@@ -129,6 +132,7 @@ export default function RegisterPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
+        username,
         email,
         password,
         wantsToTeach,
@@ -284,6 +288,24 @@ export default function RegisterPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                Username
+              </label>
+              <div className="relative">
+                <AtSign size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                <input
+                  id="username"
+                  required
+                  pattern="[a-z][a-z0-9_]{2,19}"
+                  title="3-20 caracteres: letras minúsculas, números e _, a começar por letra"
+                  placeholder="ex: joao_silva"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
                   className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                 />
               </div>

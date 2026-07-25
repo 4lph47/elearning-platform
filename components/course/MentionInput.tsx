@@ -3,9 +3,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 export interface MentionInputHandle {
-  // Devolve o texto visível ("@Nome ") já convertido para o formato
-  // guardado em BD ("@[Nome](id)") — só chamado no submit, o utilizador
-  // nunca vê a marcação em si enquanto escreve.
+  // Devolve o texto visível ("@username ") já convertido para o formato
+  // guardado em BD ("@[username](id)") — só chamado no submit, o
+  // utilizador nunca vê a marcação em si enquanto escreve.
   encode: () => string;
   focus: () => void;
 }
@@ -13,6 +13,7 @@ export interface MentionInputHandle {
 interface MentionUser {
   id: string;
   name: string;
+  username: string;
   image: string | null;
 }
 
@@ -51,9 +52,9 @@ export const MentionInput = forwardRef<
     className: string;
     autoFocus?: boolean;
     // Menções já existentes ao abrir a caixa em modo de edição — re-semeia o
-    // mapeamento nome→id para o encode() converter de volta corretamente,
+    // mapeamento tag→id para o encode() converter de volta corretamente,
     // mesmo sem o utilizador ter tocado no dropdown desta vez.
-    seedMentions?: { name: string; id: string }[];
+    seedMentions?: { tag: string; id: string }[];
     onKeyDownCapture?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   }
 >(function MentionInput(
@@ -64,7 +65,7 @@ export const MentionInput = forwardRef<
   const [activeIndex, setActiveIndex] = useState(0);
   const [triggerStart, setTriggerStart] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const mentionQueueRef = useRef<{ name: string; id: string }[]>(seedMentions ? [...seedMentions] : []);
+  const mentionQueueRef = useRef<{ tag: string; id: string }[]>(seedMentions ? [...seedMentions] : []);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -75,10 +76,10 @@ export const MentionInput = forwardRef<
     encode() {
       let result = value;
       for (const m of mentionQueueRef.current) {
-        const token = `@${m.name}`;
+        const token = `@${m.tag}`;
         const idx = result.indexOf(token);
         if (idx === -1) continue;
-        result = result.slice(0, idx) + `@[${m.name}](${m.id})` + result.slice(idx + token.length);
+        result = result.slice(0, idx) + `@[${m.tag}](${m.id})` + result.slice(idx + token.length);
       }
       return result;
     },
@@ -118,8 +119,8 @@ export const MentionInput = forwardRef<
     const caret = inputRef.current?.selectionStart ?? value.length;
     const before = value.slice(0, triggerStart);
     const after = value.slice(caret);
-    const inserted = `@${user.name} `;
-    mentionQueueRef.current.push({ name: user.name, id: user.id });
+    const inserted = `@${user.username} `;
+    mentionQueueRef.current.push({ tag: user.username, id: user.id });
     onChange(before + inserted + after);
     setSuggestions([]);
     setTriggerStart(null);
@@ -188,7 +189,10 @@ export const MentionInput = forwardRef<
                   {initials(u.name)}
                 </span>
               )}
-              <span className="truncate text-slate-800 dark:text-slate-100">{u.name}</span>
+              <span className="min-w-0 truncate">
+                <span className="text-slate-800 dark:text-slate-100">{u.name}</span>{" "}
+                <span className="text-slate-400 dark:text-slate-500">@{u.username}</span>
+              </span>
             </button>
           ))}
         </div>

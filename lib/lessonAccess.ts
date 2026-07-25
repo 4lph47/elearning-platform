@@ -22,12 +22,15 @@ export async function canAccessLesson(lessonId: string, userId: string) {
 export interface MentionableUser {
   id: string;
   name: string;
+  username: string;
   image: string | null;
 }
 
 // Quem pode ser @mencionado numa aula: instrutor, colaboradores e alunos
 // inscritos no curso — o mesmo universo de quem já pode ver/comentar ali,
 // nunca a base de utilizadores toda (evita notificar/expor gente de fora).
+// Quem ainda não escolheu username (registo por completar) fica de fora —
+// não há tag nenhuma para inserir.
 export async function getMentionableUsers(lessonId: string): Promise<MentionableUser[]> {
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
@@ -36,9 +39,9 @@ export async function getMentionableUsers(lessonId: string): Promise<Mentionable
         select: {
           course: {
             select: {
-              instructor: { select: { id: true, name: true, image: true } },
-              collaborators: { select: { id: true, name: true, image: true } },
-              enrollments: { select: { user: { select: { id: true, name: true, image: true } } } },
+              instructor: { select: { id: true, name: true, username: true, image: true } },
+              collaborators: { select: { id: true, name: true, username: true, image: true } },
+              enrollments: { select: { user: { select: { id: true, name: true, username: true, image: true } } } },
             },
           },
         },
@@ -50,7 +53,7 @@ export async function getMentionableUsers(lessonId: string): Promise<Mentionable
   const course = lesson.module.course;
   const byId = new Map<string, MentionableUser>();
   for (const u of [course.instructor, ...course.collaborators, ...course.enrollments.map((e) => e.user)]) {
-    byId.set(u.id, u);
+    if (u.username) byId.set(u.id, { id: u.id, name: u.name, username: u.username, image: u.image });
   }
   return Array.from(byId.values());
 }

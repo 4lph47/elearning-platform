@@ -87,7 +87,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
       parentId: parsed.data.parentId ?? null,
       mentionedUserIds,
     },
-    include: { user: { select: { id: true, name: true } } },
+    include: { user: { select: { id: true, name: true, username: true } } },
   });
 
   if (mentionedUserIds.length > 0) {

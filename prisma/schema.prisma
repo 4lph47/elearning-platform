@@ -43,38 +43,48 @@ enum NotificationType {
 }
 
 model User {
-  id              String          @id @default(cuid())
-  name            String
-  email           String          @unique
-  emailVerified   DateTime?
-  image           String?
-  passwordHash    String?
-  role            Role            @default(STUDENT)
-  bio             String?
-  expertise       String?
-  yearsExperience Int?
-  bannerUrl       String?
-  bannerType      String?
-  websiteUrl      String?
-  twitterUrl      String?
-  linkedinUrl     String?
-  youtubeUrl      String?
-  instagramUrl    String?
-  facebookUrl     String?
-  tiktokUrl       String?
-  githubUrl       String?
-  discordUrl      String?
-  mediumUrl       String?
-  twitchUrl       String?
-  certifications  Certification[]
+  id                           String          @id @default(cuid())
+  name                         String
+  email                        String          @unique
+  emailVerified                DateTime?
+  image                        String?
+  passwordHash                 String?
+  role                         Role            @default(STUDENT)
+  bio                          String?
+  expertise                    String?
+  yearsExperience              Int?
+  bannerUrl                    String?
+  bannerType                   String?
+  websiteUrl                   String?
+  twitterUrl                   String?
+  linkedinUrl                  String?
+  youtubeUrl                   String?
+  instagramUrl                 String?
+  facebookUrl                  String?
+  tiktokUrl                    String?
+  githubUrl                    String?
+  discordUrl                   String?
+  mediumUrl                    String?
+  twitchUrl                    String?
+  certifications               Certification[]
   // null = conta criada (Google/link mágico) mas ainda não passou pelo
   // ecrã de aceitar termos em /register/complete — o middleware tranca a
   // navegação até isto ficar preenchido. Contas por credenciais já ficam
   // com isto definido na criação, porque o formulário exige aceitar os
-  // termos antes de submeter.
-  termsAcceptedAt DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  // termos antes de submeter — mas para essas o gate (ver lib/auth.ts
+  // "registered") também exige emailVerified, por isso não basta isto.
+  termsAcceptedAt              DateTime?
+  // @tag único usado nas @menções dos comentários e mostrado no perfil
+  // público — escolhido no registo (credenciais) ou em /register/complete
+  // (Google/link mágico, cuja conta o adapter já cria sem isto).
+  username                     String?         @unique
+  // Código de 6 dígitos enviado por email às contas por password — só
+  // essas precisam disto (Google/link mágico já provam dono do email só
+  // por completarem o respetivo fluxo).
+  emailVerificationCode        String?
+  emailVerificationCodeExpires DateTime?
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
 
   accounts              Account[]
   sessions              Session[]

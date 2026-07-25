@@ -171,8 +171,12 @@ async function getReceivedBytes(auth: WorkerAuth): Promise<number> {
 // a cobrir o upload inteiro (minutos, em vídeos grandes; mostrou-se
 // vulnerável a resets de ligação a meio, fora do nosso controlo), o vídeo
 // vai em blocos deste tamanho, cada um o seu próprio pedido curto. Um reset
-// a meio custa no máximo este bloco, não o envio todo.
-const CHUNK_BYTES = 50 * 1024 * 1024;
+// a meio custa no máximo este bloco, não o envio todo — 8MB (não os 50MB de
+// antes) também limita a quanto a barra de progresso pode recuar num retry
+// (ver clamp em setProgress/setCompressionPercent abaixo) e dá eventos de
+// progresso do xhr mais frequentes, sem multiplicar demais os pedidos ao
+// worker num vídeo grande.
+const CHUNK_BYTES = 8 * 1024 * 1024;
 
 // Envia um único bloco começando em `offset`. Resolve com o receivedBytes
 // que o worker confirma ter guardado (não assume — usa a resposta como
@@ -448,10 +452,12 @@ export function FileUploadInput({
   // pela geração de legendas automáticas (lib/captions.ts), que arranca
   // depois da compressão terminar, sobre o MESMO ficheiro original.
   onFileSelected?: (file: File) => void;
-  // Espelha o estado interno de uploading/compressing pro pai poder desenhar
-  // um indicador de etapas por cima (ver stepper em LessonEditScreen.tsx) —
-  // null quando não há nenhum envio em curso.
-  onStageChange?: (stage: "uploading" | "compressing" | null) => void;
+  // Espelha o estado interno de uploading/compressing (e o % de compressão,
+  // quando há um) pro pai poder desenhar um indicador de etapas por cima
+  // (ver stepper em LessonEditScreen.tsx) — stage null quando não há nenhum
+  // envio em curso; percent é sempre null fora da fase de compressão (o
+  // envio já mostra o seu próprio % à parte, ver progress abaixo).
+  onStageChange?: (stage: "uploading" | "compressing" | null, compressionPercent: number | null) => void;
   // Em espaços apertados no mobile (ex.: painel de banner com dois
   // uploaders lado a lado), o nome do ficheiro que o próprio browser
   // desenha ao lado do botão nativo não cabe — encolhe o input ao tamanho
@@ -486,9 +492,9 @@ export function FileUploadInput({
   // um único sítio, nunca desalinha dos dois.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!uploading) onStageChange?.(null);
-    else onStageChange?.(compressing ? "compressing" : "uploading");
-  }, [uploading, compressing]);
+    if (!uploading) onStageChange?.(null, null);
+    else onStageChange?.(compressing ? "compressing" : "uploading", compressing ? compressionPercent : null);
+  }, [uploading, compressing, compressionPercent]);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -523,7 +529,12 @@ export function FileUploadInput({
           xhrRef,
           (percent) => {
             if (!isCurrent()) return;
-            setProgress(percent);
+            // Nunca deixa a barra andar pra trás — num retry (bloco que
+            // falhou a meio), o valor confirmado pelo worker pode ser menor
+            // que o que já se tinha mostrado (bytes que o browser achava ter
+            // enviado mas o servidor não confirmou); fica presa no máximo já
+            // visto até apanhar de novo, em vez de recuar visivelmente.
+            setProgress((prev) => Math.max(prev, percent));
           },
           (phase) => {
             if (!isCurrent()) return;
@@ -532,7 +543,8 @@ export function FileUploadInput({
           isCurrent,
           (completed, total) => {
             if (!isCurrent()) return;
-            setCompressionPercent(total ? Math.round((completed / total) * 100) : null);
+            const percent = total ? Math.round((completed / total) * 100) : null;
+            setCompressionPercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
           },
           (resume) => onFinalizePending?.(resume)
         );
@@ -606,7 +618,8 @@ export function FileUploadInput({
       isCurrent,
       (completed, total) => {
         if (!isCurrent()) return;
-        setCompressionPercent(total ? Math.round((completed / total) * 100) : null);
+        const percent = total ? Math.round((completed / total) * 100) : null;
+        setCompressionPercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
       }
     )
       .then((data) => {

@@ -114,6 +114,7 @@ export function LessonEditScreen({
   // — só serve pro stepper de 3 etapas acima do input, não guarda mais
   // nenhuma lógica própria.
   const [videoStage, setVideoStage] = useState<"uploading" | "compressing" | null>(null);
+  const [videoCompressionPercent, setVideoCompressionPercent] = useState<number | null>(null);
   const [pendingVideoUpload, setPendingVideoUpload] = useState<ResumableFinalize | null>(
     draft?.value.pendingVideoUpload ?? null
   );
@@ -517,6 +518,7 @@ export function LessonEditScreen({
                             }
                           >
                             {stepNumber}. {stepLabel}
+                            {isCurrentStep && stepNumber === 2 && videoCompressionPercent !== null && ` (${videoCompressionPercent}%)`}
                           </span>
                         </div>
                       );
@@ -527,7 +529,10 @@ export function LessonEditScreen({
                   kind="VIDEO"
                   currentUrl={contentUrl}
                   currentName={contentName}
-                  onStageChange={setVideoStage}
+                  onStageChange={(stage, percent) => {
+                    setVideoStage(stage);
+                    setVideoCompressionPercent(percent);
+                  }}
                   onUploaded={(r) => {
                     if (localPreviewUrlRef.current) {
                       URL.revokeObjectURL(localPreviewUrlRef.current);

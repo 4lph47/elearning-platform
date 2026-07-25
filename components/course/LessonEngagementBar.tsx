@@ -44,7 +44,10 @@ export function LessonEngagementBar({
   const primaryAuthor = authors[0];
 
   async function applyReaction(next: "LIKE" | "DISLIKE" | null) {
+    const prev = reaction;
+    const delta = (next === "LIKE" ? 1 : 0) - (prev === "LIKE" ? 1 : 0);
     setReaction(next);
+    if (delta !== 0) setLikeCount((c) => c + delta);
     const res = await fetch(`/api/lessons/${lessonId}/reaction`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,6 +56,9 @@ export function LessonEngagementBar({
     if (res.ok) {
       const data = await res.json();
       setLikeCount(data.likeCount);
+    } else {
+      setReaction(prev);
+      if (delta !== 0) setLikeCount((c) => c - delta);
     }
   }
 

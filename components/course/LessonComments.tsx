@@ -151,7 +151,7 @@ function CommentRow({
           <button
             onClick={toggleLike}
             disabled={!currentUserId}
-            className={`flex items-center gap-1 outline-none hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
+            className={`flex items-center gap-1 outline-none [-webkit-tap-highlight-color:transparent] hover:text-slate-700 disabled:cursor-not-allowed dark:hover:text-slate-300 ${liked ? "text-blue-400" : ""}`}
           >
             <ThumbsUp size={13} className={liked ? "fill-blue-400" : ""} /> {likeCount > 0 ? likeCount : ""}
           </button>

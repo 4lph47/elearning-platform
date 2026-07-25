@@ -40,39 +40,39 @@ const config: Config = {
         // do ponto de repouso (ease-in), volta a assentar a desacelerar
         // (ease-out) — só assim fica um movimento contínuo, não aos
         // solavancos.
-        // Scale-pop tipo Instagram/TikTok, com overshoot e um wiggle leve de
-        // rotação nos dois primeiros trambolhões pra ficar mais "vivo" —
-        // cada troço com a sua curva (mesma lógica do antigo like-swing).
+        // Scale-pop tipo Instagram/TikTok — começa nivelado (rotate 0), sobe
+        // até ao pico e volta a assentar nivelado, sem tilt inicial (não
+        // "vem de baixo"); wiggle leve só no fim de volta pra ficar vivo.
         "like-pop": {
           "0%": {
             opacity: "0",
-            transform: "translate(-50%, -50%) scale(0.3) rotate(-12deg)",
+            transform: "translate(-50%, -50%) scale(0.3) rotate(0deg)",
             animationTimingFunction: "ease-out",
           },
           "20%": {
             opacity: "1",
-            transform: "translate(-50%, -50%) scale(1.4) rotate(10deg)",
+            transform: "translate(-50%, -50%) scale(1.4) rotate(14deg)",
             animationTimingFunction: "ease-in",
           },
           "35%": {
-            transform: "translate(-50%, -50%) scale(0.85) rotate(-10deg)",
+            transform: "translate(-50%, -50%) scale(0.85) rotate(8deg)",
             animationTimingFunction: "ease-out",
           },
           "50%": {
-            transform: "translate(-50%, -50%) scale(1.15) rotate(8deg)",
+            transform: "translate(-50%, -50%) scale(1.15) rotate(3deg)",
             animationTimingFunction: "ease-in",
           },
           "63%": {
-            transform: "translate(-50%, -50%) scale(0.95) rotate(-6deg)",
+            transform: "translate(-50%, -50%) scale(0.95) rotate(-2deg)",
             animationTimingFunction: "ease-out",
           },
           "75%": {
-            transform: "translate(-50%, -50%) scale(1.05) rotate(4deg)",
+            transform: "translate(-50%, -50%) scale(1.05) rotate(1deg)",
             animationTimingFunction: "ease-in",
           },
           "87%": {
             opacity: "1",
-            transform: "translate(-50%, -50%) scale(1) rotate(-2deg)",
+            transform: "translate(-50%, -50%) scale(1) rotate(0deg)",
             animationTimingFunction: "ease-out",
           },
           "100%": { opacity: "0", transform: "translate(-50%, -50%) scale(1) rotate(0deg)" },

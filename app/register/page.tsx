@@ -415,7 +415,7 @@ export default function RegisterPage() {
           <div className={stepClass(0)}>
             {googleButton}
           </div>
-          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 ${stepClass(0)}`}>
+          <div className={`space-y-4 ${stepClass(0)}`}>
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
                 Nome

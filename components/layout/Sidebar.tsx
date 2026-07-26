@@ -228,7 +228,7 @@ export function Sidebar() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setOpenGroup((g) => ((g ?? item.id) === item.id ? null : item.id))}
+                    onClick={() => setOpenGroup((g) => (g === item.id || g === undefined ? null : item.id))}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium ${
                       groupActive
                         ? "text-slate-900 dark:text-white"

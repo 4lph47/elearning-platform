@@ -5,18 +5,36 @@ import { prisma } from "@/lib/db";
 import { FadeLink } from "@/components/course/FadeLink";
 import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
 import { CommunityTile, type CommunityCardData } from "@/components/community/CommunityTile";
+import { CommunitySearchBar } from "@/components/community/CommunitySearchBar";
 
 export const dynamic = "force-dynamic";
 
+type CommunitiesSearchParams = Promise<{ q?: string; category?: string }>;
+
 // Listagem em filas horizontais por categoria, igual ao catálogo de cursos
-// (app/courses/page.tsx) — só que de comunidades em vez de cursos.
-export default async function CommunitiesPage() {
+// (app/courses/page.tsx) — só que de comunidades em vez de cursos, com a
+// mesma busca+filtro por categoria (CommunitySearchBar espelha o SearchBar
+// do catálogo).
+export default async function CommunitiesPage({ searchParams }: { searchParams: CommunitiesSearchParams }) {
+  const { q, category } = await searchParams;
   const session = await getServerSession(authOptions);
+  const term = (q ?? "").trim();
+  const selectedCategories = (category ?? "").split(",").filter(Boolean);
 
   const communities = await prisma.community.findMany({
+    where: {
+      ...(term
+        ? { OR: [{ name: { contains: term, mode: "insensitive" } }, { description: { contains: term, mode: "insensitive" } }] }
+        : {}),
+      ...(selectedCategories.length > 0 ? { category: { in: selectedCategories } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { members: true } } },
   });
+
+  const allCategories = (
+    await prisma.community.findMany({ distinct: ["category"], select: { category: true } })
+  ).map((c) => c.category);
 
   const cards: CommunityCardData[] = communities.map((c) => ({
     id: c.id,
@@ -25,6 +43,15 @@ export default async function CommunitiesPage() {
     coverImageUrl: c.coverImageUrl,
     memberCount: c._count.members,
   }));
+
+  const myCommunityIds = session
+    ? new Set(
+        (await prisma.communityMember.findMany({ where: { userId: session.user.id }, select: { communityId: true } })).map(
+          (m) => m.communityId
+        )
+      )
+    : new Set<string>();
+  const myCards = cards.filter((c) => myCommunityIds.has(c.id));
 
   const byCategory = new Map<string, CommunityCardData[]>();
   for (const c of cards) {
@@ -53,21 +80,40 @@ export default async function CommunitiesPage() {
         </div>
       </div>
 
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-neutral-900/60 sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <CommunitySearchBar categories={allCategories} />
+        </div>
+      </div>
+
       <div className="mx-auto max-w-6xl py-3">
         {cards.length === 0 ? (
           <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">
-            Ainda não existe nenhuma comunidade — cria a primeira.
+            {term || selectedCategories.length > 0
+              ? "Nenhuma comunidade encontrada."
+              : "Ainda não existe nenhuma comunidade — cria a primeira."}
           </p>
         ) : (
-          Array.from(byCategory.entries()).map(([cat, list]) => (
-            <HorizontalScrollRow key={cat} title={cat}>
-              {list.map((c) => (
-                <div key={c.id} className="w-64 shrink-0 sm:w-72">
-                  <CommunityTile community={c} />
-                </div>
-              ))}
-            </HorizontalScrollRow>
-          ))
+          <>
+            {myCards.length > 0 && (
+              <HorizontalScrollRow title="As tuas comunidades">
+                {myCards.map((c) => (
+                  <div key={c.id} className="w-64 shrink-0 sm:w-72">
+                    <CommunityTile community={c} />
+                  </div>
+                ))}
+              </HorizontalScrollRow>
+            )}
+            {Array.from(byCategory.entries()).map(([cat, list]) => (
+              <HorizontalScrollRow key={cat} title={cat}>
+                {list.map((c) => (
+                  <div key={c.id} className="w-64 shrink-0 sm:w-72">
+                    <CommunityTile community={c} />
+                  </div>
+                ))}
+              </HorizontalScrollRow>
+            ))}
+          </>
         )}
       </div>
     </div>

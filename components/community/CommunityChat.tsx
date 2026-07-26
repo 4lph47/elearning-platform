@@ -153,6 +153,9 @@ export function CommunityChat({
   const [dragMessageId, setDragMessageId] = useState<string | null>(null);
   const [dragX, setDragX] = useState(0);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -338,10 +341,31 @@ export function CommunityChat({
     }
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  // Escolher o ficheiro só o põe em espera (com preview) — o envio real
+  // (upload + mensagem) só acontece quando se confirma, para dar espaço a
+  // escrever uma legenda antes, tal como o WhatsApp.
+  function selectFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setError(null);
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingFile(file);
+    setPendingPreviewUrl(URL.createObjectURL(file));
+    setCaption("");
+  }
+
+  function cancelAttachment() {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingFile(null);
+    setPendingPreviewUrl(null);
+    setCaption("");
+  }
+
+  async function confirmSendAttachment() {
+    if (!pendingFile) return;
+    const file = pendingFile;
+    const content = caption.trim();
     setError(null);
     setUploading(true);
     const replyToId = replyingTo?.id;
@@ -362,7 +386,13 @@ export function CommunityChat({
       const res = await fetch(`/api/communities/${communityId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attachmentUrl: signData.publicUrl, attachmentType: file.type, attachmentName: file.name, replyToId }),
+        body: JSON.stringify({
+          attachmentUrl: signData.publicUrl,
+          attachmentType: file.type,
+          attachmentName: file.name,
+          ...(content ? { content } : {}),
+          replyToId,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -371,6 +401,7 @@ export function CommunityChat({
       const message = await res.json();
       setMessages((prev) => [...prev, message]);
       setReplyingTo(null);
+      cancelAttachment();
       scrollToBottom();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
@@ -653,34 +684,87 @@ export function CommunityChat({
         </div>
       )}
 
-      <form onSubmit={send} className="flex items-center gap-2 border-t border-slate-200 p-2 dark:border-white/10">
-        <input ref={fileInputRef} type="file" onChange={handleFile} className="hidden" />
-        <button
-          type="button"
-          onClick={() => setAttachMenuOpen((v) => !v)}
-          disabled={uploading}
-          aria-label="Anexar ficheiro"
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10 ${
-            attachMenuOpen ? "bg-slate-100 text-blue-600 dark:bg-white/10 dark:text-blue-400" : "text-slate-500 dark:text-slate-300"
-          }`}
-        >
-          {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-        </button>
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Escreve uma mensagem..."
-          className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-        />
-        <button
-          type="submit"
-          disabled={sending || !text.trim()}
-          aria-label="Enviar"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
-        >
-          <Send size={15} />
-        </button>
-      </form>
+      <input ref={fileInputRef} type="file" onChange={selectFile} className="hidden" />
+
+      {/* Ficheiro escolhido fica em espera com preview + legenda antes de
+          enviar de verdade (upload só acontece ao confirmar) — dá espaço a
+          escrever um comentário sobre o anexo, tal como o WhatsApp. */}
+      {pendingFile ? (
+        <div className="border-t border-slate-200 p-3 dark:border-white/10">
+          <div className="mb-2 flex items-start gap-2">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 dark:bg-white/10">
+              {pendingFile.type.startsWith("image/") && pendingPreviewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={pendingPreviewUrl} alt="" className="h-full w-full object-cover" />
+              ) : pendingFile.type.startsWith("video/") && pendingPreviewUrl ? (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video src={pendingPreviewUrl} className="h-full w-full object-cover" />
+              ) : (
+                <Paperclip size={20} className="text-slate-400" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 pt-1">
+              <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{pendingFile.name}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{(pendingFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+            </div>
+            <button
+              type="button"
+              onClick={cancelAttachment}
+              disabled={uploading}
+              aria-label="Cancelar anexo"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Adiciona uma legenda (opcional)..."
+              disabled={uploading}
+              className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+            />
+            <button
+              type="button"
+              onClick={confirmSendAttachment}
+              disabled={uploading}
+              aria-label="Enviar ficheiro"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+            >
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={send} className="flex items-center gap-2 border-t border-slate-200 p-2 dark:border-white/10">
+          <button
+            type="button"
+            onClick={() => setAttachMenuOpen((v) => !v)}
+            disabled={uploading}
+            aria-label="Anexar ficheiro"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10 ${
+              attachMenuOpen ? "bg-slate-100 text-blue-600 dark:bg-white/10 dark:text-blue-400" : "text-slate-500 dark:text-slate-300"
+            }`}
+          >
+            {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+          </button>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Escreve uma mensagem..."
+            className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+          />
+          <button
+            type="submit"
+            disabled={sending || !text.trim()}
+            aria-label="Enviar"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+          >
+            <Send size={15} />
+          </button>
+        </form>
+      )}
     </div>
   );
 }

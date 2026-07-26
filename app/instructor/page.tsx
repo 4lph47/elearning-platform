@@ -11,11 +11,18 @@ export const dynamic = "force-dynamic";
 export default async function InstructorHomePage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login?callbackUrl=/instructor");
-  const courses = await prisma.course.findMany({
-    where: { OR: [{ instructorId: session.user.id }, { collaborators: { some: { id: session.user.id } } }] },
-    include: { modules: { include: { _count: { select: { lessons: true } } } }, enrollments: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [courses, bundles] = await Promise.all([
+    prisma.course.findMany({
+      where: { OR: [{ instructorId: session.user.id }, { collaborators: { some: { id: session.user.id } } }] },
+      include: { modules: { include: { _count: { select: { lessons: true } } } }, enrollments: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.bundle.findMany({
+      where: { instructorId: session.user.id },
+      include: { courses: { select: { title: true, category: true, thumbnailUrl: true, price: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const publishedCount = courses.filter((c) => c.published).length;
   const totalStudents = courses.reduce((sum, c) => sum + c.enrollments.length, 0);
@@ -134,6 +141,13 @@ export default async function InstructorHomePage() {
               rating: course.rating,
               ratingCount: course.ratingCount,
               revenue: course.price * course.enrollments.length,
+            }))}
+            bundles={bundles.map((bundle) => ({
+              id: bundle.id,
+              name: bundle.name,
+              thumbnailUrl: bundle.courses[0]?.thumbnailUrl ?? null,
+              courseTitles: bundle.courses.map((c) => c.title),
+              price: bundle.courses.reduce((sum, c) => sum + c.price, 0),
             }))}
           />
           </div>

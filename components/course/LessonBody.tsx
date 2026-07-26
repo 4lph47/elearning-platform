@@ -205,8 +205,8 @@ export function LessonBody({
       </div>
 
       <div className="mt-4 overflow-x-hidden">
-        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-stretch lg:gap-0 lg:relative lg:w-full" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:shrink-0 lg:flex-grow-0" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, flexBasis: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
+        <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:relative lg:z-10" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -248,12 +248,12 @@ export function LessonBody({
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="hidden lg:flex lg:w-3 lg:cursor-col-resize lg:transition-colors lg:relative lg:items-stretch lg:justify-center hover:lg:bg-slate-100 dark:hover:lg:bg-white/5"
-              style={{ touchAction: 'none' }}
+              className="hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors lg:z-20 hover:lg:bg-slate-100 dark:hover:lg:bg-white/5"
+              style={{ left: `calc(${leftWidth}% + 0.25rem)`, touchAction: 'none' }}
               title="Arrastar para redimensionar"
             >
               {/* Linha vertical sutil no centro */}
-              <div className="w-px bg-slate-200 dark:bg-white/10" />
+              <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-200 dark:bg-white/10" />
               {/* Barra azul aparece durante o resize */}
               {isResizing && (
                 <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500" />
@@ -266,7 +266,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:flex-shrink lg:flex-grow" : ""} style={sideBySide ? { width: `${100 - leftWidth}%`, flexBasis: `${100 - leftWidth}%`, paddingLeft: '0.5rem' } : undefined}>
+          <div className={sideBySide ? "mt-6 lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:overflow-x-hidden" : ""} style={sideBySide ? { left: `calc(${leftWidth}% + 1rem)`, paddingLeft: '0.5rem' } : undefined}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

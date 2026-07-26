@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { FadeLink } from "@/components/course/FadeLink";
 import {
   ArrowLeft,
   Send,
@@ -16,8 +17,8 @@ import {
   Music,
   Link2,
 } from "lucide-react";
-import { FadeLink } from "@/components/course/FadeLink";
 import { useFadeNav } from "@/components/course/FadeNavContext";
+import { LinkPreviewCard } from "@/components/community/LinkPreviewCard";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type CommunityRole = "OWNER" | "ADMIN" | "MEMBER";
@@ -61,6 +62,35 @@ function timeLabel(iso: string) {
 function snippetOf(m: { content: string | null; attachmentName: string | null; deleted: boolean }) {
   if (m.deleted) return "Mensagem apagada";
   return m.content || m.attachmentName || "Anexo";
+}
+
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+// Reconhece links (cursos, comunidades, ou qualquer site) dentro do texto e
+// torna-os clicáveis — o preview em baixo (LinkPreviewCard) é que mostra a
+// pré-visualização em si, isto só linka o texto.
+function renderContentWithLinks(content: string) {
+  const parts = content.split(URL_REGEX);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 hover:no-underline"
+      >
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
+
+function firstUrlIn(content: string): string | null {
+  const match = content.match(URL_REGEX);
+  return match ? match[0] : null;
 }
 
 function AttachmentPreview({ url, type, name }: { url: string; type: string | null; name: string | null }) {
@@ -111,6 +141,8 @@ export function CommunityChat({
   const { fadeNavigate } = useFadeNav();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -122,10 +154,21 @@ export function CommunityChat({
   const [dragX, setDragX] = useState(0);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragStartXRef = useRef(0);
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  function scrollToBottom() {
+    requestAnimationFrame(() => {
+      if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+    });
+  }
 
   useEffect(() => {
     if (!attachMenuOpen) return;
@@ -172,26 +215,80 @@ export function CommunityChat({
     };
   }
 
-  async function fetchMessages() {
+  // Carrega só a página mais recente ao abrir — nunca o histórico todo de
+  // uma vez. Scroll para cima ("carregar mais") busca mais antigas por
+  // cursor; o poll só pede o que é mais novo que a última mensagem que já
+  // temos, nunca refaz a lista toda (ver route.ts: before/after).
+  async function fetchInitial() {
     const res = await fetch(`/api/communities/${communityId}/messages`);
     if (res.ok) {
       const data = await res.json();
       setMessages(data.messages ?? []);
+      setHasMore(Boolean(data.hasMore));
+      scrollToBottom();
     }
     setLoading(false);
   }
 
+  async function pollNew() {
+    const last = messagesRef.current[messagesRef.current.length - 1];
+    const url = last
+      ? `/api/communities/${communityId}/messages?after=${encodeURIComponent(last.createdAt)}`
+      : `/api/communities/${communityId}/messages`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    const incoming: Message[] = data.messages ?? [];
+    if (incoming.length === 0) return;
+    const existingIds = new Set(messagesRef.current.map((m) => m.id));
+    const fresh = incoming.filter((m) => !existingIds.has(m.id));
+    if (fresh.length === 0) return;
+    setMessages((prev) => [...prev, ...fresh]);
+    scrollToBottom();
+  }
+
+  async function loadOlder() {
+    if (loadingMore || !hasMore) return;
+    const oldest = messagesRef.current[0];
+    if (!oldest) return;
+    setLoadingMore(true);
+    const container = listRef.current;
+    const prevScrollHeight = container?.scrollHeight ?? 0;
+    const res = await fetch(`/api/communities/${communityId}/messages?before=${encodeURIComponent(oldest.createdAt)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const older: Message[] = data.messages ?? [];
+      setMessages((prev) => [...older, ...prev]);
+      setHasMore(Boolean(data.hasMore));
+      // Preserva a posição do scroll — sem isto, prepender mensagens em
+      // cima empurrava a vista inteira e dava um salto brusco.
+      requestAnimationFrame(() => {
+        if (container) container.scrollTop = container.scrollHeight - prevScrollHeight;
+      });
+    }
+    setLoadingMore(false);
+  }
+
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, POLL_MS);
+    fetchInitial();
+    const interval = setInterval(pollNew, POLL_MS);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [communityId]);
 
+  // Só carrega mensagens antigas quando a sentinela no topo da lista
+  // entra em vista (scroll para cima) — nunca a lista toda de uma vez.
   useEffect(() => {
-    if (!listRef.current) return;
-    listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [messages]);
+    const el = topSentinelRef.current;
+    const root = listRef.current;
+    if (!el || !root || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) loadOlder();
+    }, { root, threshold: 0 });
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loadingMore, messages.length === 0]);
 
   function scrollToMessage(id: string) {
     messageRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -216,6 +313,7 @@ export function CommunityChat({
     if (res.ok) {
       const message = await res.json();
       setMessages((prev) => [...prev, message]);
+      scrollToBottom();
     }
   }
 
@@ -236,6 +334,7 @@ export function CommunityChat({
     if (res.ok) {
       const message = await res.json();
       setMessages((prev) => [...prev, message]);
+      scrollToBottom();
     }
   }
 
@@ -272,6 +371,7 @@ export function CommunityChat({
       const message = await res.json();
       setMessages((prev) => [...prev, message]);
       setReplyingTo(null);
+      scrollToBottom();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     } finally {
@@ -362,7 +462,14 @@ export function CommunityChat({
             Ainda não há mensagens. Diz olá à comunidade.
           </p>
         ) : (
-          messages.map((m) => {
+          <>
+            <div ref={topSentinelRef} />
+            {loadingMore && (
+              <div className="flex justify-center py-2">
+                <Loader2 size={14} className="animate-spin text-slate-400" />
+              </div>
+            )}
+            {messages.map((m) => {
             const isMine = m.senderId === currentUserId;
             const highlighted = highlightId === m.id;
             const isDragging = dragMessageId === m.id;
@@ -415,7 +522,12 @@ export function CommunityChat({
                   className={`flex flex-col ${isDragging ? "" : "transition-transform"} ${isMine ? "items-end" : "items-start"}`}
                 >
                   {!isMine && (
-                    <p className="mb-0.5 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">{m.sender.name}</p>
+                    <FadeLink
+                      href={`/u/${m.senderId}`}
+                      className="mb-0.5 px-1 text-xs font-medium text-slate-500 hover:underline dark:text-slate-400"
+                    >
+                      {m.sender.name}
+                    </FadeLink>
                   )}
                   <div
                     className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-sm transition-shadow ${
@@ -446,10 +558,11 @@ export function CommunityChat({
                       "Mensagem apagada"
                     ) : (
                       <>
-                        {m.content}
+                        {m.content && renderContentWithLinks(m.content)}
                         {m.attachmentUrl && (
                           <AttachmentPreview url={m.attachmentUrl} type={m.attachmentType} name={m.attachmentName} />
                         )}
+                        {m.content && firstUrlIn(m.content) && <LinkPreviewCard url={firstUrlIn(m.content)!} />}
                       </>
                     )}
                   </div>
@@ -479,7 +592,8 @@ export function CommunityChat({
                 )}
               </div>
             );
-          })
+          })}
+          </>
         )}
       </div>
 
@@ -518,7 +632,7 @@ export function CommunityChat({
                 onClick={() => openPicker(opt.accept)}
                 className="flex flex-col items-center gap-1.5 rounded-lg p-2 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
                   <Icon size={20} />
                 </span>
                 {opt.label}
@@ -531,7 +645,7 @@ export function CommunityChat({
             disabled={sending}
             className="flex flex-col items-center gap-1.5 rounded-lg p-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-white/10"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
               <Link2 size={20} />
             </span>
             Link da comunidade

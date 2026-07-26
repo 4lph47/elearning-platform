@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ShieldCheck, ShieldOff, UserMinus, Loader2 } from "lucide-react";
+import { FadeLink } from "@/components/course/FadeLink";
 
 type CommunityRole = "OWNER" | "ADMIN" | "MEMBER";
 
@@ -91,20 +92,22 @@ export function MembersList({
       {error && <p className="pb-1 text-xs text-red-500 dark:text-red-400">{error}</p>}
       {members.map((m) => (
         <div key={m.userId} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5">
-          {m.user.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={m.user.image} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
-          ) : (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-              {m.user.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-slate-900 dark:text-white">{m.user.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {m.role === "OWNER" ? "Criador" : m.role === "ADMIN" ? "Administrador" : "Membro"}
-            </p>
-          </div>
+          <FadeLink href={`/u/${m.userId}`} className="flex min-w-0 flex-1 items-center gap-2">
+            {m.user.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={m.user.image} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                {m.user.name.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm text-slate-900 hover:underline dark:text-white">{m.user.name}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {m.role === "OWNER" ? "Criador" : m.role === "ADMIN" ? "Administrador" : "Membro"}
+              </p>
+            </div>
+          </FadeLink>
           {canActOn(m) && (
             <div className="flex shrink-0 items-center gap-1">
               {busyUserId === m.userId ? (

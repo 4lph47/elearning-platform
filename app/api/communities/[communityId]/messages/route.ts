@@ -5,9 +5,18 @@ import { prisma } from "@/lib/db";
 import { communityMessageSchema } from "@/lib/validations";
 import { getMembership } from "@/lib/communityAccess";
 
-const TAKE = 100;
+const TAKE = 30;
+const MESSAGE_INCLUDE = {
+  sender: { select: { id: true, name: true, image: true } },
+  replyTo: { include: { sender: { select: { id: true, name: true } } } },
+} as const;
 
-export async function GET(_request: Request, { params }: { params: Promise<{ communityId: string }> }) {
+// Paginado por cursor de data — carregar as 100+ mensagens todas de uma vez
+// não escala (grupos com histórico grande). Três modos:
+// - sem parâmetros: as TAKE mais recentes (carga inicial, ecrã já abre no fundo);
+// - ?before=<ISO>: TAKE mais antigas que essa data (scroll para cima, "carregar mais");
+// - ?after=<ISO>: só as mais novas que essa data (poll, nunca refaz o histórico todo).
+export async function GET(request: Request, { params }: { params: Promise<{ communityId: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Precisas de iniciar sessão" }, { status: 401 });
 
@@ -15,17 +24,29 @@ export async function GET(_request: Request, { params }: { params: Promise<{ com
   const membership = await getMembership(communityId, session.user.id);
   if (!membership) return NextResponse.json({ error: "Só membros veem as mensagens" }, { status: 403 });
 
-  const messages = await prisma.communityMessage.findMany({
-    where: { communityId },
-    orderBy: { createdAt: "asc" },
-    take: TAKE,
-    include: {
-      sender: { select: { id: true, name: true, image: true } },
-      replyTo: { include: { sender: { select: { id: true, name: true } } } },
-    },
-  });
+  const { searchParams } = new URL(request.url);
+  const before = searchParams.get("before");
+  const after = searchParams.get("after");
 
-  return NextResponse.json({ messages });
+  if (after) {
+    const messages = await prisma.communityMessage.findMany({
+      where: { communityId, createdAt: { gt: new Date(after) } },
+      orderBy: { createdAt: "asc" },
+      take: TAKE,
+      include: MESSAGE_INCLUDE,
+    });
+    return NextResponse.json({ messages, hasMore: false });
+  }
+
+  const messages = await prisma.communityMessage.findMany({
+    where: { communityId, ...(before ? { createdAt: { lt: new Date(before) } } : {}) },
+    orderBy: { createdAt: "desc" },
+    take: TAKE,
+    include: MESSAGE_INCLUDE,
+  });
+  messages.reverse();
+
+  return NextResponse.json({ messages, hasMore: messages.length === TAKE });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ communityId: string }> }) {

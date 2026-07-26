@@ -8,7 +8,8 @@ import type { ReactNode } from "react";
 // /communities (a listagem) nem /communities/new (o form de criação).
 function hidesFooter(pathname: string | null) {
   if (!pathname) return false;
-  return /^\/communities\/(?!new(\/|$))[^/]+/.test(pathname);
+  if (/^\/communities\/(?!new(\/|$))[^/]+/.test(pathname)) return true;
+  return pathname === "/login" || pathname === "/register" || pathname.startsWith("/register/");
 }
 
 export function ConditionalFooter({ children }: { children: ReactNode }) {

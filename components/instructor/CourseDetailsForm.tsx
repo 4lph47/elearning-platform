@@ -13,6 +13,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import type { QuizData } from "@/components/instructor/QuizEditor";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
 import { DeleteWithConfirmName } from "@/components/instructor/DeleteWithConfirmName";
+import { CategoryPicker } from "@/components/instructor/CategoryPicker";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { saveDraft, loadDraft, clearDraft, sanitizeUploadedUrl } from "@/lib/formDraft";
 import {
@@ -365,7 +366,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <Label htmlFor="category">Categoria</Label>
-              <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
+              <CategoryPicker id="category" value={category} onChange={setCategory} />
             </div>
             <div>
               <Label htmlFor="level">Nível</Label>

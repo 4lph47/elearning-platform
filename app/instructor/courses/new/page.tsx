@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { CategoryPicker } from "@/components/instructor/CategoryPicker";
 import { CornerCard, CornerCardStack, CornerCardIssueList, focusField, type CornerCardIssue } from "@/components/ui/CornerCard";
 
 export default function NewCoursePage() {
@@ -58,13 +59,7 @@ export default function NewCoursePage() {
           </div>
           <div>
             <Label htmlFor="category">Categoria</Label>
-            <Input
-              id="category"
-              required
-              placeholder="ex: Programação, Design, Marketing"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            />
+            <CategoryPicker id="category" value={category} onChange={setCategory} />
           </div>
           <div>
             <Label htmlFor="level">Nível</Label>

@@ -286,7 +286,7 @@ export function StudentProfileHero({
   // tema.
   const hasBanner = Boolean(bannerUrl);
   const textMain = hasBanner ? "text-white" : "text-slate-900 dark:text-white";
-  const textSoft = hasBanner ? "text-white/70" : "text-slate-600 dark:text-white/70";
+  const textSoft = hasBanner ? "text-white/70" : "text-slate-900 dark:text-white/70";
   const textSofter = hasBanner ? "text-white/60" : "text-slate-500 dark:text-white/60";
   const textBody = hasBanner ? "text-white/85" : "text-slate-700 dark:text-white/85";
   const text80 = hasBanner ? "text-white/80" : "text-slate-700 dark:text-white/80";

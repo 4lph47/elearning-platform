@@ -7,6 +7,7 @@ import { CourseRow } from "@/components/course/CourseRow";
 import { SearchBar } from "@/components/course/SearchBar";
 import type { CourseCardData } from "@/components/course/CourseCard";
 import { PeopleRow, BundlesRow, ResaleRow, type PersonResult, type InstructorBundleResult } from "@/components/course/SearchExtras";
+import { ResaleListingTile } from "@/components/resale/ResaleTile";
 import type { ResaleBundleCardData, ResaleListingCardData } from "@/components/resale/types";
 
 export const dynamic = "force-dynamic";
@@ -89,11 +90,12 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   // pesquisa) — igual às outras secções horizontais do catálogo — e o filtro
   // "Bundles" isola-a por completo.
   const showBundles = resultType === "bundles" || resultType === "";
-  // "Revendas" é distinto de "Bundles" (que também inclui pacotes do próprio
-  // instrutor) — mostra cursos individuais revendidos + bundles de revenda,
-  // conteúdo que antes só aparecia no perfil do vendedor/marketplace, nunca
-  // no catálogo.
-  const showResale = resultType === "resale" || resultType === "";
+  // "Revendas" é o filtro dedicado — só aí ganham a própria secção. Fora
+  // dele (Tudo/Cursos), cursos revendidos entram no fim de cada fila de
+  // categoria normal (ver extraTiles do CourseRow), nunca numa fila própria
+  // — daí a query correr também quando showCourses, mesmo sem o filtro.
+  const showResaleRow = resultType === "resale";
+  const needsResaleListings = showCourses || showResaleRow;
 
   const [courses, categories, enrollments, people, resaleBundles, instructorBundles, resaleListings] = await Promise.all([
     showCourses
@@ -169,7 +171,7 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
           take: 8,
         })
       : Promise.resolve([]),
-    showResale
+    needsResaleListings
       ? prisma.resaleListing.findMany({
           where: {
             active: true,
@@ -353,6 +355,27 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
     byCategory.get(c.category)!.push(c);
   }
 
+  // Cursos de revenda entram no fim de cada fila de categoria (não numa fila
+  // própria) fora do filtro "Revendas" — união de categorias porque uma
+  // categoria pode só ter revendas, sem nenhum curso normal publicado nela.
+  const resaleListingsByCategory = new Map<string, ResaleListingCardData[]>();
+  for (const l of resaleListingCards) {
+    if (!resaleListingsByCategory.has(l.courseCategory)) resaleListingsByCategory.set(l.courseCategory, []);
+    resaleListingsByCategory.get(l.courseCategory)!.push(l);
+  }
+  const allCategoriesInOrder = Array.from(
+    new Set([...Array.from(byCategory.keys()), ...Array.from(resaleListingsByCategory.keys())])
+  );
+
+  function resaleExtraTiles(listings: ResaleListingCardData[]) {
+    if (listings.length === 0) return undefined;
+    return listings.map((l) => (
+      <div key={l.id} className="w-64 shrink-0 sm:w-72">
+        <ResaleListingTile listing={l} showSeller />
+      </div>
+    ));
+  }
+
   return (
     <>
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-neutral-900/60 sm:px-8">
@@ -364,21 +387,33 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       <div className="mx-auto max-w-6xl py-3">
         {showPeople && <PeopleRow people={peopleResults} />}
         {showBundles && <BundlesRow resaleBundles={resaleBundleCards} instructorBundles={instructorBundleCards} />}
-        {showResale && <ResaleRow listings={resaleListingCards} bundles={resaleBundleCards} />}
+        {showResaleRow && <ResaleRow listings={resaleListingCards} bundles={resaleBundleCards} />}
 
         {showCourses && (
           <>
             <p className="mb-1 px-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">
               {cards.length} curso{cards.length !== 1 ? "s" : ""} encontrado{cards.length !== 1 ? "s" : ""}
             </p>
-            {cards.length === 0 ? (
+            {cards.length === 0 && resaleListingCards.length === 0 ? (
               <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhum curso encontrado.</p>
             ) : sort ? (
-              <CourseRow title="Resultados" courses={cards} hidePriceBySlug={hidePriceBySlug} rankBySlug={rankBySlug} />
+              <CourseRow
+                title="Resultados"
+                courses={cards}
+                hidePriceBySlug={hidePriceBySlug}
+                rankBySlug={rankBySlug}
+                extraTiles={resaleExtraTiles(resaleListingCards)}
+              />
             ) : (
               <div className="space-y-1">
-                {Array.from(byCategory.entries()).map(([cat, list]) => (
-                  <CourseRow key={cat} title={cat} courses={list} hidePriceBySlug={hidePriceBySlug} />
+                {allCategoriesInOrder.map((cat) => (
+                  <CourseRow
+                    key={cat}
+                    title={cat}
+                    courses={byCategory.get(cat) ?? []}
+                    hidePriceBySlug={hidePriceBySlug}
+                    extraTiles={resaleExtraTiles(resaleListingsByCategory.get(cat) ?? [])}
+                  />
                 ))}
               </div>
             )}

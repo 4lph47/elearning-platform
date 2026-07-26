@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { LazyMount } from "@/components/course/LazyMount";
 import { PosterCard } from "@/components/course/PosterCard";
@@ -21,6 +21,7 @@ export function CourseRow({
   hidePriceBySlug,
   destinationKindBySlug,
   rankBySlug,
+  extraTiles,
 }: {
   title: string;
   courses: CourseCardData[];
@@ -29,6 +30,10 @@ export function CourseRow({
   hidePriceBySlug?: Record<string, boolean>;
   destinationKindBySlug?: Record<string, TransitionKind>;
   rankBySlug?: Record<string, number>;
+  // Tiles extra (ex.: cursos de revenda) sempre no fim da fila, depois dos
+  // cursos normais — não participam no hover-zoom/push (esse só olha para o
+  // array `courses`), só ficam ali sentados à direita.
+  extraTiles?: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -49,7 +54,7 @@ export function CourseRow({
     scrollRef.current?.scrollBy({ left: dir * 900, behavior: "smooth" });
   }
 
-  if (courses.length === 0) return null;
+  if (courses.length === 0 && !extraTiles) return null;
 
   return (
     <section className="group/row relative py-5">
@@ -123,6 +128,7 @@ export function CourseRow({
             </div>
           );
         })}
+        {extraTiles}
       </div>
 
       <button

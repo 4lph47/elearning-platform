@@ -52,11 +52,6 @@ export function BundlesRow({
   if (resaleBundles.length === 0 && instructorBundles.length === 0) return null;
   return (
     <HorizontalScrollRow title="Bundles">
-      {resaleBundles.map((b) => (
-        <div key={b.id} className="w-64 shrink-0 sm:w-72">
-          <ResaleBundleTile bundle={b} showSeller />
-        </div>
-      ))}
       {instructorBundles.map((b) => (
         <div key={b.id} className="w-64 shrink-0 sm:w-72">
           <FadeLink href={b.href} className="group block">
@@ -82,6 +77,11 @@ export function BundlesRow({
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{b.subtitle}</p>
             </div>
           </FadeLink>
+        </div>
+      ))}
+      {resaleBundles.map((b) => (
+        <div key={b.id} className="w-64 shrink-0 sm:w-72">
+          <ResaleBundleTile bundle={b} showSeller />
         </div>
       ))}
     </HorizontalScrollRow>

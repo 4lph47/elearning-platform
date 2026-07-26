@@ -1328,7 +1328,7 @@ async function main() {
     create: {
       name: "Ana Rodrigues",
       email: "instrutor@example.com",
-      passwordHash,
+      passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(),
       role: "INSTRUCTOR",
       bio: anaBio,
       ...anaSocials,
@@ -1341,7 +1341,7 @@ async function main() {
     create: {
       name: "Carlos Mendes",
       email: "carlos@example.com",
-      passwordHash,
+      passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(),
       role: "INSTRUCTOR",
       bio: carlosBio,
       ...carlosSocials,
@@ -1351,37 +1351,37 @@ async function main() {
   const bruno = await prisma.user.upsert({
     where: { email: "aluno@example.com" },
     update: {},
-    create: { name: "Bruno Aluno", email: "aluno@example.com", passwordHash, role: "STUDENT" },
+    create: { name: "Bruno Aluno", email: "aluno@example.com", passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(), role: "STUDENT" },
   });
 
   const sofia = await prisma.user.upsert({
     where: { email: "sofia@example.com" },
     update: {},
-    create: { name: "Sofia Ferreira", email: "sofia@example.com", passwordHash, role: "STUDENT" },
+    create: { name: "Sofia Ferreira", email: "sofia@example.com", passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(), role: "STUDENT" },
   });
 
   const miguel = await prisma.user.upsert({
     where: { email: "miguel@example.com" },
     update: {},
-    create: { name: "Miguel Santos", email: "miguel@example.com", passwordHash, role: "STUDENT" },
+    create: { name: "Miguel Santos", email: "miguel@example.com", passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(), role: "STUDENT" },
   });
 
   const carla = await prisma.user.upsert({
     where: { email: "carla@example.com" },
     update: {},
-    create: { name: "Carla Nunes", email: "carla@example.com", passwordHash, role: "STUDENT" },
+    create: { name: "Carla Nunes", email: "carla@example.com", passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(), role: "STUDENT" },
   });
 
   const tiago = await prisma.user.upsert({
     where: { email: "tiago@example.com" },
     update: {},
-    create: { name: "Tiago Silva", email: "tiago@example.com", passwordHash, role: "STUDENT" },
+    create: { name: "Tiago Silva", email: "tiago@example.com", passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(), role: "STUDENT" },
   });
 
   const beatriz = await prisma.user.upsert({
     where: { email: "beatriz@example.com" },
     update: {},
-    create: { name: "Beatriz Costa", email: "beatriz@example.com", passwordHash, role: "STUDENT" },
+    create: { name: "Beatriz Costa", email: "beatriz@example.com", passwordHash, termsAcceptedAt: new Date(), emailVerified: new Date(), role: "STUDENT" },
   });
 
   const reviewers = [bruno, sofia, miguel, carla, tiago, beatriz];

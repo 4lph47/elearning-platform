@@ -3,6 +3,7 @@ import { PersonTile } from "@/components/course/PersonTile";
 import { ResaleBundleTile } from "@/components/resale/ResaleTile";
 import type { ResaleBundleCardData } from "@/components/resale/types";
 import { FadeLink } from "@/components/course/FadeLink";
+import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
 
 export interface PersonResult {
   id: string;
@@ -31,14 +32,13 @@ export interface InstructorBundleResult {
 export function PeopleRow({ people }: { people: PersonResult[] }) {
   if (people.length === 0) return null;
   return (
-    <section className="py-5">
-      <h2 className="mb-3 px-4 text-lg font-semibold text-slate-900 dark:text-white sm:px-8 sm:text-xl">Pessoas</h2>
-      <div className="grid grid-cols-2 gap-4 px-4 sm:grid-cols-4 sm:px-8 lg:grid-cols-6">
-        {people.map((p) => (
-          <PersonTile key={p.id} person={p} />
-        ))}
-      </div>
-    </section>
+    <HorizontalScrollRow title="Pessoas">
+      {people.map((p) => (
+        <div key={p.id} className="w-28 shrink-0 sm:w-32">
+          <PersonTile person={p} />
+        </div>
+      ))}
+    </HorizontalScrollRow>
   );
 }
 
@@ -51,14 +51,15 @@ export function BundlesRow({
 }) {
   if (resaleBundles.length === 0 && instructorBundles.length === 0) return null;
   return (
-    <section className="py-5">
-      <h2 className="mb-3 px-4 text-lg font-semibold text-slate-900 dark:text-white sm:px-8 sm:text-xl">Bundles</h2>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-10 px-4 sm:grid-cols-2 sm:px-8 lg:grid-cols-3">
-        {resaleBundles.map((b) => (
-          <ResaleBundleTile key={b.id} bundle={b} showSeller />
-        ))}
-        {instructorBundles.map((b) => (
-          <FadeLink key={b.id} href={b.href} className="group block">
+    <HorizontalScrollRow title="Bundles">
+      {resaleBundles.map((b) => (
+        <div key={b.id} className="w-64 shrink-0 sm:w-72">
+          <ResaleBundleTile bundle={b} showSeller />
+        </div>
+      ))}
+      {instructorBundles.map((b) => (
+        <div key={b.id} className="w-64 shrink-0 sm:w-72">
+          <FadeLink href={b.href} className="group block">
             <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 p-4 ring-1 ring-white/10 transition-all duration-200 group-hover:ring-slate-400 dark:group-hover:ring-white/40">
               {b.thumbnailUrl && (
                 <Image
@@ -81,8 +82,8 @@ export function BundlesRow({
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{b.subtitle}</p>
             </div>
           </FadeLink>
-        ))}
-      </div>
-    </section>
+        </div>
+      ))}
+    </HorizontalScrollRow>
   );
 }

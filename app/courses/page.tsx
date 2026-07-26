@@ -83,9 +83,12 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   // do prefixo.
   const term = (q ?? "").trim().replace(/^@+/, "").trim();
   const resultType = type ?? "";
-  const showCourses = resultType !== "people";
-  const showPeople = resultType !== "courses" && (term.length > 0 || resultType === "people");
-  const showBundles = showCourses && term.length > 0;
+  const showCourses = resultType === "" || resultType === "courses";
+  const showPeople = resultType === "people" || (resultType === "" && term.length > 0);
+  // "Tudo" mostra sempre a linha de bundles (não só quando há termo de
+  // pesquisa) — igual às outras secções horizontais do catálogo — e o filtro
+  // "Bundles" isola-a por completo.
+  const showBundles = resultType === "bundles" || resultType === "";
 
   const [courses, categories, enrollments, people, resaleBundles, instructorBundles] = await Promise.all([
     showCourses
@@ -346,8 +349,11 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
           </>
         )}
 
-        {!showCourses && peopleResults.length === 0 && (
+        {resultType === "people" && peopleResults.length === 0 && (
           <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhuma pessoa encontrada.</p>
+        )}
+        {resultType === "bundles" && resaleBundleCards.length === 0 && instructorBundleCards.length === 0 && (
+          <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhum bundle encontrado.</p>
         )}
       </div>
     </>

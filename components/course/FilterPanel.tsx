@@ -19,6 +19,7 @@ export const SORT_OPTIONS = [
 export const RESULT_TYPE_OPTIONS = [
   { value: "", label: "Tudo" },
   { value: "courses", label: "Cursos" },
+  { value: "bundles", label: "Bundles" },
   { value: "people", label: "Pessoas" },
 ] as const;
 

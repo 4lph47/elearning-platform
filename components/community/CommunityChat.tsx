@@ -2,7 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Send, Paperclip, ChevronRight, Reply, Trash2, X, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Send,
+  Paperclip,
+  ChevronRight,
+  Reply,
+  Trash2,
+  X,
+  Loader2,
+  Image as ImageIcon,
+  FileText,
+  Music,
+} from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -31,6 +43,15 @@ interface Message {
 }
 
 const POLL_MS = 4000;
+
+// Menu de anexo estilo WhatsApp — escolhe o tipo primeiro (filtra o picker
+// nativo do dispositivo via "accept"), em vez de abrir logo um seletor
+// genérico de ficheiros.
+const ATTACH_OPTIONS = [
+  { label: "Fotos e vídeos", icon: ImageIcon, accept: "image/*,video/*" },
+  { label: "Documento", icon: FileText, accept: "" },
+  { label: "Áudio", icon: Music, accept: "audio/*" },
+];
 
 function timeLabel(iso: string) {
   return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
@@ -96,9 +117,59 @@ export function CommunityChat({
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [dragMessageId, setDragMessageId] = useState<string | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragStartXRef = useRef(0);
+
+  useEffect(() => {
+    if (!attachMenuOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) setAttachMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [attachMenuOpen]);
+
+  function openPicker(accept: string) {
+    if (fileInputRef.current) fileInputRef.current.setAttribute("accept", accept);
+    setAttachMenuOpen(false);
+    fileInputRef.current?.click();
+  }
+
+  const SWIPE_MAX = 64;
+  const SWIPE_THRESHOLD = 36;
+
+  function dragStart(m: Message) {
+    return (e: React.PointerEvent<HTMLDivElement>) => {
+      if (m.deleted) return;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dragStartXRef.current = e.clientX;
+      setDragMessageId(m.id);
+      setDragX(0);
+    };
+  }
+
+  function dragMove(m: Message) {
+    return (e: React.PointerEvent<HTMLDivElement>) => {
+      if (dragMessageId !== m.id) return;
+      const dx = e.clientX - dragStartXRef.current;
+      setDragX(Math.max(0, Math.min(dx, SWIPE_MAX)));
+    };
+  }
+
+  function dragEnd(m: Message) {
+    return () => {
+      if (dragMessageId !== m.id) return;
+      if (dragX > SWIPE_THRESHOLD) setReplyingTo(m);
+      setDragMessageId(null);
+      setDragX(0);
+    };
+  }
 
   async function fetchMessages() {
     const res = await fetch(`/api/communities/${communityId}/messages`);
@@ -273,46 +344,55 @@ export function CommunityChat({
           messages.map((m) => {
             const isMine = m.senderId === currentUserId;
             const highlighted = highlightId === m.id;
-            return (
-              <div
-                key={m.id}
-                ref={(el) => {
-                  messageRefs.current[m.id] = el;
-                }}
-                className={`group flex items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}
-              >
-                {/* Ações (responder/apagar) — ficam do lado de fora da bolha,
-                    só visíveis ao passar o rato (mesmo padrão hover-actions do
-                    WhatsApp Web), ordem invertida quando é a tua mensagem para
-                    ficarem sempre coladas à bolha. */}
-                <div
-                  className={`flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 ${
-                    isMine ? "order-2" : "order-1"
-                  }`}
-                >
-                  {!m.deleted && (
-                    <button
-                      type="button"
-                      onClick={() => setReplyingTo(m)}
-                      aria-label="Responder"
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
-                    >
-                      <Reply size={13} />
-                    </button>
-                  )}
-                  {!m.deleted && canDelete(m) && (
-                    <button
-                      type="button"
-                      onClick={() => deleteMessage(m.id)}
-                      aria-label="Apagar"
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
+            const isDragging = dragMessageId === m.id;
 
-                <div className={`order-1 max-w-[80%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
+            // Ações (responder/apagar) — só visíveis ao passar o rato, no
+            // lado de dentro da bolha (perto do centro do ecrã): à esquerda
+            // das tuas mensagens (alinhadas à direita), à direita das dos
+            // outros (alinhadas à esquerda).
+            const actions = (
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                {!m.deleted && (
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(m)}
+                    aria-label="Responder"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
+                  >
+                    <Reply size={13} />
+                  </button>
+                )}
+                {!m.deleted && canDelete(m) && (
+                  <button
+                    type="button"
+                    onClick={() => deleteMessage(m.id)}
+                    aria-label="Apagar"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            );
+
+            const bubbleColumn = (
+              <div className="relative flex max-w-[80%] flex-col">
+                {/* Ícone de responder revelado ao arrastar a mensagem para a
+                    direita (drag-to-reply, igual ao WhatsApp/Telegram). */}
+                <div
+                  className="pointer-events-none absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 pr-2 text-blue-500 transition-opacity"
+                  style={{ opacity: isDragging ? Math.min(dragX / SWIPE_THRESHOLD, 1) : 0 }}
+                >
+                  <Reply size={16} />
+                </div>
+                <div
+                  onPointerDown={dragStart(m)}
+                  onPointerMove={dragMove(m)}
+                  onPointerUp={dragEnd(m)}
+                  onPointerCancel={dragEnd(m)}
+                  style={{ transform: `translateX(${isDragging ? dragX : 0}px)`, touchAction: "pan-y" }}
+                  className={`flex flex-col ${isDragging ? "" : "transition-transform"} ${isMine ? "items-end" : "items-start"}`}
+                >
                   {!isMine && (
                     <p className="mb-0.5 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">{m.sender.name}</p>
                   )}
@@ -356,6 +436,28 @@ export function CommunityChat({
                 </div>
               </div>
             );
+
+            return (
+              <div
+                key={m.id}
+                ref={(el) => {
+                  messageRefs.current[m.id] = el;
+                }}
+                className={`group flex items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}
+              >
+                {isMine ? (
+                  <>
+                    {actions}
+                    {bubbleColumn}
+                  </>
+                ) : (
+                  <>
+                    {bubbleColumn}
+                    {actions}
+                  </>
+                )}
+              </div>
+            );
           })
         )}
       </div>
@@ -379,14 +481,42 @@ export function CommunityChat({
         </div>
       )}
 
+      {/* Menu de anexo — escolhe o tipo primeiro, tal como o WhatsApp, antes
+          de abrir o seletor de ficheiros nativo do dispositivo. */}
+      {attachMenuOpen && (
+        <div
+          ref={attachMenuRef}
+          className="grid grid-cols-3 gap-2 border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900"
+        >
+          {ATTACH_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => openPicker(opt.accept)}
+                className="flex flex-col items-center gap-1.5 rounded-lg p-2 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white">
+                  <Icon size={20} />
+                </span>
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <form onSubmit={send} className="flex items-center gap-2 border-t border-slate-200 p-2 dark:border-white/10">
         <input ref={fileInputRef} type="file" onChange={handleFile} className="hidden" />
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => setAttachMenuOpen((v) => !v)}
           disabled={uploading}
           aria-label="Anexar ficheiro"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-white/10"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10 ${
+            attachMenuOpen ? "bg-slate-100 text-blue-600 dark:bg-white/10 dark:text-blue-400" : "text-slate-500 dark:text-slate-300"
+          }`}
         >
           {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
         </button>

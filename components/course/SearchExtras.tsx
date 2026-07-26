@@ -101,17 +101,25 @@ export function ResaleRow({
 }) {
   if (listings.length === 0 && bundles.length === 0) return null;
   return (
-    <HorizontalScrollRow title="Revendas">
-      {bundles.map((b) => (
-        <div key={b.id} className="w-64 shrink-0 sm:w-72">
-          <ResaleBundleTile bundle={b} showSeller />
-        </div>
-      ))}
-      {listings.map((l) => (
-        <div key={l.id} className="w-64 shrink-0 sm:w-72">
-          <ResaleListingTile listing={l} showSeller />
-        </div>
-      ))}
-    </HorizontalScrollRow>
+    <>
+      {bundles.length > 0 && (
+        <HorizontalScrollRow title="Bundles de revenda">
+          {bundles.map((b) => (
+            <div key={b.id} className="w-64 shrink-0 sm:w-72">
+              <ResaleBundleTile bundle={b} showSeller />
+            </div>
+          ))}
+        </HorizontalScrollRow>
+      )}
+      {listings.length > 0 && (
+        <HorizontalScrollRow title="Cursos de revenda">
+          {listings.map((l) => (
+            <div key={l.id} className="w-64 shrink-0 sm:w-72">
+              <ResaleListingTile listing={l} showSeller />
+            </div>
+          ))}
+        </HorizontalScrollRow>
+      )}
+    </>
   );
 }

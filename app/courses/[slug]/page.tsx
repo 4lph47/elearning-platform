@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { CheckCircle2, Video, ListChecks, Paperclip, Infinity as InfinityIcon, HelpCircle, Lock, Star, Users, BookOpen, Smartphone, Award, MessageSquare } from "lucide-react";
+import { CheckCircle2, Video, ListChecks, Paperclip, Infinity as InfinityIcon, HelpCircle, Lock, Star, Users, BookOpen, Smartphone, Award, MessageSquare, Repeat } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getCachedCourseBySlug, getCachedRelatedCourses } from "@/lib/courseCache";
@@ -476,6 +476,12 @@ export default async function CourseDetailPage({
                     <Award size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <span>Certificado de conclusão</span>
                   </div>
+                  {course.resaleMinCommission !== null && (
+                    <div className="flex items-center gap-2.5">
+                      <Repeat size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
+                      <span>Podes revender este curso depois de o completares</span>
+                    </div>
+                  )}
                 </dl>
               </div>
 

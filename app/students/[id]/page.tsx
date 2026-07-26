@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/socialPlatforms";
-import { BookOpen, Settings } from "lucide-react";
+import { BookOpen, Settings, BarChart3 } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { StudentCourseGrid } from "@/components/student/StudentCourseGrid";
 import { StudentProfileHero } from "@/components/student/StudentProfileHero";
@@ -186,6 +186,12 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
             <BookOpen size={13} /> A minha aprendizagem
+          </FadeLink>
+          <FadeLink
+            href="/dashboard?tab=atividade"
+            className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <BarChart3 size={13} /> Analytics
           </FadeLink>
           <FadeLink
             href="/account"

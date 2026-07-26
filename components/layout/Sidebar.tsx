@@ -47,7 +47,10 @@ export function Sidebar() {
   const { fadeNavigate } = useFadeNav();
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const [openGroup, setOpenGroup] = useState<string | null>("instructor");
+  // undefined = utilizador ainda não tocou em nenhum grupo — usa o grupo do
+  // seu próprio papel como aberto por omissão (só existe um dos dois por
+  // sessão, nunca os dois ao mesmo tempo).
+  const [openGroup, setOpenGroup] = useState<string | null | undefined>(undefined);
   // Hover expande visualmente a barra minimizada (só sobrepõe o conteúdo,
   // fixed já garante isso) sem tocar no state persistido — sair do rato
   // devolve-a ao tamanho mini, sem afetar a margem do conteúdo principal.
@@ -71,14 +74,25 @@ export function Sidebar() {
     { href: "/", label: "Início", icon: Home },
     { href: "/courses", label: "Catálogo", icon: LayoutGrid },
     { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
-    ...(status === "authenticated"
+    ...(status === "authenticated" && session.user.role === "STUDENT"
+      ? [
+          {
+            id: "student",
+            label: "Meu Aprendizado",
+            icon: BookOpen,
+            children: [
+              { href: "/dashboard", label: "Painel", icon: LayoutDashboard, exact: true },
+              { href: "/dashboard?tab=atividade", label: "Analytics", icon: BarChart3 },
+              { href: `/students/${session.user.id}`, label: "Perfil público", icon: UserCircle },
+            ],
+          } as GroupItem,
+        ]
+      : []),
+    ...(status === "authenticated" && session.user.role !== "STUDENT"
       ? [{ href: "/dashboard", label: "A minha aprendizagem", icon: BookOpen } as LeafItem]
       : []),
     ...(status === "authenticated"
       ? [{ href: "/notifications", label: "Notificações", icon: Bell } as LeafItem]
-      : []),
-    ...(status === "authenticated" && session.user.role === "STUDENT"
-      ? [{ href: `/students/${session.user.id}`, label: "Perfil público", icon: UserCircle } as LeafItem]
       : []),
     ...(status === "authenticated"
       ? [{ href: "/cart", label: "Carrinho", icon: ShoppingCart } as LeafItem]
@@ -185,7 +199,9 @@ export function Sidebar() {
             }
 
             const GroupIcon = item.icon;
-            const expanded = !isMini && openGroup === item.id;
+            // undefined = ainda por tocar — só existe um GroupItem por sessão
+            // (instrutor OU aluno, nunca os dois), por isso abre-o por omissão.
+            const expanded = !isMini && (openGroup === item.id || openGroup === undefined);
             const groupActive = item.children.some((c) => isActive(c));
 
             return (
@@ -206,7 +222,7 @@ export function Sidebar() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setOpenGroup((g) => (g === item.id ? null : item.id))}
+                    onClick={() => setOpenGroup((g) => ((g ?? item.id) === item.id ? null : item.id))}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium ${
                       groupActive
                         ? "text-slate-900 dark:text-white"

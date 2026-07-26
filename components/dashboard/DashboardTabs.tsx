@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Activity, BookOpen, SlidersHorizontal, X } from "lucide-react";
 import { CourseRow } from "@/components/course/CourseRow";
 import type { CourseCardData } from "@/components/course/CourseCard";
@@ -54,7 +55,12 @@ export function DashboardTabs({
   hidePriceBySlug: Record<string, boolean>;
   courseStatsBySlug: Record<string, CourseStats>;
 }) {
-  const [tab, setTab] = useState<Tab>("cursos");
+  const searchParams = useSearchParams();
+  // Permite chegar direto na aba de atividade via link (/dashboard?tab=atividade)
+  // — usado pelo atalho "Analytics" da sidebar/perfil público, que noutras
+  // áreas da app (instrutor) é uma página própria; aqui continua a ser uma
+  // aba só, por isso lê o estado inicial da URL em vez de navegar de página.
+  const [tab, setTab] = useState<Tab>(searchParams.get("tab") === "atividade" ? "atividade" : "cursos");
   const [query, setQuery] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(DEFAULT_FILTER_VALUES);

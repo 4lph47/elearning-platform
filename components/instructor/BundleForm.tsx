@@ -6,6 +6,7 @@ import { useFadeNav } from "@/components/course/FadeNavContext";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { CategoryPicker } from "@/components/instructor/CategoryPicker";
 
 export interface EligibleCourse {
   id: string;
@@ -21,17 +22,20 @@ export function BundleForm({
   mode,
   bundleId,
   initialName = "",
+  initialCategory = "",
   initialCourseIds = [],
   eligibleCourses,
 }: {
   mode: "create" | "edit";
   bundleId?: string;
   initialName?: string;
+  initialCategory?: string;
   initialCourseIds?: string[];
   eligibleCourses: EligibleCourse[];
 }) {
   const { fadeNavigate } = useFadeNav();
   const [name, setName] = useState(initialName);
+  const [category, setCategory] = useState(initialCategory);
   const [courseIds, setCourseIds] = useState<string[]>(initialCourseIds);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -79,6 +83,10 @@ export function BundleForm({
       setError("Indica um nome para o bundle");
       return;
     }
+    if (!category.trim()) {
+      setError("Escolhe uma categoria para o bundle");
+      return;
+    }
     if (courseIds.length === 0) {
       setError("Escolhe pelo menos um curso para o bundle");
       return;
@@ -87,7 +95,7 @@ export function BundleForm({
     const res = await fetch(mode === "create" ? "/api/instructor/bundles" : `/api/instructor/bundles/${bundleId}`, {
       method: mode === "create" ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), courseIds }),
+      body: JSON.stringify({ name: name.trim(), category: category.trim(), courseIds }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -124,6 +132,10 @@ export function BundleForm({
         <div>
           <Label htmlFor="bundle-name">Nome</Label>
           <Input id="bundle-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+        </div>
+        <div>
+          <Label htmlFor="bundle-category">Categoria</Label>
+          <CategoryPicker id="bundle-category" value={category} onChange={setCategory} />
         </div>
       </Card>
 

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { name, courseIds } = parsed.data;
+  const { name, category, courseIds } = parsed.data;
 
   const courses = await prisma.course.findMany({
     where: { id: { in: courseIds }, instructorId: session.user.id, bundleId: null },
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const bundle = await prisma.$transaction(async (tx) => {
-    const created = await tx.bundle.create({ data: { name, instructorId: session.user.id } });
+    const created = await tx.bundle.create({ data: { name, category, instructorId: session.user.id } });
     await tx.course.updateMany({ where: { id: { in: courseIds } }, data: { bundleId: created.id } });
     return created;
   });

@@ -26,6 +26,7 @@ export function LessonTabs({
   onSelectResource,
   progress,
   comments,
+  notes,
   videoMeta,
 }: {
   overview: string;
@@ -33,9 +34,10 @@ export function LessonTabs({
   onSelectResource?: (resource: LessonResourceData) => void;
   progress?: React.ReactNode;
   comments?: React.ReactNode;
+  notes?: React.ReactNode;
   videoMeta?: VideoMeta;
 }) {
-  const [tab, setTab] = useState<"overview" | "resources" | "progress" | "comments">("overview");
+  const [tab, setTab] = useState<"overview" | "resources" | "notes" | "progress" | "comments">("overview");
   const [showDetails, setShowDetails] = useState(false);
 
   return (
@@ -57,6 +59,16 @@ export function LessonTabs({
         >
           Recursos
         </button>
+        {notes && (
+          <button
+            onClick={() => setTab("notes")}
+            className={`border-b-2 px-1 py-2 text-sm font-medium ${
+              tab === "notes" ? "border-blue-500 text-slate-900 dark:text-white" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+          >
+            Notas
+          </button>
+        )}
         {progress && (
           <button
             onClick={() => setTab("progress")}
@@ -79,11 +91,13 @@ export function LessonTabs({
         )}
       </div>
 
-      <div className={tab === "progress" || tab === "comments" ? "py-4" : "py-4 text-sm text-slate-600 dark:text-slate-300"}>
+      <div className={tab === "progress" || tab === "comments" || tab === "notes" ? "py-4" : "py-4 text-sm text-slate-600 dark:text-slate-300"}>
         {tab === "progress" ? (
           progress
         ) : tab === "comments" ? (
           comments
+        ) : tab === "notes" ? (
+          notes
         ) : tab === "overview" ? (
           <div>
             <p className="whitespace-pre-wrap leading-relaxed">{linkify(overview)}</p>

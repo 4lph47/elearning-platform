@@ -100,6 +100,7 @@ model User {
   cartItems             CartItem[]
   enrollments           Enrollment[]
   lessonProgress        LessonProgress[]
+  lessonNotes           LessonNote[]
   quizAttempts          QuizAttempt[]
   reviews               Review[]
   lessonComments        LessonComment[]
@@ -186,6 +187,7 @@ model CartItem {
 model Bundle {
   id        String   @id @default(cuid())
   name      String
+  category  String   @default("Outros")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -195,6 +197,7 @@ model Bundle {
   courses Course[]
 
   @@index([instructorId])
+  @@index([category])
 }
 
 model Course {
@@ -276,6 +279,7 @@ model ResaleListing {
 model ResaleBundle {
   id             String   @id @default(cuid())
   name           String
+  category       String   @default("Outros")
   description    String?
   coverImageUrl  String?
   createdAt      DateTime @default(now())
@@ -288,6 +292,7 @@ model ResaleBundle {
   sales    ResaleSale[]
 
   @@index([sellerId])
+  @@index([category])
 }
 
 // Junção many-to-many: a mesma listagem pode entrar em vários bundles do
@@ -371,6 +376,7 @@ model Lesson {
 
   resources   LessonResource[]
   progress    LessonProgress[]
+  notes       LessonNote[]
   comments    LessonComment[]
   reactions   LessonReaction[]
   quiz        Quiz?
@@ -696,6 +702,25 @@ model LessonProgress {
   lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
+  @@index([lessonId])
+}
+
+// Notas pessoais do aluno para uma aula específica — cada nota tem um
+// título (auto-gerado das primeiras palavras se vazio) e conteúdo de texto.
+// Mostradas numa lista estilo grid de cursos, clicáveis para editar.
+model LessonNote {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lessonId])
   @@index([lessonId])
 }
 

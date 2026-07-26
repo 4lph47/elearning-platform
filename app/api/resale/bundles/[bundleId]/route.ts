@@ -21,11 +21,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
     return NextResponse.json({ error: "Bundle não encontrado" }, { status: 404 });
   }
 
-  const { name, description, coverImageUrl, listingIds } = parsed.data;
+  const { name, description, coverImageUrl, category, listingIds } = parsed.data;
   const bundleFields = {
     ...(name !== undefined ? { name } : {}),
     ...(description !== undefined ? { description } : {}),
     ...(coverImageUrl !== undefined ? { coverImageUrl } : {}),
+    ...(category !== undefined ? { category } : {}),
   };
   const hasBundleFields = Object.keys(bundleFields).length > 0;
 

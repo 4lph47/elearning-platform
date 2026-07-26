@@ -17,6 +17,7 @@ import { LessonTitleHeading } from "@/components/course/LessonTitleHeading";
 import { CourseProgressSidebar } from "@/components/course/CourseProgressSidebar";
 import { LessonEngagementBar } from "@/components/course/LessonEngagementBar";
 import { LessonComments, type CommentData } from "@/components/course/LessonComments";
+import { LessonNotes } from "@/components/course/LessonNotes";
 
 export const dynamic = "force-dynamic";
 
@@ -224,6 +225,7 @@ export default async function LessonPage({
               isAuthenticated={Boolean(session)}
             />
           }
+          notes={<LessonNotes lessonId={lesson.id} />}
           videoMeta={{
             authors,
             viewCount: updatedLesson.viewCount,

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
+import { CategoryPicker } from "@/components/instructor/CategoryPicker";
 
 export interface EligibleListing {
   id: string;
@@ -27,6 +28,7 @@ export function BundleForm({
   initialName = "",
   initialDescription = "",
   initialCoverImageUrl = null,
+  initialCategory = "",
   initialListingIds = [],
   eligibleListings,
 }: {
@@ -35,6 +37,7 @@ export function BundleForm({
   initialName?: string;
   initialDescription?: string;
   initialCoverImageUrl?: string | null;
+  initialCategory?: string;
   initialListingIds?: string[];
   eligibleListings: EligibleListing[];
 }) {
@@ -43,6 +46,7 @@ export function BundleForm({
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initialCoverImageUrl);
+  const [category, setCategory] = useState(initialCategory);
   const [listingIds, setListingIds] = useState<string[]>(initialListingIds);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -90,12 +94,22 @@ export function BundleForm({
       setError("Indica um nome para o bundle");
       return;
     }
+    if (!category.trim()) {
+      setError("Escolhe uma categoria para o bundle");
+      return;
+    }
     if (listingIds.length === 0) {
       setError("Escolhe pelo menos um curso para o bundle");
       return;
     }
     setSaving(true);
-    const body = { name: name.trim(), description: description.trim() || null, coverImageUrl, listingIds };
+    const body = {
+      name: name.trim(),
+      description: description.trim() || null,
+      coverImageUrl,
+      category: category.trim(),
+      listingIds,
+    };
     const res = await fetch(mode === "create" ? "/api/resale/bundles" : `/api/resale/bundles/${bundleId}`, {
       method: mode === "create" ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -138,6 +152,10 @@ export function BundleForm({
         <div>
           <Label htmlFor="bundle-name">Nome</Label>
           <Input id="bundle-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+        </div>
+        <div>
+          <Label htmlFor="bundle-category">Categoria</Label>
+          <CategoryPicker id="bundle-category" value={category} onChange={setCategory} />
         </div>
         <div>
           <Label htmlFor="bundle-description">Descrição</Label>

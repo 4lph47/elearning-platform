@@ -20,7 +20,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
     return NextResponse.json({ error: "Bundle não encontrado" }, { status: 404 });
   }
 
-  const { name, courseIds } = parsed.data;
+  const { name, category, courseIds } = parsed.data;
+  const bundleFields = {
+    ...(name !== undefined ? { name } : {}),
+    ...(category !== undefined ? { category } : {}),
+  };
+  const hasBundleFields = Object.keys(bundleFields).length > 0;
 
   if (courseIds) {
     const courses = await prisma.course.findMany({
@@ -36,10 +41,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
     await prisma.$transaction([
       prisma.course.updateMany({ where: { bundleId, id: { notIn: courseIds } }, data: { bundleId: null } }),
       prisma.course.updateMany({ where: { id: { in: courseIds } }, data: { bundleId } }),
-      ...(name !== undefined ? [prisma.bundle.update({ where: { id: bundleId }, data: { name } })] : []),
+      ...(hasBundleFields ? [prisma.bundle.update({ where: { id: bundleId }, data: bundleFields })] : []),
     ]);
-  } else if (name !== undefined) {
-    await prisma.bundle.update({ where: { id: bundleId }, data: { name } });
+  } else if (hasBundleFields) {
+    await prisma.bundle.update({ where: { id: bundleId }, data: bundleFields });
   }
 
   const updated = await prisma.bundle.findUnique({

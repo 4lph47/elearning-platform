@@ -27,6 +27,7 @@ export default async function EditInstructorBundlePage({ params }: { params: Pro
       mode="edit"
       bundleId={bundle.id}
       initialName={bundle.name}
+      initialCategory={bundle.category}
       initialCourseIds={bundle.courses.map((c) => c.id)}
       eligibleCourses={courses}
     />

@@ -15,9 +15,11 @@ import {
   Image as ImageIcon,
   FileText,
   Music,
+  Mic,
 } from "lucide-react";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { LinkPreviewCard } from "@/components/community/LinkPreviewCard";
+import { AudioRecorder } from "@/components/community/AudioRecorder";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type CommunityRole = "OWNER" | "ADMIN" | "MEMBER";
@@ -155,6 +157,7 @@ export function CommunityChat({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -393,6 +396,58 @@ export function CommunityChat({
     if (res.ok) {
       const updated = await res.json();
       setMessages((prev) => prev.map((m) => (m.id === id ? updated : m)));
+    }
+  }
+
+  async function handleAudioRecorded(audioBlob: Blob) {
+    setError(null);
+    setUploading(true);
+    const replyToId = replyingTo?.id;
+    setIsRecordingAudio(false);
+    
+    try {
+      // Criar um nome para o ficheiro de áudio
+      const fileName = `audio-${Date.now()}.${audioBlob.type.includes("webm") ? "webm" : "mp4"}`;
+      
+      const signRes = await fetch("/api/upload/community-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          fileName, 
+          mimeType: audioBlob.type, 
+          sizeBytes: audioBlob.size 
+        }),
+      });
+      const signData = await signRes.json();
+      if (!signRes.ok) throw new Error(signData.error ?? "Erro ao preparar envio");
+
+      const { error: uploadError } = await getSupabaseBrowserClient()
+        .storage.from(signData.bucket)
+        .uploadToSignedUrl(signData.path, signData.token, audioBlob, { contentType: audioBlob.type || undefined });
+      if (uploadError) throw uploadError;
+
+      const res = await fetch(`/api/communities/${communityId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          attachmentUrl: signData.publicUrl,
+          attachmentType: audioBlob.type,
+          attachmentName: fileName,
+          replyToId,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Erro ao enviar áudio");
+      }
+      const message = await res.json();
+      setMessages((prev) => [...prev, message]);
+      setReplyingTo(null);
+      scrollToBottom();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar áudio");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -705,40 +760,64 @@ export function CommunityChat({
         </div>
       ) : (
         <form onSubmit={send} className="border-t border-slate-200 dark:border-white/10">
-          {/* Reconhece um link enquanto se escreve — mostra a pré-visualização
-              já aqui, sem impedir continuar a escrever o resto da mensagem. */}
-          {text.trim() && firstUrlIn(text) && (
-            <div className="px-3 pt-2">
-              <LinkPreviewCard url={firstUrlIn(text)!} />
+          {/* Gravador de áudio */}
+          {isRecordingAudio ? (
+            <div className="p-3">
+              <AudioRecorder
+                onRecordingComplete={handleAudioRecorded}
+                onCancel={() => setIsRecordingAudio(false)}
+              />
             </div>
+          ) : (
+            <>
+              {/* Reconhece um link enquanto se escreve — mostra a pré-visualização
+                  já aqui, sem impedir continuar a escrever o resto da mensagem. */}
+              {text.trim() && firstUrlIn(text) && (
+                <div className="px-3 pt-2">
+                  <LinkPreviewCard url={firstUrlIn(text)!} />
+                </div>
+              )}
+              <div className="flex items-center gap-2 p-2">
+                <button
+                  type="button"
+                  onClick={() => setAttachMenuOpen((v) => !v)}
+                  disabled={uploading}
+                  aria-label="Anexar ficheiro"
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10 ${
+                    attachMenuOpen ? "bg-slate-100 text-blue-600 dark:bg-white/10 dark:text-blue-400" : "text-slate-500 dark:text-slate-300"
+                  }`}
+                >
+                  {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+                </button>
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Escreve uma mensagem..."
+                  className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                />
+                {text.trim() ? (
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    aria-label="Enviar"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+                  >
+                    <Send size={15} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsRecordingAudio(true)}
+                    disabled={uploading}
+                    aria-label="Gravar áudio"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-white/10"
+                  >
+                    <Mic size={18} />
+                  </button>
+                )}
+              </div>
+            </>
           )}
-          <div className="flex items-center gap-2 p-2">
-          <button
-            type="button"
-            onClick={() => setAttachMenuOpen((v) => !v)}
-            disabled={uploading}
-            aria-label="Anexar ficheiro"
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-white/10 ${
-              attachMenuOpen ? "bg-slate-100 text-blue-600 dark:bg-white/10 dark:text-blue-400" : "text-slate-500 dark:text-slate-300"
-            }`}
-          >
-            {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
-          </button>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Escreve uma mensagem..."
-            className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-          />
-          <button
-            type="submit"
-            disabled={sending || !text.trim()}
-            aria-label="Enviar"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
-          >
-            <Send size={15} />
-          </button>
-          </div>
         </form>
       )}
     </div>

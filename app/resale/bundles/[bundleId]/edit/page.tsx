@@ -36,6 +36,7 @@ export default async function EditBundlePage({ params }: { params: Promise<{ bun
       initialName={bundle.name}
       initialDescription={bundle.description ?? ""}
       initialCoverImageUrl={bundle.coverImageUrl}
+      initialCategory={bundle.category}
       initialListingIds={bundle.listings.map((l) => l.listingId)}
       eligibleListings={eligibleListings}
     />

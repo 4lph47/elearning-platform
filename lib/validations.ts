@@ -240,6 +240,7 @@ export const resaleBundleSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   description: z.string().max(2000).optional(),
   coverImageUrl: z.string().url().optional().nullable(),
+  category: z.string().min(1, "Escolhe uma categoria"),
   listingIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos uma listagem"),
 });
 export type ResaleBundleInput = z.infer<typeof resaleBundleSchema>;
@@ -248,6 +249,7 @@ export const resaleBundleUpdateSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
   description: z.string().max(2000).optional().nullable(),
   coverImageUrl: z.string().url().optional().nullable(),
+  category: z.string().min(1, "Escolhe uma categoria").optional(),
   listingIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos uma listagem").optional(),
 });
 export type ResaleBundleUpdateInput = z.infer<typeof resaleBundleUpdateSchema>;
@@ -256,12 +258,14 @@ export type ResaleBundleUpdateInput = z.infer<typeof resaleBundleUpdateSchema>;
 // sem desconto/preço próprio) — distinto do ResaleBundle acima.
 export const bundleSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  category: z.string().min(1, "Escolhe uma categoria"),
   courseIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos um curso"),
 });
 export type BundleInput = z.infer<typeof bundleSchema>;
 
 export const bundleUpdateSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
+  category: z.string().min(1, "Escolhe uma categoria").optional(),
   courseIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos um curso").optional(),
 });
 export type BundleUpdateInput = z.infer<typeof bundleUpdateSchema>;

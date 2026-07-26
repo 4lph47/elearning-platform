@@ -28,6 +28,7 @@ export function LessonBody({
   progress,
   engagement,
   comments,
+  notes,
   videoMeta,
   previousHref,
   previousTitle,
@@ -50,6 +51,7 @@ export function LessonBody({
   progress?: React.ReactNode;
   engagement?: ReactElement<{ completeButton?: React.ReactNode; onReady?: (handle: LessonEngagementBarHandle) => void }>;
   comments?: React.ReactNode;
+  notes?: React.ReactNode;
   videoMeta?: VideoMeta;
   previousHref?: string | null;
   previousTitle?: string | null;
@@ -224,6 +226,7 @@ export function LessonBody({
                 resources={resources}
                 progress={progress}
                 comments={comments}
+                notes={notes}
                 videoMeta={videoMeta}
                 onSelectResource={(r) => setPreviewResource((prev) => (prev?.id === r.id ? null : r))}
               />

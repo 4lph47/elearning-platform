@@ -117,6 +117,10 @@ export function InstructorProfileHero({
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(draft?.value.name ?? initialName);
+  // Não faz parte do draft/edição normal do perfil — tem o próprio endpoint,
+  // gate e cooldown de 14 dias (UsernameField) — só precisa de refletir aqui
+  // o valor guardado mais recente, sem passar pelo ciclo de "Guardar" geral.
+  const [username, setUsername] = useState(initialUsername);
   const [image, setImage] = useState(draft?.value.image ?? initialImage);
   const [bannerUrl, setBannerUrl] = useState(draft?.value.bannerUrl ?? initialBannerUrl);
   const [bannerType, setBannerType] = useState<BannerType | null>(draft?.value.bannerType ?? initialBannerType);
@@ -412,10 +416,10 @@ export function InstructorProfileHero({
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
-        {isOwner ? (
-          <UsernameField className="" />
+        {isOwner && showInputs ? (
+          <UsernameField className="" onSaved={setUsername} />
         ) : (
-          initialUsername && <span className="text-xs text-white/70">@{initialUsername}</span>
+          username && <span className="text-xs text-white/70">@{username}</span>
         )}
       </div>
 

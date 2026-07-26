@@ -10,7 +10,13 @@ function formatWait(canChangeAt: string) {
   return days === 1 ? "1 dia" : `${days} dias`;
 }
 
-export function UsernameField({ className = "mt-3" }: { className?: string }) {
+export function UsernameField({
+  className = "mt-3",
+  onSaved,
+}: {
+  className?: string;
+  onSaved?: (username: string) => void;
+}) {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<string | null>(null);
   const [value, setValue] = useState("");
@@ -50,6 +56,7 @@ export function UsernameField({ className = "mt-3" }: { className?: string }) {
     setSaved(data.username);
     setValue(data.username);
     setCanChangeAt(data.canChangeAt);
+    onSaved?.(data.username);
   }
 
   if (loading) {

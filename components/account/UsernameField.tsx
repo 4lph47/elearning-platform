@@ -10,7 +10,7 @@ function formatWait(canChangeAt: string) {
   return days === 1 ? "1 dia" : `${days} dias`;
 }
 
-export function UsernameField() {
+export function UsernameField({ className = "mt-3" }: { className?: string }) {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<string | null>(null);
   const [value, setValue] = useState("");
@@ -53,11 +53,11 @@ export function UsernameField() {
   }
 
   if (loading) {
-    return <p className="mt-3 text-sm text-slate-400">A carregar...</p>;
+    return <p className={`text-sm text-slate-400 ${className}`}>A carregar...</p>;
   }
 
   return (
-    <div className="mt-3">
+    <div className={className}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 basis-40 items-center gap-1.5">
           <span className="text-sm text-slate-400">@</span>

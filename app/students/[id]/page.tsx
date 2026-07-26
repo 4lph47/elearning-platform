@@ -22,6 +22,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
     select: {
       id: true,
       name: true,
+      username: true,
       role: true,
       bio: true,
       expertise: true,
@@ -220,6 +221,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           isOwner={isOwner}
           profileId={student.id}
           initialName={student.name}
+          initialUsername={student.username}
           initialImage={student.image}
           initialBannerUrl={student.bannerUrl}
           initialBannerType={student.bannerType === "VIDEO" ? "VIDEO" : student.bannerUrl ? "IMAGE" : null}

@@ -22,6 +22,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
     select: {
       id: true,
       name: true,
+      username: true,
       role: true,
       bio: true,
       expertise: true,
@@ -248,6 +249,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           isOwner={isOwner}
           profileId={instructor.id}
           initialName={instructor.name}
+          initialUsername={instructor.username}
           initialImage={instructor.image}
           initialBannerUrl={instructor.bannerUrl}
           initialBannerType={instructor.bannerType === "VIDEO" ? "VIDEO" : instructor.bannerUrl ? "IMAGE" : null}

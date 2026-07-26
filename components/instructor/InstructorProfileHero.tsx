@@ -23,6 +23,7 @@ import {
   Film,
 } from "lucide-react";
 import { FileUploadInput } from "@/components/instructor/FileUploadInput";
+import { UsernameField } from "@/components/account/UsernameField";
 import { InstructorHeroGradient } from "@/components/instructor/InstructorHeroGradient";
 import { boxFromRect, textBoxFromElement, useCardTransition } from "@/components/course/CardTransitionContext";
 import { SOCIAL_PLATFORMS, matchesPlatformDomain, type SocialPlatformKey } from "@/lib/socialPlatforms";
@@ -72,6 +73,7 @@ export function InstructorProfileHero({
   isOwner,
   profileId,
   initialName,
+  initialUsername,
   initialImage,
   initialBannerUrl,
   initialBannerType,
@@ -86,6 +88,7 @@ export function InstructorProfileHero({
   isOwner: boolean;
   profileId: string;
   initialName: string;
+  initialUsername: string | null;
   initialImage: string | null;
   initialBannerUrl: string | null;
   initialBannerType: BannerType | null;
@@ -407,7 +410,14 @@ export function InstructorProfileHero({
         </div>
       )}
 
-      <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
+        {isOwner ? (
+          <UsernameField className="" />
+        ) : (
+          initialUsername && <span className="text-xs text-white/70">@{initialUsername}</span>
+        )}
+      </div>
 
       {showInputs ? (
         <input

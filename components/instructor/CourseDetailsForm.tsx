@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Star, Plus, X } from "lucide-react";
+import { Star, Plus, X, Eye } from "lucide-react";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
@@ -340,6 +340,14 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
           )}
         </div>
         <div className="flex gap-2">
+          <a
+            href={`/courses/${course.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 transition-all hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+          >
+            <Eye size={15} /> Pré-visualizar
+          </a>
           <Button type="submit" form="course-form" variant="premium" disabled={saving}>
             {saving ? "A guardar..." : "Publicar"}
           </Button>

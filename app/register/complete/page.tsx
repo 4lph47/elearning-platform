@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AtSign, Briefcase, Globe, Link2, Plus, X, Loader2 } from "lucide-react";
@@ -29,6 +29,19 @@ function CompleteForm() {
   const { data: session, status, update } = useSession();
   const searchParams = useSearchParams();
   const wantsToTeach = searchParams.get("role") === "instrutor";
+  const resyncedRef = useRef(false);
+
+  // O JWT só é reavaliado contra a BD no login ou quando update() é chamado
+  // — se `registered` mudou entretanto por fora (ex.: backfill direto na
+  // BD), a sessão já aberta continuava presa aqui com o valor antigo até
+  // se voltar a fazer login. Uma sincronização única ao abrir esta página
+  // evita ficar preso sem precisar de sair e entrar de novo.
+  useEffect(() => {
+    if (status === "authenticated" && !session.user.registered && !resyncedRef.current) {
+      resyncedRef.current = true;
+      update();
+    }
+  }, [status, session, update]);
 
   useEffect(() => {
     if (status === "unauthenticated") {

@@ -20,6 +20,7 @@ export const RESULT_TYPE_OPTIONS = [
   { value: "", label: "Tudo" },
   { value: "courses", label: "Cursos" },
   { value: "bundles", label: "Bundles" },
+  { value: "resale", label: "Revendas" },
   { value: "people", label: "Pessoas" },
 ] as const;
 

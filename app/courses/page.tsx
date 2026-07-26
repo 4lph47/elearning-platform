@@ -6,8 +6,8 @@ import { prisma } from "@/lib/db";
 import { CourseRow } from "@/components/course/CourseRow";
 import { SearchBar } from "@/components/course/SearchBar";
 import type { CourseCardData } from "@/components/course/CourseCard";
-import { PeopleRow, BundlesRow, type PersonResult, type InstructorBundleResult } from "@/components/course/SearchExtras";
-import type { ResaleBundleCardData } from "@/components/resale/types";
+import { PeopleRow, BundlesRow, ResaleRow, type PersonResult, type InstructorBundleResult } from "@/components/course/SearchExtras";
+import type { ResaleBundleCardData, ResaleListingCardData } from "@/components/resale/types";
 
 export const dynamic = "force-dynamic";
 
@@ -89,8 +89,13 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   // pesquisa) — igual às outras secções horizontais do catálogo — e o filtro
   // "Bundles" isola-a por completo.
   const showBundles = resultType === "bundles" || resultType === "";
+  // "Revendas" é distinto de "Bundles" (que também inclui pacotes do próprio
+  // instrutor) — mostra cursos individuais revendidos + bundles de revenda,
+  // conteúdo que antes só aparecia no perfil do vendedor/marketplace, nunca
+  // no catálogo.
+  const showResale = resultType === "resale" || resultType === "";
 
-  const [courses, categories, enrollments, people, resaleBundles, instructorBundles] = await Promise.all([
+  const [courses, categories, enrollments, people, resaleBundles, instructorBundles, resaleListings] = await Promise.all([
     showCourses
       ? prisma.course.findMany({
           where: {
@@ -164,6 +169,25 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
           take: 8,
         })
       : Promise.resolve([]),
+    showResale
+      ? prisma.resaleListing.findMany({
+          where: {
+            active: true,
+            resaleBundleId: null,
+            course: {
+              published: true,
+              ...(term
+                ? { OR: [{ title: { contains: term, mode: "insensitive" } }, { category: { contains: term, mode: "insensitive" } }] }
+                : {}),
+            },
+          },
+          include: {
+            seller: { select: { id: true, name: true } },
+            course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } },
+          },
+          take: 12,
+        })
+      : Promise.resolve([]),
   ]);
 
   const peopleResults: PersonResult[] = people;
@@ -176,6 +200,17 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
     courseTitles: b.listings.map((l) => l.course.title),
     sellerId: b.seller.id,
     sellerName: b.seller.name,
+  }));
+  const resaleListingCards: ResaleListingCardData[] = resaleListings.map((l) => ({
+    id: l.id,
+    price: l.price,
+    courseSlug: l.course.slug,
+    courseTitle: l.course.title,
+    courseThumbnailUrl: l.course.thumbnailUrl,
+    courseCategory: l.course.category,
+    courseLevel: l.course.level,
+    sellerId: l.seller.id,
+    sellerName: l.seller.name,
   }));
   const instructorBundleCards: InstructorBundleResult[] = instructorBundles.map((b) => ({
     id: b.id,
@@ -329,6 +364,7 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       <div className="mx-auto max-w-6xl py-3">
         {showPeople && <PeopleRow people={peopleResults} />}
         {showBundles && <BundlesRow resaleBundles={resaleBundleCards} instructorBundles={instructorBundleCards} />}
+        {showResale && <ResaleRow listings={resaleListingCards} bundles={resaleBundleCards} />}
 
         {showCourses && (
           <>
@@ -354,6 +390,9 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
         )}
         {resultType === "bundles" && resaleBundleCards.length === 0 && instructorBundleCards.length === 0 && (
           <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhum bundle encontrado.</p>
+        )}
+        {resultType === "resale" && resaleListingCards.length === 0 && resaleBundleCards.length === 0 && (
+          <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhuma revenda encontrada.</p>
         )}
       </div>
     </>

@@ -294,7 +294,7 @@ export default async function StudentAnalyticsPage() {
           </div>
           <FadeLink
             href="/dashboard"
-            className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
             ← Voltar à minha aprendizagem
           </FadeLink>

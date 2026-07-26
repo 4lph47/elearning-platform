@@ -236,7 +236,10 @@ export default async function InstructorProfilePage({ params }: { params: Promis
         resaleBundles={resaleBundles}
       />
 
-      <FadeLink href="/courses" className="mt-8 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+      <FadeLink
+        href="/courses"
+        className="mt-8 flex w-fit items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+      >
         ← Ver catálogo completo
       </FadeLink>
     </div>

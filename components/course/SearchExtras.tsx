@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { PersonTile } from "@/components/course/PersonTile";
-import { ResaleBundleTile } from "@/components/resale/ResaleTile";
-import type { ResaleBundleCardData } from "@/components/resale/types";
+import { ResaleBundleTile, ResaleListingTile } from "@/components/resale/ResaleTile";
+import type { ResaleBundleCardData, ResaleListingCardData } from "@/components/resale/types";
 import { FadeLink } from "@/components/course/FadeLink";
 import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
 
@@ -82,6 +82,34 @@ export function BundlesRow({
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{b.subtitle}</p>
             </div>
           </FadeLink>
+        </div>
+      ))}
+    </HorizontalScrollRow>
+  );
+}
+
+// Filtro "Revendas" próprio (distinto de "Bundles", que também inclui
+// pacotes criados pelo próprio instrutor) — cursos individuais revendidos
+// (ResaleListing sem bundle) e bundles de revenda (ResaleBundle), nunca
+// aparecendo de outra forma no catálogo antes disto.
+export function ResaleRow({
+  listings,
+  bundles,
+}: {
+  listings: ResaleListingCardData[];
+  bundles: ResaleBundleCardData[];
+}) {
+  if (listings.length === 0 && bundles.length === 0) return null;
+  return (
+    <HorizontalScrollRow title="Revendas">
+      {bundles.map((b) => (
+        <div key={b.id} className="w-64 shrink-0 sm:w-72">
+          <ResaleBundleTile bundle={b} showSeller />
+        </div>
+      ))}
+      {listings.map((l) => (
+        <div key={l.id} className="w-64 shrink-0 sm:w-72">
+          <ResaleListingTile listing={l} showSeller />
         </div>
       ))}
     </HorizontalScrollRow>

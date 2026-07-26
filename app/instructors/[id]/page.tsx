@@ -8,6 +8,7 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { InstructorCourseGrid } from "@/components/instructor/InstructorCourseGrid";
 import { InstructorProfileHero } from "@/components/instructor/InstructorProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
+import { ChatButton } from "@/components/chat/ChatButton";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -198,6 +199,7 @@ export default async function InstructorProfilePage({ params }: { params: Promis
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
+      <ChatButton otherUserId={instructor.id} otherUserName={instructor.name} otherUserImage={instructor.image} />
       <InstructorAccentProvider imageUrl={instructor.image}>
         <InstructorProfileHero
           isOwner={isOwner}

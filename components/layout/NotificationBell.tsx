@@ -9,7 +9,7 @@ import { decodeMentionContent } from "@/lib/mentions";
 
 interface NotificationItem {
   id: string;
-  type: "MENTION" | "RESALE_COMMISSION_CHANGE" | "COMMENT_REPLY";
+  type: "MENTION" | "RESALE_COMMISSION_CHANGE" | "COMMENT_REPLY" | "DIRECT_MESSAGE";
   read: boolean;
   createdAt: string;
   actor: { id: string; name: string };
@@ -76,6 +76,7 @@ export function NotificationBell() {
 
   function notificationHref(n: NotificationItem) {
     if (n.type === "MENTION" || n.type === "COMMENT_REPLY") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
+    if (n.type === "DIRECT_MESSAGE") return `/u/${n.actor.id}`;
     return session?.user.role === "STUDENT" ? "/dashboard/resale" : "/instructor/resale";
   }
 
@@ -136,6 +137,11 @@ export function NotificationBell() {
                         {n.comment ? decodeMentionContent(n.comment.content).display : ""}
                       </p>
                     </>
+                  ) : n.type === "DIRECT_MESSAGE" ? (
+                    <p className="text-slate-700 dark:text-slate-200">
+                      <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> enviou-te uma
+                      mensagem
+                    </p>
                   ) : (
                     <p className="text-slate-700 dark:text-slate-200">{commissionText(n)}</p>
                   )}

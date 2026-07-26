@@ -42,6 +42,7 @@ enum NotificationType {
   MENTION
   RESALE_COMMISSION_CHANGE
   COMMENT_REPLY
+  DIRECT_MESSAGE
 }
 
 model User {
@@ -113,6 +114,9 @@ model User {
   resaleListingsSold    ResaleListing[]  @relation("ResaleListingsSold")
   resaleBundlesSold     ResaleBundle[]   @relation("ResaleBundlesSold")
   resalePurchases       ResaleSale[]     @relation("ResalePurchases")
+  conversationsAsA      Conversation[]   @relation("ConversationUserA")
+  conversationsAsB      Conversation[]   @relation("ConversationUserB")
+  sentMessages          Message[]        @relation("MessageSender")
 }
 
 model Certification {
@@ -487,6 +491,35 @@ model Notification {
   resaleNewPrice      Float?
 
   @@index([recipientId, read])
+}
+
+// Chat 1:1 entre dois utilizadores quaisquer (não ligado a curso nenhum) —
+// userAId/userBId sempre em ordem canónica (menor id primeiro, ver
+// lib/conversations.ts) para a dupla nunca criar duas conversas trocadas.
+model Conversation {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userA    User      @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User      @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  content        String
+  createdAt      DateTime     @default(now())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
 }
 
 model LessonResource {

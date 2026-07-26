@@ -8,6 +8,7 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { StudentCourseGrid } from "@/components/student/StudentCourseGrid";
 import { StudentProfileHero } from "@/components/student/StudentProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
+import { ChatButton } from "@/components/chat/ChatButton";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -184,6 +185,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
+      <ChatButton otherUserId={student.id} otherUserName={student.name} otherUserImage={student.image} />
       <InstructorAccentProvider imageUrl={student.image}>
         <StudentProfileHero
           isOwner={isOwner}

@@ -82,7 +82,7 @@ export function Sidebar() {
             icon: BookOpen,
             children: [
               { href: "/dashboard", label: "Painel", icon: LayoutDashboard, exact: true },
-              { href: "/dashboard?tab=atividade", label: "Analytics", icon: BarChart3 },
+              { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
               { href: `/students/${session.user.id}`, label: "Perfil público", icon: UserCircle },
             ],
           } as GroupItem,

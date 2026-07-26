@@ -231,6 +231,15 @@ export function AnalyticsCharts({
   lessonMetrics,
   quizScores,
   hourOfDay,
+  courseHref = (courseId: string) => `/instructor/courses/${courseId}`,
+  lessonHref = (courseId: string, moduleId: string, lessonId: string) =>
+    `/instructor/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
+  quizHref = (q: QuizScoreMetric) => {
+    if (q.lessonId && q.moduleId) return lessonHref(q.courseId, q.moduleId, q.lessonId);
+    if (q.moduleId) return `/instructor/courses/${q.courseId}/modules/${q.moduleId}/quizzes/${q.id}`;
+    return courseHref(q.courseId);
+  },
+  courseStatusHref = "/instructor",
 }: {
   totals: Totals;
   enrollmentsByWeek: WeekPoint[];
@@ -243,6 +252,13 @@ export function AnalyticsCharts({
   lessonMetrics: LessonMetric[];
   quizScores: QuizScoreMetric[];
   hourOfDay: HourPoint[];
+  // Instrutor navega para /instructor/courses/... (gestão); reutilizado pela
+  // analytics do aluno (app/dashboard/analytics), que aponta para as mesmas
+  // páginas públicas do curso (/courses/[slug]/...) em vez de gestão.
+  courseHref?: (courseId: string) => string;
+  lessonHref?: (courseId: string, moduleId: string, lessonId: string) => string;
+  quizHref?: (q: QuizScoreMetric) => string;
+  courseStatusHref?: string;
 }) {
   const router = useRouter();
   // Cards do dashboard (app/instructor/page.tsx) linkam para cá com ?tile=X —
@@ -259,14 +275,10 @@ export function AnalyticsCharts({
     setTimeout(() => router.push(href), FADE_OUT_MS);
   };
 
-  const goToCourse = (courseId: string) => navigate(`/instructor/courses/${courseId}`);
+  const goToCourse = (courseId: string) => navigate(courseHref(courseId));
   const goToLesson = (courseId: string, moduleId: string, lessonId: string) =>
-    navigate(`/instructor/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`);
-  const goToQuiz = (q: QuizScoreMetric) => {
-    if (q.lessonId && q.moduleId) return goToLesson(q.courseId, q.moduleId, q.lessonId);
-    if (q.moduleId) return navigate(`/instructor/courses/${q.courseId}/modules/${q.moduleId}/quizzes/${q.id}`);
-    return goToCourse(q.courseId);
-  };
+    navigate(lessonHref(courseId, moduleId, lessonId));
+  const goToQuiz = (q: QuizScoreMetric) => navigate(quizHref(q));
 
   const byRevenue = [...courseMetrics].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
   const byEnrollments = [...courseMetrics].sort((a, b) => b.enrollments - a.enrollments).slice(0, 10);
@@ -322,7 +334,7 @@ export function AnalyticsCharts({
       chartHint: "Três ângulos lado a lado: estado, categoria e nível. Clica numa fatia para navegar.",
       render: () => (
         <div className="grid gap-10 lg:grid-cols-3 lg:gap-4">
-          <MiniPie title="Por estado" data={courseStatusData} onSliceClick={() => navigate("/instructor")} />
+          <MiniPie title="Por estado" data={courseStatusData} onSliceClick={() => navigate(courseStatusHref)} />
           <MiniPie
             title="Por categoria"
             data={courseCategoryBreakdown}

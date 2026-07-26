@@ -71,7 +71,7 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
       ? prisma.resaleListing.findMany({
           where: {
             active: true,
-            resaleBundleId: null,
+            bundles: { none: {} },
             ...(term
               ? { OR: [{ course: { title: { contains: term, mode: "insensitive" } } }, { seller: { name: { contains: term, mode: "insensitive" } } }] }
               : {}),
@@ -87,7 +87,7 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
     showBundlesSection
       ? prisma.resaleBundle.findMany({
           where: {
-            listings: { some: { active: true } },
+            listings: { some: { listing: { active: true } } },
             ...(term
               ? { OR: [{ name: { contains: term, mode: "insensitive" } }, { seller: { name: { contains: term, mode: "insensitive" } } }] }
               : {}),
@@ -95,13 +95,16 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
           orderBy: { createdAt: "desc" },
           include: {
             seller: { select: { id: true, name: true } },
-            listings: { where: { active: true }, include: { course: { select: { title: true, thumbnailUrl: true, category: true } } } },
+            listings: {
+              where: { listing: { active: true } },
+              include: { listing: { include: { course: { select: { title: true, thumbnailUrl: true, category: true } } } } },
+            },
           },
         })
       : Promise.resolve([]),
     prisma.resaleListing.findMany({ where: { active: true }, select: { sellerId: true }, distinct: ["sellerId"] }),
     prisma.resaleBundle.findMany({
-      where: { listings: { some: { active: true } } },
+      where: { listings: { some: { listing: { active: true } } } },
       select: { sellerId: true },
       distinct: ["sellerId"],
     }),
@@ -120,6 +123,7 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
   }));
 
   const bundleCards: ResaleBundleCardData[] = resaleBundles
+    .map((bundle) => ({ ...bundle, listings: bundle.listings.map((bl) => bl.listing) }))
     .filter((bundle) => bundle.listings.length > 0)
     .map((bundle) => ({
       id: bundle.id,

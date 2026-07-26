@@ -15,23 +15,28 @@ export default async function ResaleBundleCheckoutPage({ params }: { params: Pro
     redirect(`/login?callbackUrl=${encodeURIComponent(`/resale/bundles/${bundleId}/checkout`)}`);
   }
 
-  const bundle = await prisma.resaleBundle.findUnique({
+  const bundleRow = await prisma.resaleBundle.findUnique({
     where: { id: bundleId },
     include: {
       seller: { select: { name: true } },
       listings: {
-        where: { active: true },
+        where: { listing: { active: true } },
         include: {
-          course: {
+          listing: {
             include: {
-              modules: { orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" }, select: { id: true } } } },
+              course: {
+                include: {
+                  modules: { orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" }, select: { id: true } } } },
+                },
+              },
             },
           },
         },
       },
     },
   });
-  if (!bundle || bundle.listings.length === 0 || bundle.listings.some((l) => !l.course.published)) notFound();
+  if (!bundleRow || bundleRow.listings.length === 0 || bundleRow.listings.some((bl) => !bl.listing.course.published)) notFound();
+  const bundle = { ...bundleRow, listings: bundleRow.listings.map((bl) => bl.listing) };
   if (bundle.sellerId === session.user.id) redirect("/marketplace");
 
   const courseIds = bundle.listings.map((l) => l.course.id);

@@ -54,6 +54,23 @@ export function splitResalePrice(price: number, instructorMinCommission: number)
   return { instructorCut, sellerCut };
 }
 
+// Impede dois bundles do mesmo vendedor com o conjunto de listagens
+// exatamente igual — bundles parcialmente sobrepostos (ex.: {1,2,3} e
+// {1,2,4}) são permitidos, só o conjunto idêntico é que não faz sentido
+// (seria o mesmo bundle duplicado).
+export async function hasDuplicateBundleListingSet(
+  sellerId: string,
+  listingIds: string[],
+  excludeBundleId?: string
+): Promise<boolean> {
+  const sortedTarget = [...listingIds].sort().join(",");
+  const bundles = await prisma.resaleBundle.findMany({
+    where: { sellerId, ...(excludeBundleId ? { id: { not: excludeBundleId } } : {}) },
+    include: { listings: { select: { listingId: true } } },
+  });
+  return bundles.some((b) => b.listings.map((l) => l.listingId).sort().join(",") === sortedTarget);
+}
+
 // Chamado quando o instrutor SOBE a comissão mínima de um curso (nunca em
 // descidas — aí o revendedor só fica a ganhar, não há nada a proteger).
 // Para cada listagem já existente: se a nova comissão ainda não alcançou o

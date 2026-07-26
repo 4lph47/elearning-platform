@@ -52,11 +52,15 @@ export async function GET(request: Request) {
       take: 3,
     }),
     prisma.resaleBundle.findMany({
-      where: { name: { contains: raw, mode: "insensitive" }, listings: { some: { active: true } } },
+      where: { name: { contains: raw, mode: "insensitive" }, listings: { some: { listing: { active: true } } } },
       select: {
         id: true,
         name: true,
-        listings: { where: { active: true }, select: { course: { select: { thumbnailUrl: true } } }, take: 1 },
+        listings: {
+          where: { listing: { active: true } },
+          select: { listing: { select: { course: { select: { thumbnailUrl: true } } } } },
+          take: 1,
+        },
       },
       take: 3,
     }),
@@ -76,7 +80,7 @@ export async function GET(request: Request) {
     ...resaleBundles.map((b) => ({
       id: b.id,
       name: b.name,
-      thumbnailUrl: b.listings[0]?.course.thumbnailUrl ?? null,
+      thumbnailUrl: b.listings[0]?.listing.course.thumbnailUrl ?? null,
       kind: "resale" as const,
       instructorId: null as string | null,
     })),

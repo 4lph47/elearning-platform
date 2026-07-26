@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { resaleBundleSchema } from "@/lib/validations";
+import { hasDuplicateBundleListingSet } from "@/lib/resale";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,7 +14,11 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     include: {
       listings: {
-        include: { course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } } },
+        include: {
+          listing: {
+            include: { course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } } },
+          },
+        },
       },
     },
   });
@@ -32,22 +37,24 @@ export async function POST(request: Request) {
   const { name, description, coverImageUrl, listingIds } = parsed.data;
 
   const listings = await prisma.resaleListing.findMany({
-    where: { id: { in: listingIds }, sellerId: session.user.id, active: true, resaleBundleId: null },
+    where: { id: { in: listingIds }, sellerId: session.user.id, active: true },
   });
   if (listings.length !== listingIds.length) {
     return NextResponse.json(
-      { error: "Alguma listagem não existe, não te pertence, está desativada ou já está noutro bundle" },
+      { error: "Alguma listagem não existe, não te pertence ou está desativada" },
       { status: 400 }
     );
+  }
+  if (await hasDuplicateBundleListingSet(session.user.id, listingIds)) {
+    return NextResponse.json({ error: "Já tens um bundle com exatamente estes cursos" }, { status: 400 });
   }
 
   const bundle = await prisma.$transaction(async (tx) => {
     const created = await tx.resaleBundle.create({
       data: { name, description, coverImageUrl, sellerId: session.user.id },
     });
-    await tx.resaleListing.updateMany({
-      where: { id: { in: listingIds } },
-      data: { resaleBundleId: created.id },
+    await tx.resaleBundleListing.createMany({
+      data: listingIds.map((listingId) => ({ resaleBundleId: created.id, listingId })),
     });
     return created;
   });

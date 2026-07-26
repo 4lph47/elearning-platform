@@ -11,7 +11,7 @@ export default async function NewBundlePage() {
   if (!session) redirect(`/login?callbackUrl=${encodeURIComponent("/resale/bundles/new")}`);
 
   const listings = await prisma.resaleListing.findMany({
-    where: { sellerId: session.user.id, active: true, resaleBundleId: null },
+    where: { sellerId: session.user.id, active: true },
     include: { course: { select: { title: true, thumbnailUrl: true } } },
   });
 

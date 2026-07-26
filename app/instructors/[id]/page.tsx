@@ -43,13 +43,13 @@ export default async function InstructorProfilePage({ params }: { params: Promis
       twitchUrl: true,
       certifications: { orderBy: { order: "asc" }, select: { id: true, name: true, url: true } },
       resaleListingsSold: {
-        where: { active: true, resaleBundleId: null },
+        where: { active: true, bundles: { none: {} } },
         orderBy: { createdAt: "desc" },
         include: { course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } } },
       },
       resaleBundlesSold: {
         orderBy: { createdAt: "desc" },
-        include: { listings: { include: { course: { select: { title: true, thumbnailUrl: true } } } } },
+        include: { listings: { include: { listing: { include: { course: { select: { title: true, thumbnailUrl: true } } } } } } },
       },
       coursesTaught: {
         where: { published: true },
@@ -145,16 +145,19 @@ export default async function InstructorProfilePage({ params }: { params: Promis
     sellerId: instructor.id,
     sellerName: instructor.name,
   }));
-  const resaleBundles = instructor.resaleBundlesSold.map((bundle) => ({
-    id: bundle.id,
-    name: bundle.name,
-    coverImageUrl: bundle.coverImageUrl ?? bundle.listings[0]?.course.thumbnailUrl ?? null,
-    price: bundle.listings.reduce((sum, l) => sum + l.price, 0),
-    listingCount: bundle.listings.length,
-    courseTitles: bundle.listings.map((l) => l.course.title),
-    sellerId: instructor.id,
-    sellerName: instructor.name,
-  }));
+  const resaleBundles = instructor.resaleBundlesSold.map((bundle) => {
+    const bundleListings = bundle.listings.map((bl) => bl.listing);
+    return {
+      id: bundle.id,
+      name: bundle.name,
+      coverImageUrl: bundle.coverImageUrl ?? bundleListings[0]?.course.thumbnailUrl ?? null,
+      price: bundleListings.reduce((sum, l) => sum + l.price, 0),
+      listingCount: bundleListings.length,
+      courseTitles: bundleListings.map((l) => l.course.title),
+      sellerId: instructor.id,
+      sellerName: instructor.name,
+    };
+  });
 
   // Dono vê todas as suas comunidades; visitante só as que tem em comum com
   // este perfil (interseção das duas listas de membership).

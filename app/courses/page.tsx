@@ -160,10 +160,13 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       : Promise.resolve([]),
     showBundles
       ? prisma.resaleBundle.findMany({
-          where: { name: { contains: term, mode: "insensitive" }, listings: { some: { active: true } } },
+          where: { name: { contains: term, mode: "insensitive" }, listings: { some: { listing: { active: true } } } },
           include: {
             seller: { select: { id: true, name: true } },
-            listings: { where: { active: true }, select: { price: true, course: { select: { title: true, thumbnailUrl: true } } } },
+            listings: {
+              where: { listing: { active: true } },
+              select: { listing: { select: { price: true, course: { select: { title: true, thumbnailUrl: true } } } } },
+            },
           },
           take: 8,
         })
@@ -179,7 +182,7 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       ? prisma.resaleListing.findMany({
           where: {
             active: true,
-            resaleBundleId: null,
+            bundles: { none: {} },
             course: {
               published: true,
               ...(term
@@ -197,16 +200,19 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   ]);
 
   const peopleResults: PersonResult[] = people;
-  const resaleBundleCards: ResaleBundleCardData[] = resaleBundles.map((b) => ({
-    id: b.id,
-    name: b.name,
-    coverImageUrl: b.coverImageUrl ?? b.listings[0]?.course.thumbnailUrl ?? null,
-    price: b.listings.reduce((sum, l) => sum + l.price, 0),
-    listingCount: b.listings.length,
-    courseTitles: b.listings.map((l) => l.course.title),
-    sellerId: b.seller.id,
-    sellerName: b.seller.name,
-  }));
+  const resaleBundleCards: ResaleBundleCardData[] = resaleBundles.map((b) => {
+    const bundleListings = b.listings.map((bl) => bl.listing);
+    return {
+      id: b.id,
+      name: b.name,
+      coverImageUrl: b.coverImageUrl ?? bundleListings[0]?.course.thumbnailUrl ?? null,
+      price: bundleListings.reduce((sum, l) => sum + l.price, 0),
+      listingCount: bundleListings.length,
+      courseTitles: bundleListings.map((l) => l.course.title),
+      sellerId: b.seller.id,
+      sellerName: b.seller.name,
+    };
+  });
   const resaleListingCards: ResaleListingCardData[] = resaleListings.map((l) => ({
     id: l.id,
     price: l.price,

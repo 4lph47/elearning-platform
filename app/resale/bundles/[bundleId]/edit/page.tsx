@@ -13,16 +13,12 @@ export default async function EditBundlePage({ params }: { params: Promise<{ bun
 
   const bundle = await prisma.resaleBundle.findUnique({
     where: { id: bundleId },
-    include: { listings: { select: { id: true } } },
+    include: { listings: { select: { listingId: true } } },
   });
   if (!bundle || bundle.sellerId !== session.user.id) notFound();
 
   const listings = await prisma.resaleListing.findMany({
-    where: {
-      sellerId: session.user.id,
-      active: true,
-      OR: [{ resaleBundleId: null }, { resaleBundleId: bundleId }],
-    },
+    where: { sellerId: session.user.id, active: true },
     include: { course: { select: { title: true, thumbnailUrl: true } } },
   });
 
@@ -40,7 +36,7 @@ export default async function EditBundlePage({ params }: { params: Promise<{ bun
       initialName={bundle.name}
       initialDescription={bundle.description ?? ""}
       initialCoverImageUrl={bundle.coverImageUrl}
-      initialListingIds={bundle.listings.map((l) => l.id)}
+      initialListingIds={bundle.listings.map((l) => l.listingId)}
       eligibleListings={eligibleListings}
     />
   );

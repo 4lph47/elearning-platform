@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { resaleBundleUpdateSchema } from "@/lib/validations";
+import { hasDuplicateBundleListingSet } from "@/lib/resale";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ bundleId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -30,29 +31,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
 
   if (listingIds) {
     const listings = await prisma.resaleListing.findMany({
-      where: {
-        id: { in: listingIds },
-        sellerId: session.user.id,
-        active: true,
-        OR: [{ resaleBundleId: null }, { resaleBundleId: bundleId }],
-      },
+      where: { id: { in: listingIds }, sellerId: session.user.id, active: true },
     });
     if (listings.length !== listingIds.length) {
       return NextResponse.json(
-        { error: "Alguma listagem não existe, não te pertence, está desativada ou já está noutro bundle" },
+        { error: "Alguma listagem não existe, não te pertence ou está desativada" },
         { status: 400 }
       );
     }
+    if (await hasDuplicateBundleListingSet(session.user.id, listingIds, bundleId)) {
+      return NextResponse.json({ error: "Já tens um bundle com exatamente estes cursos" }, { status: 400 });
+    }
 
     await prisma.$transaction([
-      prisma.resaleListing.updateMany({
-        where: { resaleBundleId: bundleId, id: { notIn: listingIds } },
-        data: { resaleBundleId: null },
-      }),
-      prisma.resaleListing.updateMany({
-        where: { id: { in: listingIds } },
-        data: { resaleBundleId: bundleId },
-      }),
+      prisma.resaleBundleListing.deleteMany({ where: { resaleBundleId: bundleId, listingId: { notIn: listingIds } } }),
+      ...listingIds.map((listingId) =>
+        prisma.resaleBundleListing.upsert({
+          where: { resaleBundleId_listingId: { resaleBundleId: bundleId, listingId } },
+          update: {},
+          create: { resaleBundleId: bundleId, listingId },
+        })
+      ),
       ...(hasBundleFields ? [prisma.resaleBundle.update({ where: { id: bundleId }, data: bundleFields })] : []),
     ]);
   } else if (hasBundleFields) {
@@ -61,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
 
   const updated = await prisma.resaleBundle.findUnique({
     where: { id: bundleId },
-    include: { listings: { include: { course: { select: { slug: true, title: true } } } } },
+    include: { listings: { include: { listing: { include: { course: { select: { slug: true, title: true } } } } } } },
   });
   return NextResponse.json(updated);
 }
@@ -76,11 +75,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Bundle não encontrado" }, { status: 404 });
   }
 
-  // Listagens sobrevivem soltas — resaleBundleId é SetNull no schema, mas
-  // fazemos explícito aqui dentro da mesma transação do delete por clareza.
-  await prisma.$transaction([
-    prisma.resaleListing.updateMany({ where: { resaleBundleId: bundleId }, data: { resaleBundleId: null } }),
-    prisma.resaleBundle.delete({ where: { id: bundleId } }),
-  ]);
+  // Listagens sobrevivem soltas (e em quaisquer outros bundles onde também
+  // estejam) — só o vínculo com este bundle desaparece, via cascade em
+  // ResaleBundleListing.
+  await prisma.resaleBundle.delete({ where: { id: bundleId } });
   return new NextResponse(null, { status: 204 });
 }

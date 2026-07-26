@@ -15,20 +15,25 @@ export default async function BundlePage({ params }: { params: Promise<{ bundleI
   const { bundleId } = await params;
   const session = await getServerSession(authOptions);
 
-  const bundle = await prisma.resaleBundle.findUnique({
+  const bundleRow = await prisma.resaleBundle.findUnique({
     where: { id: bundleId },
     include: {
       seller: { select: { id: true, name: true, role: true } },
       listings: {
-        where: { active: true },
+        where: { listing: { active: true } },
         include: {
-          course: { select: { slug: true, title: true, thumbnailUrl: true, trailerUrl: true, category: true, level: true } },
+          listing: {
+            include: {
+              course: { select: { slug: true, title: true, thumbnailUrl: true, trailerUrl: true, category: true, level: true } },
+            },
+          },
         },
       },
     },
   });
-  if (!bundle || bundle.listings.length === 0) notFound();
+  if (!bundleRow || bundleRow.listings.length === 0) notFound();
 
+  const bundle = { ...bundleRow, listings: bundleRow.listings.map((bl) => bl.listing) };
   const isOwner = session?.user.id === bundle.sellerId;
   const price = bundle.listings.reduce((sum, l) => sum + l.price, 0);
 

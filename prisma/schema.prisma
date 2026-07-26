@@ -263,14 +263,11 @@ model ResaleListing {
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  resaleBundleId String?
-  resaleBundle   ResaleBundle? @relation(fields: [resaleBundleId], references: [id], onDelete: SetNull)
-
-  sales ResaleSale[]
+  bundles ResaleBundleListing[]
+  sales   ResaleSale[]
 
   @@unique([sellerId, courseId])
   @@index([courseId])
-  @@index([resaleBundleId])
 }
 
 // Agrupa listagens do mesmo vendedor — preço sempre a soma dos listings
@@ -287,10 +284,26 @@ model ResaleBundle {
   sellerId String
   seller   User   @relation("ResaleBundlesSold", fields: [sellerId], references: [id], onDelete: Cascade)
 
-  listings ResaleListing[]
+  listings ResaleBundleListing[]
   sales    ResaleSale[]
 
   @@index([sellerId])
+}
+
+// Junção many-to-many: a mesma listagem pode entrar em vários bundles do
+// mesmo vendedor (ex.: bundle A={1,2,3} e B={1,2,4}) — só não pode haver
+// dois bundles do mesmo vendedor com o conjunto de listagens exatamente
+// igual (validado na API, ver app/api/resale/bundles).
+model ResaleBundleListing {
+  id String @id @default(cuid())
+
+  resaleBundleId String
+  resaleBundle   ResaleBundle  @relation(fields: [resaleBundleId], references: [id], onDelete: Cascade)
+  listingId      String
+  listing        ResaleListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([resaleBundleId, listingId])
+  @@index([listingId])
 }
 
 // Um curso vendido através de uma listagem — quer avulso quer dentro de um

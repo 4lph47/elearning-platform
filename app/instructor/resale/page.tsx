@@ -43,7 +43,9 @@ export default async function InstructorResalePage() {
     prisma.resaleBundle.findMany({
       where: { sellerId: userId },
       orderBy: { createdAt: "desc" },
-      include: { listings: { include: { course: { select: { title: true, thumbnailUrl: true, category: true } } } } },
+      include: {
+        listings: { include: { listing: { include: { course: { select: { title: true, thumbnailUrl: true, category: true } } } } } },
+      },
     }),
   ]);
 
@@ -62,18 +64,21 @@ export default async function InstructorResalePage() {
     sellerName: session.user.name ?? "",
     active: l.active,
   }));
-  const bundles: ResaleBundleCardData[] = ownBundles.map((b) => ({
-    id: b.id,
-    name: b.name,
-    coverImageUrl: b.coverImageUrl ?? b.listings[0]?.course.thumbnailUrl ?? null,
-    price: b.listings.reduce((sum, l) => sum + l.price, 0),
-    listingCount: b.listings.length,
-    courseTitles: b.listings.map((l) => l.course.title),
-    sellerId: userId,
-    sellerName: session.user.name ?? "",
-    category: b.listings[0]?.course.category ?? "Outros",
-  }));
-  const canCreateBundle = ownListings.some((l) => l.active && !l.resaleBundleId);
+  const bundles: ResaleBundleCardData[] = ownBundles.map((b) => {
+    const bundleListings = b.listings.map((bl) => bl.listing);
+    return {
+      id: b.id,
+      name: b.name,
+      coverImageUrl: b.coverImageUrl ?? bundleListings[0]?.course.thumbnailUrl ?? null,
+      price: bundleListings.reduce((sum, l) => sum + l.price, 0),
+      listingCount: bundleListings.length,
+      courseTitles: bundleListings.map((l) => l.course.title),
+      sellerId: userId,
+      sellerName: session.user.name ?? "",
+      category: bundleListings[0]?.course.category ?? "Outros",
+    };
+  });
+  const canCreateBundle = ownListings.some((l) => l.active);
 
   return (
     <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">

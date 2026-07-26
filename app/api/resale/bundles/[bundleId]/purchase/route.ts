@@ -13,8 +13,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ bu
     where: { id: bundleId },
     include: {
       listings: {
-        where: { active: true },
-        include: { course: { select: { id: true, published: true, resaleMinCommission: true } } },
+        where: { listing: { active: true } },
+        include: { listing: { include: { course: { select: { id: true, published: true, resaleMinCommission: true } } } } },
       },
     },
   });
@@ -24,17 +24,18 @@ export async function POST(_request: Request, { params }: { params: Promise<{ bu
   if (bundle.sellerId === session.user.id) {
     return NextResponse.json({ error: "Não podes comprar o teu próprio bundle" }, { status: 403 });
   }
-  if (bundle.listings.some((l) => !l.course.published)) {
+  const listings = bundle.listings.map((bl) => bl.listing);
+  if (listings.some((l) => !l.course.published)) {
     return NextResponse.json({ error: "Curso não encontrado" }, { status: 404 });
   }
   // Mesma regra do purchase de listing avulso — instrutor pode desligar a
   // revenda a qualquer momento; bloqueia o bundle inteiro (tudo ou nada) se
   // algum dos cursos já não permitir revenda.
-  if (bundle.listings.some((l) => l.course.resaleMinCommission === null)) {
+  if (listings.some((l) => l.course.resaleMinCommission === null)) {
     return NextResponse.json({ error: "Um dos cursos deste bundle já não permite revenda" }, { status: 403 });
   }
 
-  const courseIds = bundle.listings.map((l) => l.course.id);
+  const courseIds = listings.map((l) => l.course.id);
   const existingEnrollments = await prisma.enrollment.findMany({
     where: { userId: session.user.id, courseId: { in: courseIds } },
     select: { courseId: true },
@@ -45,7 +46,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ bu
 
   const sales = await prisma.$transaction(async (tx) => {
     const created = [];
-    for (const listing of bundle.listings) {
+    for (const listing of listings) {
       const { instructorCut, sellerCut } = splitResalePrice(listing.price, listing.course.resaleMinCommission ?? 0);
       created.push(
         await tx.resaleSale.create({

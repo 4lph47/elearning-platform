@@ -1634,12 +1634,12 @@ async function main() {
     });
   }
 
-  async function ensureResaleListing(sellerId: string, slug: string, price: number, resaleBundleId?: string) {
+  async function ensureResaleListing(sellerId: string, slug: string, price: number) {
     await completeEnrollment(sellerId, slug);
-    await prisma.resaleListing.upsert({
+    return prisma.resaleListing.upsert({
       where: { sellerId_courseId: { sellerId, courseId: courses[slug].id } },
-      update: { price, active: true, resaleBundleId: resaleBundleId ?? null },
-      create: { sellerId, courseId: courses[slug].id, price, resaleBundleId: resaleBundleId ?? null },
+      update: { price, active: true },
+      create: { sellerId, courseId: courses[slug].id, price },
     });
   }
 
@@ -1649,7 +1649,12 @@ async function main() {
       bundle = await prisma.resaleBundle.create({ data: { name, sellerId } });
     }
     for (const entry of entries) {
-      await ensureResaleListing(sellerId, entry.slug, entry.price, bundle.id);
+      const listing = await ensureResaleListing(sellerId, entry.slug, entry.price);
+      await prisma.resaleBundleListing.upsert({
+        where: { resaleBundleId_listingId: { resaleBundleId: bundle.id, listingId: listing.id } },
+        update: {},
+        create: { resaleBundleId: bundle.id, listingId: listing.id },
+      });
     }
   }
 

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     prisma.resaleListing.findMany({
       where: {
         active: true,
-        resaleBundleId: null,
+        bundles: { none: {} },
         OR: [
           { course: { title: { contains: term, mode: "insensitive" } } },
           { seller: { name: { contains: term, mode: "insensitive" } } },
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     }),
     prisma.resaleBundle.findMany({
       where: {
-        listings: { some: { active: true } },
+        listings: { some: { listing: { active: true } } },
         OR: [
           { name: { contains: term, mode: "insensitive" } },
           { seller: { name: { contains: term, mode: "insensitive" } } },
@@ -33,7 +33,11 @@ export async function GET(request: Request) {
         id: true,
         name: true,
         coverImageUrl: true,
-        listings: { where: { active: true }, select: { course: { select: { thumbnailUrl: true } } }, take: 1 },
+        listings: {
+          where: { listing: { active: true } },
+          select: { listing: { select: { course: { select: { thumbnailUrl: true } } } } },
+          take: 1,
+        },
       },
       take: 4,
     }),
@@ -44,7 +48,7 @@ export async function GET(request: Request) {
           {
             OR: [
               { resaleListingsSold: { some: { active: true } } },
-              { resaleBundlesSold: { some: { listings: { some: { active: true } } } } },
+              { resaleBundlesSold: { some: { listings: { some: { listing: { active: true } } } } } },
             ],
           },
         ],
@@ -64,7 +68,7 @@ export async function GET(request: Request) {
     bundles: bundles.map((b) => ({
       id: b.id,
       name: b.name,
-      thumbnailUrl: b.coverImageUrl ?? b.listings[0]?.course.thumbnailUrl ?? null,
+      thumbnailUrl: b.coverImageUrl ?? b.listings[0]?.listing.course.thumbnailUrl ?? null,
     })),
     sellers,
   });

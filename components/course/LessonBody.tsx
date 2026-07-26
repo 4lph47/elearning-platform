@@ -206,7 +206,7 @@ export function LessonBody({
 
       <div className="mt-4 overflow-x-hidden lg:relative">
         <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:relative" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:relative lg:z-10" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}

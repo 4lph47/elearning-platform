@@ -205,8 +205,8 @@ export function LessonBody({
       </div>
 
       <div className="mt-4">
-        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-stretch lg:gap-0 lg:relative" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:shrink-0" : ""} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
+        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-stretch lg:gap-0 lg:relative lg:overflow-hidden" : ""}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:shrink-0 lg:overflow-hidden" : ""} style={sideBySide ? { width: `${leftWidth}%`, maxWidth: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -266,7 +266,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden" : ""} style={sideBySide ? { width: `${100 - leftWidth}%`, paddingLeft: '0.5rem' } : undefined}>
+          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:overflow-hidden" : ""} style={sideBySide ? { width: `${100 - leftWidth}%`, maxWidth: `${100 - leftWidth}%`, paddingLeft: '0.5rem' } : undefined}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

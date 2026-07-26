@@ -97,7 +97,7 @@ export function LessonResourcesCard({
             key={k}
             type="button"
             onClick={() => setResourceKind(k)}
-            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
+            className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs ${
               resourceKind === k
                 ? "border-slate-800 bg-slate-900 text-white dark:border-slate-600 dark:bg-slate-700"
                 : "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"

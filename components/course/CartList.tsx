@@ -82,7 +82,7 @@ export function CartList({ items: initialItems }: { items: CartCourse[] }) {
 
       <FadeLink
         href="/checkout"
-        className="flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-500"
+        className="flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-500"
       >
         Finalizar compra
       </FadeLink>

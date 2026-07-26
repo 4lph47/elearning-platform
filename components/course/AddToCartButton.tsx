@@ -42,7 +42,7 @@ export function AddToCartButton({ courseId, isAuthenticated }: { courseId: strin
       <button
         onClick={handleClick}
         disabled={adding}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
       >
         {added ? (
           <>

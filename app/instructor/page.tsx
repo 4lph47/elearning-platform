@@ -60,13 +60,13 @@ export default async function InstructorHomePage() {
             <div className="flex items-center gap-2">
               <FadeLink
                 href="/instructor/courses/new"
-                className="flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                className="flex items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
               >
                 <Plus size={15} /> Novo curso
               </FadeLink>
               <FadeLink
                 href="/instructor/bundles/new"
-                className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+                className="flex items-center justify-center gap-1.5 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
               >
                 <Plus size={15} /> Novo bundle
               </FadeLink>
@@ -130,7 +130,7 @@ export default async function InstructorHomePage() {
             <p className="text-slate-500 dark:text-slate-400">Ainda não criaste nenhum curso.</p>
             <FadeLink
               href="/instructor/courses/new"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
             >
               <Plus size={15} /> Criar o primeiro curso
             </FadeLink>

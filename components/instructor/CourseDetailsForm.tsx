@@ -80,7 +80,7 @@ function EditableListField({
             <button
               type="button"
               onClick={() => list.remove(i)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:text-slate-500 dark:hover:bg-white/10"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:text-slate-500 dark:hover:bg-white/10"
               aria-label="Remover"
             >
               <X size={14} />
@@ -344,7 +344,7 @@ export function CourseDetailsForm({ course, otherCourses }: { course: CourseData
             href={`/courses/${course.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 transition-all hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 transition-all hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
           >
             <Eye size={15} /> Pré-visualizar
           </a>

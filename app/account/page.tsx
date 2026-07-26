@@ -74,7 +74,7 @@ export default function AccountPage() {
             </p>
             <FadeLink
               href="/register/complete?role=instrutor"
-              className="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
             >
               Continuar
             </FadeLink>
@@ -97,7 +97,7 @@ export default function AccountPage() {
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="mt-3 flex items-center gap-2 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+            className="mt-3 flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
           >
             <Download size={15} /> {exporting ? "A exportar..." : "Exportar dados"}
           </button>
@@ -112,7 +112,7 @@ export default function AccountPage() {
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="mt-3 flex items-center gap-2 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
+            className="mt-3 flex items-center gap-2 rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
           >
             <Trash2 size={15} /> {deleting ? "A eliminar..." : "Eliminar conta"}
           </button>

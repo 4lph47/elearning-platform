@@ -59,7 +59,7 @@ export function LessonLayoutShell({
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="mb-3 hidden items-center gap-1.5 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5 lg:inline-flex"
+            className="mb-3 hidden items-center gap-1.5 rounded-full border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5 lg:inline-flex"
           >
             {collapsed ? (
               <>

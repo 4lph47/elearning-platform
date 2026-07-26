@@ -148,14 +148,14 @@ export function FadeNavProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={cancelLeave}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={confirmLeave}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
+                className="rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
               >
                 Sair sem guardar
               </button>

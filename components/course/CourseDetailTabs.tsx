@@ -397,7 +397,7 @@ export function CourseDetailTabs({
               </div>
               <button
                 onClick={() => window.print()}
-                className="mx-auto mt-4 flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+                className="mx-auto mt-4 flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
               >
                 <Printer size={16} /> Imprimir / Guardar PDF
               </button>

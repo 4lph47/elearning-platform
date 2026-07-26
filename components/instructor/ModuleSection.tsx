@@ -140,19 +140,19 @@ export function ModuleSection({
           <div className="flex flex-wrap gap-2">
             <FadeLink
               href={`/instructor/courses/${courseId}/modules/${module.id}/lessons/new?type=VIDEO`}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
             >
               <Video size={14} /> Aula de vídeo
             </FadeLink>
             <FadeLink
               href={`/instructor/courses/${courseId}/modules/${module.id}/lessons/new?type=TEXT`}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
             >
               <TypeIcon size={14} /> Aula de texto
             </FadeLink>
             <FadeLink
               href={`/instructor/courses/${courseId}/modules/${module.id}/quizzes/new`}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
             >
               <HelpCircle size={14} /> Quiz
             </FadeLink>

@@ -26,7 +26,7 @@ export function CornerCardButtonNeutral({ className = "", ...props }: ButtonHTML
     <button
       type="button"
       {...props}
-      className={`rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/20 dark:text-slate-300 dark:hover:bg-white/5 ${className}`}
+      className={`rounded-full border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/20 dark:text-slate-300 dark:hover:bg-white/5 ${className}`}
     />
   );
 }
@@ -38,7 +38,7 @@ export function CornerCardButtonPrimary({ className = "", ...props }: ButtonHTML
     <button
       type="button"
       {...props}
-      className={`rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 ${className}`}
+      className={`rounded-full bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 ${className}`}
     />
   );
 }

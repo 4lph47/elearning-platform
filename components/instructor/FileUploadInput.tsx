@@ -678,7 +678,7 @@ export function FileUploadInput({
         type="file"
         accept={ACCEPT[kind]}
         onChange={handleChange}
-        className={`block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15 ${
+        className={`block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15 ${
           compactMobile ? "max-w-[132px] overflow-hidden sm:max-w-none sm:overflow-visible" : ""
         }`}
       />

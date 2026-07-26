@@ -203,7 +203,7 @@ export default function RegisterPage() {
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: `/register/complete?role=${role}` })}
-        className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+        className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
       >
         <GoogleIcon /> Continuar com Google
       </button>
@@ -668,7 +668,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={goPrev}
                 disabled={step === 0}
-                className="flex items-center gap-1.5 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
               >
                 <ArrowLeft size={14} /> Anterior
               </button>
@@ -676,7 +676,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={goNext}
-                  className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                  className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
                 >
                   Seguinte <ArrowRight size={14} />
                 </button>

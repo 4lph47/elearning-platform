@@ -396,7 +396,7 @@ export default async function CourseDetailPage({
                 {resaleListing && !isResaleOwner && !isEnrolled && !isOwner && (
                   <FadeLink
                     href={`/resale/${resaleListing.id}/checkout`}
-                    className="mb-3 block rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500"
+                    className="mb-3 block rounded-full bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500"
                   >
                     Comprar por {resaleListing.price.toFixed(2)}€ a {resaleListing.seller.name}
                   </FadeLink>
@@ -404,7 +404,7 @@ export default async function CourseDetailPage({
 
                 {isOwner ? (
                   <FadeLink href={`/instructor/courses/${course.id}`}>
-                    <p className="rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5">
+                    <p className="rounded-full border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5">
                       Editar este curso
                     </p>
                   </FadeLink>
@@ -416,12 +416,12 @@ export default async function CourseDetailPage({
                       destinationKind={firstLesson.type === "VIDEO" ? "lesson-video" : "lesson-text"}
                       className="block"
                     >
-                      <p className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500">
+                      <p className="rounded-full bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500">
                         Continuar curso
                       </p>
                     </ContinueCourseLink>
                   ) : (
-                    <p className="rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white opacity-60">
+                    <p className="rounded-full bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white opacity-60">
                       Continuar curso
                     </p>
                   )
@@ -514,13 +514,13 @@ export default async function CourseDetailPage({
                   {isEnrolled || isOwner ? (
                     <FadeLink
                       href={`/courses/${course.slug}/quiz/${course.quiz.id}`}
-                      className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+                      className="flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
                     >
                       <HelpCircle size={16} />
                       Fazer teste final do curso
                     </FadeLink>
                   ) : (
-                    <p className="flex items-center justify-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-center text-sm text-slate-500 dark:border-white/10">
+                    <p className="flex items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-center text-sm text-slate-500 dark:border-white/10">
                       <Lock size={14} />
                       Teste final do curso (inscreve-te para aceder)
                     </p>

@@ -397,7 +397,7 @@ export function LessonEditScreen({
                     key={t}
                     type="button"
                     onClick={() => setType(t)}
-                    className={`flex-1 rounded-md border px-3 py-1.5 text-sm ${
+                    className={`flex-1 rounded-full border px-3 py-1.5 text-sm ${
                       type === t
                         ? "border-slate-800 bg-slate-900 text-white dark:border-slate-600 dark:bg-slate-700"
                         : "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"

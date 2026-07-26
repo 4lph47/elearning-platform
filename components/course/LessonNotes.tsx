@@ -198,7 +198,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0">
       {/* Botão de adicionar no topo */}
       <div className="flex justify-end">
         <button
@@ -211,7 +211,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
       </div>
 
       {/* Searchbar e filtro */}
-      <div ref={searchBarRef} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div ref={searchBarRef} className="flex flex-col gap-2 sm:flex-row sm:items-center min-w-0">
         <div className="relative flex-1">
           <input
             type="text"
@@ -247,14 +247,14 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
               : "Ainda não tens notas para este curso."}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0">
           {filteredNotes.map((note) => {
             const isFromCurrentLesson = note.lessonId === currentLessonId;
             return (
               <div
                 key={note.id}
                 onClick={() => openEditor(note)}
-                className={`group relative cursor-pointer rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-white/5 overflow-hidden ${
+                className={`group relative cursor-pointer rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-white/5 overflow-hidden min-w-0 ${
                   isFromCurrentLesson
                     ? "border-blue-200 dark:border-blue-800/50"
                     : "border-slate-200 dark:border-white/10"
@@ -266,14 +266,14 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
                   </div>
                 )}
                 
-                <div className="space-y-1.5 max-w-full">
-                  <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white pr-16">
+                <div className="space-y-1.5 min-w-0 w-full">
+                  <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white pr-16 min-w-0">
                     {note.title}
                   </h4>
-                  <p className="line-clamp-2 text-xs text-slate-600 dark:text-slate-300 break-words overflow-hidden pr-16">
+                  <p className="line-clamp-2 text-xs text-slate-600 dark:text-slate-300 break-words overflow-hidden pr-16 min-w-0 overflow-wrap-anywhere">
                     {note.content}
                   </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate pr-16">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate pr-16 min-w-0">
                     {new Date(note.updatedAt).toLocaleDateString("pt-PT", {
                       day: "numeric",
                       month: "short",

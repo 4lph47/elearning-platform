@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
-import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck, GripVertical } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer, type VideoRendition } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
@@ -64,6 +64,10 @@ export function LessonBody({
   const [maximized, setMaximized] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
   const [cinemaMode, setCinemaMode] = useState(getStoredAmbient);
+  const [leftWidth, setLeftWidth] = useState(65); // Percentagem da largura esquerda (player)
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   const { handleTouchStart, handleTouchEnd, swipeClassName, isTransitioning, goPrevious, goNext, showSpinner } =
     useSwipeNav(previousHref, nextHref);
   const sideBySide = !chatOpen;
@@ -100,6 +104,44 @@ export function LessonBody({
       body: JSON.stringify({ lessonId, completed: true }),
     });
   }
+
+  // Resize handler
+  const handleMouseDown = () => {
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !containerRef.current) return;
+      
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const newLeftWidth = ((e.clientX - rect.left) / rect.width) * 100;
+      
+      // Limitar entre 30% e 80%
+      if (newLeftWidth >= 30 && newLeftWidth <= 80) {
+        setLeftWidth(newLeftWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
   const completeButton = (
     <button
@@ -164,8 +206,8 @@ export function LessonBody({
       </div>
 
       <div className="mt-4">
-        <div className={sideBySide ? "lg:flex lg:items-stretch lg:gap-6" : ""}>
-          <div ref={playerBoxRef} className="lg:shrink-0">
+        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-stretch lg:gap-0 lg:relative" : ""}>
+          <div ref={playerBoxRef} className="lg:shrink-0" style={sideBySide ? { width: `${leftWidth}%` } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -194,12 +236,23 @@ export function LessonBody({
             />
           </div>
 
+          {/* Resize Handle - apenas em desktop quando sideBySide */}
+          {sideBySide && (
+            <div
+              onMouseDown={handleMouseDown}
+              className="hidden lg:flex lg:w-6 lg:cursor-col-resize lg:items-center lg:justify-center lg:hover:bg-slate-100 dark:lg:hover:bg-white/5 lg:transition-colors"
+              style={{ touchAction: 'none' }}
+            >
+              <GripVertical size={20} className="text-slate-400 dark:text-slate-500" />
+            </div>
+          )}
+
           <div className="mt-4 lg:hidden">
             {title}
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1" : ""}>
+          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden" : ""}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

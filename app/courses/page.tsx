@@ -82,9 +82,13 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
   // "@" pode chegar aqui vindo do dropdown ao vivo da Navbar (só sinaliza lá
   // "modo pessoas") — no catálogo pesquisa tudo ao mesmo tempo, não precisa
   // do prefixo.
-  const term = (q ?? "").trim().replace(/^@+/, "").trim();
+  const rawTerm = (q ?? "").trim();
+  const isAtSearch = rawTerm.startsWith("@");
+  const term = rawTerm.replace(/^@+/, "").trim();
   const resultType = type ?? "";
   const showCourses = resultType === "" || resultType === "courses";
+  // Só corre a query especulativamente (decide-se se MOSTRA a fila mais
+  // abaixo, depois de já se saber quantos cursos/bundles bateram certo).
   const showPeople = resultType === "people" || (resultType === "" && term.length > 0);
   // "Tudo" mostra sempre a linha de bundles (não só quando há termo de
   // pesquisa) — igual às outras secções horizontais do catálogo — e o filtro
@@ -367,6 +371,15 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
     new Set([...Array.from(byCategory.keys()), ...Array.from(resaleListingsByCategory.keys())])
   );
 
+  // Na vista "Tudo", pessoas só ganham a sua fila quando a pesquisa é
+  // explicitamente por @ (modo pessoas do dropdown da Navbar) ou quando não
+  // há nenhum curso/bundle com esse nome — senão ficava sempre a competir
+  // com resultados de cursos por um termo que também bate certo com nomes
+  // de instrutor (ver OR do where de cursos acima).
+  const noCourseOrBundleMatches = cards.length === 0 && resaleBundleCards.length === 0 && instructorBundleCards.length === 0;
+  const showPeopleRow =
+    resultType === "people" || (resultType === "" && term.length > 0 && (isAtSearch || noCourseOrBundleMatches));
+
   function resaleExtraTiles(listings: ResaleListingCardData[]) {
     if (listings.length === 0) return undefined;
     return listings.map((l) => (
@@ -385,10 +398,6 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
       </div>
 
       <div className="mx-auto max-w-6xl py-3">
-        {showPeople && <PeopleRow people={peopleResults} />}
-        {showBundles && <BundlesRow resaleBundles={resaleBundleCards} instructorBundles={instructorBundleCards} />}
-        {showResaleRow && <ResaleRow listings={resaleListingCards} bundles={resaleBundleCards} />}
-
         {showCourses && (
           <>
             <p className="mb-1 px-4 text-sm text-slate-500 dark:text-slate-400 sm:px-8">
@@ -419,6 +428,10 @@ async function CoursesResults({ searchParams }: { searchParams: CoursesSearchPar
             )}
           </>
         )}
+
+        {showBundles && <BundlesRow resaleBundles={resaleBundleCards} instructorBundles={instructorBundleCards} />}
+        {showPeopleRow && <PeopleRow people={peopleResults} />}
+        {showResaleRow && <ResaleRow listings={resaleListingCards} bundles={resaleBundleCards} />}
 
         {resultType === "people" && peopleResults.length === 0 && (
           <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-8">Nenhuma pessoa encontrada.</p>

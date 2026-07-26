@@ -7,6 +7,7 @@ import { Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { FadeLink } from "@/components/course/FadeLink";
+import Link from "next/link";
 
 export default function LoginPage() {
   return (
@@ -18,19 +19,26 @@ export default function LoginPage() {
 
 function LoginForm() {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   // Já tinha sessão (voltou atrás pro /login, ou entrou pelo link direto
   // com o browser a reaproveitar uma sessão antiga) — o formulário nunca
   // ia disparar de novo o router.push de handleSubmit, por isso ficava
-  // preso aqui mesmo com a navbar já a mostrar o perfil.
+  // preso aqui mesmo com a navbar já a mostrar o perfil. Uma conta Google
+  // nova (ou uma sessão antiga que nunca aceitou os termos) tem
+  // `registered: false` — manda-a para /register/complete em vez do
+  // callbackUrl, o middleware já faz o mesmo mas nunca custa checar aqui
+  // também (evita depender só da cache de navegação do router).
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace(callbackUrl);
+    if (status !== "authenticated") return;
+    if (!session.user.registered) {
+      router.replace("/register/complete");
+      return;
     }
-  }, [status, callbackUrl, router]);
+    router.replace(callbackUrl);
+  }, [status, session, callbackUrl, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -203,6 +211,16 @@ function LoginForm() {
 
       <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
         Demo: instrutor@example.com / aluno@example.com — password: password123
+      </p>
+      <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
+        Ao entrar, concordas com os{" "}
+        <Link href="/termos" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+          Termos e Serviços
+        </Link>{" "}
+        e a{" "}
+        <Link href="/privacidade" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+          Política de Privacidade
+        </Link>
       </p>
     </AuthLayout>
   );

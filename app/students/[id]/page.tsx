@@ -8,7 +8,6 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { StudentCourseGrid } from "@/components/student/StudentCourseGrid";
 import { StudentProfileHero } from "@/components/student/StudentProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
-import { CommunityRow } from "@/components/community/CommunityRow";
 import type { CommunityCardData } from "@/components/community/CommunityTile";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
@@ -200,13 +199,8 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         hidePriceBySlug={hidePriceBySlug}
         resaleListings={resaleListings}
         resaleBundles={resaleBundles}
-        belowSearch={
-          communityCards.length > 0 ? (
-            <div className="-mx-4 mb-2 sm:-mx-8">
-              <CommunityRow title={isOwner ? "As tuas comunidades" : "Comunidades em comum"} communities={communityCards} />
-            </div>
-          ) : undefined
-        }
+        communities={communityCards}
+        communitiesTitle={isOwner ? "As tuas comunidades" : "Comunidades em comum"}
       />
 
       <FadeLink

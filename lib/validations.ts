@@ -51,7 +51,10 @@ const registerCertificationSchema = z.object({
 
 export const registerSchema = z
   .object({
-    name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+    // Só obrigatório para instrutor (verificado abaixo no superRefine) — um
+    // aluno só precisa de username/email/password/termos para criar conta,
+    // o resto (incluindo o nome) é opcional.
+    name: z.string().max(100, "Nome deve ter no máximo 100 caracteres").optional().default(""),
     username: usernameSchema,
     email: z.string().email("Email inválido"),
     password: z.string().min(6, "A password deve ter pelo menos 6 caracteres"),
@@ -65,6 +68,13 @@ export const registerSchema = z
   })
   .superRefine((data, ctx) => {
     if (!data.wantsToTeach) return;
+    if (!data.name || data.name.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["name"],
+        message: "Nome deve ter pelo menos 2 caracteres",
+      });
+    }
     if (!data.bio || data.bio.trim().length < 50) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

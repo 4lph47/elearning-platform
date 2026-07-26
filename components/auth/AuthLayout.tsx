@@ -65,7 +65,7 @@ export function AuthLayout({
           <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-blue-900/20 blur-3xl dark:bg-blue-900/30" />
         </div>
 
-        <div className={`relative w-full ${wide ? "max-w-3xl" : "max-w-sm"}`}>
+        <div className={`relative w-full ${wide ? "max-w-3xl" : "max-w-md"}`}>
           <div className="mb-8 text-center">
             <FadeLink
               href="/"

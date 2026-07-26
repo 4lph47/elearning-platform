@@ -4,7 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
-import { User, AtSign, Mail, Lock, Briefcase, Link2, ArrowRight, GraduationCap, ArrowLeft, Globe, Plus, X } from "lucide-react";
+import {
+  User,
+  AtSign,
+  Mail,
+  Lock,
+  Briefcase,
+  Link2,
+  ArrowRight,
+  GraduationCap,
+  ArrowLeft,
+  Globe,
+  Plus,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
@@ -20,16 +34,16 @@ const EMPTY_SOCIALS = Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, ""]
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
 
   // Mesmo caso do /login: já autenticado (voltou atrás, ou link direto
   // com sessão antiga) ficava preso no formulário, só a navbar é que
-  // mostrava o perfil.
+  // mostrava o perfil. Uma conta ainda por completar (Google, termos por
+  // aceitar) vai para /register/complete, não para a home.
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/");
-    }
-  }, [status, router]);
+    if (status !== "authenticated") return;
+    router.replace(session.user.registered ? "/" : "/register/complete");
+  }, [status, session, router]);
 
   const [role, setRole] = useState<"aluno" | "instrutor" | null>(null);
   const [name, setName] = useState("");
@@ -56,7 +70,7 @@ export default function RegisterPage() {
 
   function validateStep(idx: number): string | null {
     if (idx === 0) {
-      if (name.trim().length < 2) return "Nome deve ter pelo menos 2 caracteres";
+      if (wantsToTeach && name.trim().length < 2) return "Nome deve ter pelo menos 2 caracteres";
       if (!/^[a-z][a-z0-9_]{2,19}$/.test(username.trim().toLowerCase()))
         return "Username deve ter 3-20 caracteres (letras minúsculas, números e _), a começar por letra";
       if (!email.trim()) return "Indica o teu email";
@@ -173,57 +187,72 @@ export default function RegisterPage() {
 
   if (status === "authenticated") return null;
 
-  if (!role) {
-    return (
-      <AuthLayout
-        title="Cria a tua conta"
-        subtitle="Como queres usar a plataforma?"
-        footer={
-          <>
-            Já tens conta?{" "}
-            <FadeLink href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
-              Entra
-            </FadeLink>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => setRole("aluno")}
-            className="flex w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-500 hover:shadow-md dark:border-white/10 dark:bg-neutral-900 dark:hover:border-blue-500"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
-              <GraduationCap size={20} />
-            </span>
-            <span>
-              <span className="block font-medium text-slate-900 dark:text-white">Quero aprender</span>
-              <span className="block text-sm text-slate-500 dark:text-slate-400">Criar uma conta de aluno para me inscrever em cursos</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setRole("instrutor"); setStep(0); }}
-            className="flex w-full items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-500 hover:shadow-md dark:border-white/10 dark:bg-neutral-900 dark:hover:border-blue-500"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
-              <Briefcase size={20} />
-            </span>
-            <span>
-              <span className="block font-medium text-slate-900 dark:text-white">Quero ensinar</span>
-              <span className="block text-sm text-slate-500 dark:text-slate-400">Criar uma conta de instrutor para criar e vender cursos</span>
-            </span>
-          </button>
-        </div>
-      </AuthLayout>
-    );
+  // Clicar num cartão expande-o no lugar (mostra o formulário respetivo
+  // logo abaixo); clicar de novo no mesmo (ou no outro) fecha-o. Nunca há
+  // duas formas de entrar — só o botão "Criar conta"/"Continuar com
+  // Google" de dentro do formulário submetem seja o que for; os cartões e
+  // o logo são sempre type="button"/navegação pura, sem side-effects.
+  function toggleRole(r: "aluno" | "instrutor") {
+    setError(null);
+    setStep(0);
+    setRole((prev) => (prev === r ? null : r));
   }
+
+  const googleButton = (
+    <div>
+      <button
+        type="button"
+        onClick={() => signIn("google", { callbackUrl: `/register/complete?role=${role}` })}
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+      >
+        <GoogleIcon /> Continuar com Google
+      </button>
+      <div className="my-4 flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+        <span className="text-xs text-slate-400 dark:text-slate-500">ou preenche os dados</span>
+        <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+      </div>
+    </div>
+  );
+
+  const termsAndSubmit = (
+    <>
+      {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+      <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <input
+          type="checkbox"
+          required
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span>
+          Concordo com os{" "}
+          <Link href="/termos" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+            Termos e Serviços
+          </Link>{" "}
+          e a{" "}
+          <Link href="/privacidade" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+            Política de Privacidade
+          </Link>
+        </span>
+      </label>
+
+      <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+        {loading ? "A criar conta..." : (
+          <>
+            Criar conta <ArrowRight size={16} />
+          </>
+        )}
+      </Button>
+    </>
+  );
 
   return (
     <AuthLayout
-      wide={wantsToTeach}
-      title={wantsToTeach ? "Cria a tua conta de instrutor" : "Cria a tua conta de aluno"}
-      subtitle="Começa a aprender ou a ensinar hoje mesmo"
+      wide={role === "instrutor"}
+      title="Cria a tua conta"
+      subtitle="Como queres usar a plataforma?"
       footer={
         <>
           Já tens conta?{" "}
@@ -233,14 +262,134 @@ export default function RegisterPage() {
         </>
       }
     >
-      <button
-        type="button"
-        onClick={() => { setRole(null); setStep(0); }}
-        className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-      >
-        <ArrowLeft size={14} /> Voltar
-      </button>
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-neutral-900 dark:shadow-black/40">
+      <div className="space-y-3">
+        {/* Aluno */}
+        <div
+          className={`overflow-hidden rounded-xl border bg-white transition-colors dark:bg-neutral-900 ${
+            role === "aluno" ? "border-blue-500" : "border-slate-200 dark:border-white/10"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => toggleRole("aluno")}
+            className="flex w-full items-start gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+              <GraduationCap size={20} />
+            </span>
+            <span className="flex-1">
+              <span className="block font-medium text-slate-900 dark:text-white">Quero aprender</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">Criar uma conta de aluno para me inscrever em cursos</span>
+            </span>
+            <ChevronDown size={18} className={`mt-1 shrink-0 text-slate-400 transition-transform ${role === "aluno" ? "rotate-180" : ""}`} />
+          </button>
+
+          {role === "aluno" && (
+            <div className="border-t border-slate-200 p-4 dark:border-white/10">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {googleButton}
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <AtSign size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        id="username"
+                        required
+                        pattern="[a-z][a-z0-9_]{2,19}"
+                        title="3-20 caracteres: letras minúsculas, números e _, a começar por letra"
+                        placeholder="ex: joao_silva"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                        className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Email
+                    </label>
+                    <div className="relative">
+                      <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        id="email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        id="password"
+                        type="password"
+                        required
+                        minLength={6}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Confirmar password
+                    </label>
+                    <div className="relative">
+                      <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        id="confirmPassword"
+                        type="password"
+                        required
+                        minLength={6}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                      />
+                    </div>
+                    {confirmPassword && password !== confirmPassword && (
+                      <p className="mt-1 text-xs text-red-500 dark:text-red-400">As passwords não coincidem</p>
+                    )}
+                  </div>
+                </div>
+                {termsAndSubmit}
+              </form>
+            </div>
+          )}
+        </div>
+
+        {/* Instrutor */}
+        <div
+          className={`overflow-hidden rounded-xl border bg-white transition-colors dark:bg-neutral-900 ${
+            role === "instrutor" ? "border-blue-500" : "border-slate-200 dark:border-white/10"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => toggleRole("instrutor")}
+            className="flex w-full items-start gap-4 p-4 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+              <Briefcase size={20} />
+            </span>
+            <span className="flex-1">
+              <span className="block font-medium text-slate-900 dark:text-white">Quero ensinar</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">Criar uma conta de instrutor para criar e vender cursos</span>
+            </span>
+            <ChevronDown size={18} className={`mt-1 shrink-0 text-slate-400 transition-transform ${role === "instrutor" ? "rotate-180" : ""}`} />
+          </button>
+
+          {role === "instrutor" && (
+            <div className="border-t border-slate-200 p-4 dark:border-white/10 sm:p-6">
         {wantsToTeach && (
           <ol className="mb-6 hidden items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 lg:flex">
             {STEP_LABELS.map((label, i) => (
@@ -264,20 +413,9 @@ export default function RegisterPage() {
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className={stepClass(0)}>
-            <button
-              type="button"
-              onClick={() => signIn("google", { callbackUrl: `/register/complete?role=${role}` })}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            >
-              <GoogleIcon /> Continuar com Google
-            </button>
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-              <span className="text-xs text-slate-400 dark:text-slate-500">ou preenche os dados</span>
-              <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-            </div>
+            {googleButton}
           </div>
-          <div className={`${wantsToTeach ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" : "space-y-4"} ${stepClass(0)}`}>
+          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 ${stepClass(0)}`}>
             <div>
               <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
                 Nome
@@ -546,38 +684,11 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
-
-          <div className={stepClass(2)}>
-          <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <input
-              type="checkbox"
-              required
-              checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span>
-              Concordo com os{" "}
-              <Link href="/termos" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                Termos e Serviços
-              </Link>{" "}
-              e a{" "}
-              <Link href="/privacidade" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                Política de Privacidade
-              </Link>
-            </span>
-          </label>
-
-          <Button type="submit" variant="accent" className="w-full" disabled={loading}>
-            {loading ? "A criar conta..." : (
-              <>
-                Criar conta <ArrowRight size={16} />
-              </>
-            )}
-          </Button>
-          </div>
-        </form>
+          <div className={stepClass(2)}>{termsAndSubmit}</div>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
     </AuthLayout>
   );

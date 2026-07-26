@@ -8,6 +8,8 @@ import type { CourseCardData } from "@/components/course/CourseCard";
 import { useInstructorAccent } from "@/components/instructor/InstructorAccentContext";
 import { ResaleListingTile, ResaleBundleTile } from "@/components/resale/ResaleTile";
 import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
+import { CommunityRow } from "@/components/community/CommunityRow";
+import type { CommunityCardData } from "@/components/community/CommunityTile";
 
 type Tab = "cursos" | "venda";
 
@@ -42,14 +44,16 @@ export function InstructorCourseGrid({
   hidePriceBySlug,
   resaleListings = [],
   resaleBundles = [],
-  belowSearch,
+  communities = [],
+  communitiesTitle = "Comunidades",
 }: {
   instructorFirstName: string;
   courses: CourseCardData[];
   hidePriceBySlug: Record<string, boolean>;
   resaleListings?: ResaleListingCardData[];
   resaleBundles?: ResaleBundleCardData[];
-  belowSearch?: React.ReactNode;
+  communities?: CommunityCardData[];
+  communitiesTitle?: string;
 }) {
   const [tab, setTab] = useState<Tab>("cursos");
   const [query, setQuery] = useState("");
@@ -168,12 +172,9 @@ export function InstructorCourseGrid({
 
   return (
     <div>
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="order-2 text-lg font-semibold text-slate-900 dark:text-white sm:order-1">
-          Cursos de {instructorFirstName}
-        </h2>
+      <div className="mb-3">
         {(courses.length > 0 || hasResale) && (
-          <div className="relative order-1 flex w-full gap-2 sm:order-2 sm:w-auto sm:max-w-xl">
+          <div className="relative flex w-full gap-2 sm:max-w-xl">
             <div
               ref={searchWrapRef}
               className="relative min-w-0 flex-1"
@@ -256,7 +257,13 @@ export function InstructorCourseGrid({
         )}
       </div>
 
-      {belowSearch}
+      {communities.length > 0 && (
+        <div className="-mx-4 mb-2 sm:-mx-8">
+          <CommunityRow title={communitiesTitle} communities={communities} query={query} />
+        </div>
+      )}
+
+      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Cursos de {instructorFirstName}</h2>
 
       {hasResale && (
         <div className="mb-4 flex gap-2">

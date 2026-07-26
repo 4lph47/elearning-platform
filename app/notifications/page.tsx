@@ -11,12 +11,18 @@ const PAGE_SIZE = 20;
 
 interface NotificationItem {
   id: string;
+  type: "MENTION" | "RESALE_COMMISSION_CHANGE";
   read: boolean;
   createdAt: string;
   actor: { id: string; name: string; image: string | null };
-  comment: { content: string };
-  courseSlug: string;
-  lessonId: string;
+  comment: { content: string } | null;
+  courseSlug: string | null;
+  lessonId: string | null;
+  resaleCourseTitle: string | null;
+  resaleOldCommission: number | null;
+  resaleNewCommission: number | null;
+  resaleOldPrice: number | null;
+  resaleNewPrice: number | null;
 }
 
 function initials(name: string) {
@@ -33,7 +39,7 @@ function initials(name: string) {
 // Vista completa (a campainha da Navbar só mostra as últimas 20 num
 // dropdown) — mesma API, com paginação e "marcar tudo como lido".
 export default function NotificationsPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -78,6 +84,17 @@ export default function NotificationsPage() {
     await fetch("/api/notifications/read-all", { method: "POST" });
   }
 
+  function notificationHref(n: NotificationItem) {
+    if (n.type === "MENTION") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
+    return `/u/${session?.user.id}`;
+  }
+
+  function commissionText(n: NotificationItem) {
+    return n.resaleNewPrice !== null
+      ? `Preço da tua listagem de "${n.resaleCourseTitle}" ajustado de ${n.resaleOldPrice?.toFixed(2)}€ para ${n.resaleNewPrice.toFixed(2)}€ (comissão subiu para ${n.resaleNewCommission?.toFixed(2)}€)`
+      : `Comissão subiu para ${n.resaleNewCommission?.toFixed(2)}€ em "${n.resaleCourseTitle}" — a tua parte por venda desceu, ajusta o preço se quiseres compensar`;
+  }
+
   if (status === "unauthenticated") {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-8">
@@ -110,7 +127,7 @@ export default function NotificationsPage() {
           {items.map((n) => (
             <FadeLink
               key={n.id}
-              href={`/courses/${n.courseSlug}/lessons/${n.lessonId}`}
+              href={notificationHref(n)}
               onClick={() => {
                 if (!n.read) markRead(n.id);
               }}
@@ -127,13 +144,19 @@ export default function NotificationsPage() {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-700 dark:text-slate-200">
-                  <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> mencionou-te num
-                  comentário
-                </p>
-                <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-                  {decodeMentionContent(n.comment.content).display}
-                </p>
+                {n.type === "MENTION" ? (
+                  <>
+                    <p className="text-sm text-slate-700 dark:text-slate-200">
+                      <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> mencionou-te num
+                      comentário
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                      {n.comment ? decodeMentionContent(n.comment.content).display : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-700 dark:text-slate-200">{commissionText(n)}</p>
+                )}
                 <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{timeAgo(n.createdAt)}</p>
               </div>
               {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden />}

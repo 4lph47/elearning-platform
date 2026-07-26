@@ -9,20 +9,26 @@ import { decodeMentionContent } from "@/lib/mentions";
 
 interface NotificationItem {
   id: string;
+  type: "MENTION" | "RESALE_COMMISSION_CHANGE";
   read: boolean;
   createdAt: string;
   actor: { id: string; name: string };
-  comment: { content: string };
-  courseSlug: string;
-  lessonId: string;
+  comment: { content: string } | null;
+  courseSlug: string | null;
+  lessonId: string | null;
+  resaleCourseTitle: string | null;
+  resaleOldCommission: number | null;
+  resaleNewCommission: number | null;
+  resaleOldPrice: number | null;
+  resaleNewPrice: number | null;
 }
 
 const POLL_MS = 30000;
 
-// Só menções por agora (único NotificationType que existe) — mostradas como
-// "Fulano mencionou-te" a apontar para a aula onde o comentário vive.
+// Menções apontam para a aula do comentário; mudanças de comissão de revenda
+// apontam para o próprio perfil de quem recebeu (onde ManageResaleSection vive).
 export function NotificationBell() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -67,6 +73,17 @@ export function NotificationBell() {
 
   if (status !== "authenticated") return null;
 
+  function notificationHref(n: NotificationItem) {
+    if (n.type === "MENTION") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
+    return `/u/${session?.user.id}`;
+  }
+
+  function commissionText(n: NotificationItem) {
+    return n.resaleNewPrice !== null
+      ? `Preço da tua listagem de "${n.resaleCourseTitle}" ajustado de ${n.resaleOldPrice?.toFixed(2)}€ para ${n.resaleNewPrice.toFixed(2)}€ (comissão subiu para ${n.resaleNewCommission?.toFixed(2)}€)`
+      : `Comissão subiu para ${n.resaleNewCommission?.toFixed(2)}€ em "${n.resaleCourseTitle}" — a tua parte por venda desceu, ajusta o preço se quiseres compensar`;
+  }
+
   return (
     <div className="relative" ref={wrapRef}>
       <button
@@ -99,7 +116,7 @@ export function NotificationBell() {
               items.map((n) => (
                 <FadeLink
                   key={n.id}
-                  href={`/courses/${n.courseSlug}/lessons/${n.lessonId}`}
+                  href={notificationHref(n)}
                   onClick={() => {
                     setOpen(false);
                     if (!n.read) markRead(n.id);
@@ -108,13 +125,19 @@ export function NotificationBell() {
                     n.read ? "" : "bg-blue-50 dark:bg-blue-500/10"
                   }`}
                 >
-                  <p className="text-slate-700 dark:text-slate-200">
-                    <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> mencionou-te num
-                    comentário
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-                    {decodeMentionContent(n.comment.content).display}
-                  </p>
+                  {n.type === "MENTION" ? (
+                    <>
+                      <p className="text-slate-700 dark:text-slate-200">
+                        <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> mencionou-te num
+                        comentário
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                        {n.comment ? decodeMentionContent(n.comment.content).display : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-slate-700 dark:text-slate-200">{commissionText(n)}</p>
+                  )}
                   <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{timeAgo(n.createdAt)}</p>
                 </FadeLink>
               ))

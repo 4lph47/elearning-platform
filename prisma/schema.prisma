@@ -40,6 +40,7 @@ enum ReactionType {
 
 enum NotificationType {
   MENTION
+  RESALE_COMMISSION_CHANGE
 }
 
 model User {
@@ -468,12 +469,21 @@ model Notification {
   actorId     String
   actor       User   @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
 
-  commentId  String
-  comment    LessonComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  // Campos exclusivos de MENTION.
+  commentId  String?
+  comment    LessonComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   // Denormalizados na criação (não FKs) só para montar o link sem juntar
   // lesson→module→course a cada leitura da lista de notificações.
-  courseSlug String
-  lessonId   String
+  courseSlug String?
+  lessonId   String?
+
+  // Campos exclusivos de RESALE_COMMISSION_CHANGE — denormalizados porque o
+  // curso/listing podem mudar de preço outra vez depois desta notificação.
+  resaleCourseTitle   String?
+  resaleOldCommission Float?
+  resaleNewCommission Float?
+  resaleOldPrice      Float?
+  resaleNewPrice      Float?
 
   @@index([recipientId, read])
 }

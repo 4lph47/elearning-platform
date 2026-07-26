@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export interface ResaleEligibility {
@@ -51,4 +52,51 @@ export function splitResalePrice(price: number, instructorMinCommission: number)
   const instructorCut = Math.min(instructorMinCommission, price);
   const sellerCut = price - instructorCut;
   return { instructorCut, sellerCut };
+}
+
+// Chamado quando o instrutor SOBE a comissão mínima de um curso (nunca em
+// descidas — aí o revendedor só fica a ganhar, não há nada a proteger).
+// Para cada listagem já existente: se a nova comissão ainda não alcançou o
+// preço da listagem, só a parte do revendedor encolhe (preço fica igual, já
+// é >= comissão). Mas se a nova comissão alcançar ou passar o preço, sobe o
+// preço da listagem o suficiente para preservar a mesma parte em euros que o
+// revendedor já tinha — nunca deixa a comissão "comer" o que já era dele.
+// ResaleBundle não precisa de tratamento à parte: o preço dele é sempre a
+// soma ao vivo das suas listagens (ver app/resale/bundles/[bundleId]/page.tsx).
+export async function cascadeCommissionIncrease(
+  tx: Prisma.TransactionClient,
+  params: { courseId: string; courseTitle: string; instructorId: string; oldCommission: number; newCommission: number }
+) {
+  const { courseId, courseTitle, instructorId, oldCommission, newCommission } = params;
+  if (newCommission <= oldCommission) return;
+
+  const listings = await tx.resaleListing.findMany({
+    where: { courseId },
+    select: { id: true, price: true, sellerId: true },
+  });
+  if (listings.length === 0) return;
+
+  const notifications: Prisma.NotificationCreateManyInput[] = [];
+  for (const listing of listings) {
+    const sellerCut = listing.price - Math.min(oldCommission, listing.price);
+    const bump = newCommission >= listing.price;
+    const newPrice = bump ? newCommission + sellerCut : null;
+
+    if (bump && newPrice !== null) {
+      await tx.resaleListing.update({ where: { id: listing.id }, data: { price: newPrice } });
+    }
+
+    notifications.push({
+      type: "RESALE_COMMISSION_CHANGE",
+      recipientId: listing.sellerId,
+      actorId: instructorId,
+      resaleCourseTitle: courseTitle,
+      resaleOldCommission: oldCommission,
+      resaleNewCommission: newCommission,
+      resaleOldPrice: bump ? listing.price : null,
+      resaleNewPrice: newPrice,
+    });
+  }
+
+  await tx.notification.createMany({ data: notifications });
 }

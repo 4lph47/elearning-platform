@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { courseSchema, zodIssueDetails } from "@/lib/validations";
 import { getOwnedCourse } from "@/lib/instructor-guard";
+import { cascadeCommissionIncrease } from "@/lib/resale";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ courseId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -23,9 +24,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     );
   }
 
-  const updated = await prisma.course.update({
-    where: { id: courseId },
-    data: parsed.data,
+  const oldCommission = course.resaleMinCommission;
+  const newCommission = parsed.data.resaleMinCommission;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.course.update({
+      where: { id: courseId },
+      data: parsed.data,
+    });
+    if (typeof oldCommission === "number" && typeof newCommission === "number" && newCommission > oldCommission) {
+      await cascadeCommissionIncrease(tx, {
+        courseId,
+        courseTitle: u.title,
+        instructorId: session.user.id,
+        oldCommission,
+        newCommission,
+      });
+    }
+    return u;
   });
 
   if ("bundle" in body) {

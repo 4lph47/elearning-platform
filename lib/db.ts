@@ -20,3 +20,8 @@ if (process.env.NODE_ENV !== "production") {
 } else {
   globalForPrisma.prisma = prisma;
 }
+
+// Connection pool management para serverless
+prisma.$connect().catch((err) => {
+  console.error("Failed to connect to database:", err);
+});

@@ -261,19 +261,19 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
                 }`}
               >
                 {isFromCurrentLesson && (
-                  <div className="absolute right-2 top-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                  <div className="absolute right-2 top-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white z-10">
                     Atual
                   </div>
                 )}
                 
-                <div className="space-y-1.5 pr-16">
-                  <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                <div className="space-y-1.5 max-w-full">
+                  <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white pr-16">
                     {note.title}
                   </h4>
-                  <p className="line-clamp-2 text-xs text-slate-600 dark:text-slate-300 break-words">
+                  <p className="line-clamp-2 text-xs text-slate-600 dark:text-slate-300 break-words overflow-hidden pr-16">
                     {note.content}
                   </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate pr-16">
                     {new Date(note.updatedAt).toLocaleDateString("pt-PT", {
                       day: "numeric",
                       month: "short",
@@ -283,7 +283,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
                   </p>
                 </div>
 
-                <div className="absolute bottom-3 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute bottom-3 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 z-10">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

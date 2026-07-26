@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FadeLink } from "@/components/course/FadeLink";
 import { ManageResaleSection } from "@/components/resale/ManageResaleSection";
+import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,14 @@ export default async function InstructorResalePage() {
     prisma.resaleListing.findMany({
       where: { sellerId: userId },
       orderBy: { createdAt: "desc" },
-      include: { course: { select: { id: true, title: true, slug: true } }, _count: { select: { sales: true } } },
+      include: {
+        course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } },
+      },
     }),
     prisma.resaleBundle.findMany({
       where: { sellerId: userId },
       orderBy: { createdAt: "desc" },
-      include: { listings: { select: { id: true } } },
+      include: { listings: { include: { course: { select: { title: true, thumbnailUrl: true } } } } },
     }),
   ]);
 
@@ -47,23 +50,36 @@ export default async function InstructorResalePage() {
   const eligibleCourses = completedCourses
     .filter((e) => !listedCourseIds.has(e.course.id))
     .map((e) => ({ id: e.course.id, title: e.course.title, minCommission: e.course.resaleMinCommission! }));
-  const listings = ownListings.map((l) => ({
+
+  const listings: ResaleListingCardData[] = ownListings.map((l) => ({
     id: l.id,
     price: l.price,
-    active: l.active,
-    courseId: l.courseId,
-    courseTitle: l.course.title,
     courseSlug: l.course.slug,
-    bundleId: l.resaleBundleId,
-    salesCount: l._count.sales,
+    courseTitle: l.course.title,
+    courseThumbnailUrl: l.course.thumbnailUrl,
+    courseCategory: l.course.category,
+    courseLevel: l.course.level,
+    sellerId: userId,
+    sellerName: session.user.name ?? "",
+    active: l.active,
   }));
-  const bundles = ownBundles.map((b) => ({ id: b.id, name: b.name, listingIds: b.listings.map((l) => l.id) }));
+  const bundles: ResaleBundleCardData[] = ownBundles.map((b) => ({
+    id: b.id,
+    name: b.name,
+    coverImageUrl: b.coverImageUrl ?? b.listings[0]?.course.thumbnailUrl ?? null,
+    price: b.listings.reduce((sum, l) => sum + l.price, 0),
+    listingCount: b.listings.length,
+    courseTitles: b.listings.map((l) => l.course.title),
+    sellerId: userId,
+    sellerName: session.user.name ?? "",
+  }));
+  const canCreateBundle = ownListings.some((l) => l.active && !l.resaleBundleId);
 
   const hasNothing = eligibleCourses.length === 0 && listings.length === 0 && bundles.length === 0;
 
   return (
-    <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-6">
-      <div className="mx-auto max-w-3xl">
+    <div className="min-h-screen bg-white px-4 py-10 dark:bg-black sm:px-8">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Gerir revendas</h1>
@@ -80,11 +96,16 @@ export default async function InstructorResalePage() {
         </div>
 
         {hasNothing ? (
-          <p className="text-slate-500 dark:text-slate-400">
+          <p className="px-4 text-slate-500 dark:text-slate-400 sm:px-0">
             Ainda não tens nada para vender — termina um curso de outro instrutor com revenda ativada para poderes revendê-lo aqui.
           </p>
         ) : (
-          <ManageResaleSection eligibleCourses={eligibleCourses} listings={listings} bundles={bundles} />
+          <ManageResaleSection
+            eligibleCourses={eligibleCourses}
+            listings={listings}
+            bundles={bundles}
+            canCreateBundle={canCreateBundle}
+          />
         )}
       </div>
     </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { Trash2 } from "lucide-react";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
@@ -38,11 +40,13 @@ export function BundleForm({
   eligibleListings: EligibleListing[];
 }) {
   const { fadeNavigate } = useFadeNav();
+  const { data: session } = useSession();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initialCoverImageUrl);
   const [listingIds, setListingIds] = useState<string[]>(initialListingIds);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleListing(id: string) {
@@ -74,6 +78,20 @@ export function BundleForm({
     }
     const saved = await res.json();
     fadeNavigate(`/resale/bundles/${saved.id ?? bundleId}`);
+  }
+
+  async function deleteBundle() {
+    if (!bundleId) return;
+    setError(null);
+    setDeleting(true);
+    const res = await fetch(`/api/resale/bundles/${bundleId}`, { method: "DELETE" });
+    setDeleting(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Erro ao remover bundle");
+      return;
+    }
+    fadeNavigate(session?.user.role === "STUDENT" ? "/dashboard/resale" : "/instructor/resale");
   }
 
   return (
@@ -133,9 +151,21 @@ export function BundleForm({
         )}
       </Card>
 
-      <Button type="button" onClick={save} disabled={saving}>
-        {saving ? "A guardar..." : mode === "create" ? "Criar bundle" : "Guardar alterações"}
-      </Button>
+      <div className="flex items-center justify-between gap-2">
+        <Button type="button" onClick={save} disabled={saving}>
+          {saving ? "A guardar..." : mode === "create" ? "Criar bundle" : "Guardar alterações"}
+        </Button>
+        {mode === "edit" && (
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={deleteBundle}
+            className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline dark:text-red-400"
+          >
+            <Trash2 size={14} /> Eliminar bundle
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { CourseHero } from "@/components/course/CourseHero";
 import { CourseRow } from "@/components/course/CourseRow";
 import { FrequentlyBoughtTogether } from "@/components/course/FrequentlyBoughtTogether";
 import { FadeLink } from "@/components/course/FadeLink";
+import { ManageResaleListingCard } from "@/components/resale/ManageResaleListingCard";
 import { getRawCourseComments, getCourseCommentsCounts, toCourseCommentTree, COURSE_COMMENTS_PAGE_SIZE } from "@/lib/courseComments";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
@@ -46,13 +47,20 @@ export default async function CourseDetailPage({
   // quem está a vender (avatar+username) e um CTA de compra próprio, além do
   // normal (ver components/resale/ResaleTile.tsx, que já linka assim).
   // Ignora silenciosamente se o parâmetro for inválido/inativo, em vez de dar 404
-  // — a página do curso continua válida sem ele.
+  // — a página do curso continua válida sem ele. Dono da listagem também a
+  // vê desativada (senão perdia o acesso pra reativar assim que a desligasse
+  // — ver ManageResaleListingCard, o CRUD completo vive aqui agora).
   const resaleListing = resaleListingId
     ? await prisma.resaleListing.findFirst({
-        where: { id: resaleListingId, courseId: course.id, active: true },
+        where: {
+          id: resaleListingId,
+          courseId: course.id,
+          OR: [{ active: true }, { sellerId: session?.user.id }],
+        },
         include: { seller: { select: { id: true, name: true, image: true } } },
       })
     : null;
+  const isResaleOwner = Boolean(session && resaleListing && resaleListing.sellerId === session.user.id);
 
   const authors = [course.instructor, ...course.collaborators];
   const isOwner =
@@ -341,7 +349,16 @@ export default async function CourseDetailPage({
               <div className="p-4">
                 <h2 className="mb-3 line-clamp-2 font-semibold text-slate-900 dark:text-white">{course.title}</h2>
 
-                {resaleListing && (
+                {resaleListing && isResaleOwner && (
+                  <ManageResaleListingCard
+                    listingId={resaleListing.id}
+                    initialPrice={resaleListing.price}
+                    initialActive={resaleListing.active}
+                    minCommission={course.resaleMinCommission}
+                  />
+                )}
+
+                {resaleListing && !isResaleOwner && (
                   <FadeLink
                     href={`/students/${resaleListing.seller.id}`}
                     className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-600/10 px-3 py-2"
@@ -376,7 +393,7 @@ export default async function CourseDetailPage({
                   </FadeLink>
                 )}
 
-                {resaleListing && !isEnrolled && !isOwner && (
+                {resaleListing && !isResaleOwner && !isEnrolled && !isOwner && (
                   <FadeLink
                     href={`/resale/${resaleListing.id}/checkout`}
                     className="mb-3 block rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-500"

@@ -12,6 +12,10 @@ export interface ResaleListingCardData {
   courseLevel: string;
   sellerId: string;
   sellerName: string;
+  // Opcional — só a página "Gerir revendas" usa isto para marcar as
+  // desativadas na fila (ver ManageResaleSection.tsx). Ausente/irrelevante
+  // nos outros sítios que constroem este tipo (aí só mostram ativas).
+  active?: boolean;
 }
 
 export interface ResaleBundleCardData {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
-import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck, GripVertical } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer, type VideoRendition } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
@@ -240,10 +240,14 @@ export function LessonBody({
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="hidden lg:flex lg:w-6 lg:cursor-col-resize lg:items-center lg:justify-center lg:hover:bg-slate-100 dark:lg:hover:bg-white/5 lg:transition-colors"
+              className="hidden lg:block lg:w-3 lg:cursor-col-resize lg:transition-colors lg:relative"
               style={{ touchAction: 'none' }}
+              title="Arrastar para redimensionar"
             >
-              <GripVertical size={20} className="text-slate-400 dark:text-slate-500" />
+              {/* Barra só aparece durante o resize */}
+              {isResizing && (
+                <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500" />
+              )}
             </div>
           )}
 
@@ -252,7 +256,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden" : ""}>
+          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden" : ""} style={sideBySide ? { width: `${100 - leftWidth}%` } : undefined}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

@@ -70,10 +70,8 @@ async function main() {
     console.log(`✅ Query executada em ${queryTime}ms`);
     console.log(`   Resultado:`, result, "\n");
 
-    // Informações da pool
-    console.log("📈 Estatísticas:");
-    const stats = await prisma.$metrics.json();
-    console.log(JSON.stringify(stats, null, 2));
+    // Informações básicas
+    console.log("✅ Testes concluídos com sucesso!");
 
   } catch (error) {
     console.error("❌ Erro ao conectar:", error);

@@ -15,7 +15,6 @@ import {
   Image as ImageIcon,
   FileText,
   Music,
-  Link2,
 } from "lucide-react";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { LinkPreviewCard } from "@/components/community/LinkPreviewCard";
@@ -307,27 +306,6 @@ export function CommunityChat({
     setText("");
     const replyToId = replyingTo?.id;
     setReplyingTo(null);
-    const res = await fetch(`/api/communities/${communityId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content, replyToId }),
-    });
-    setSending(false);
-    if (res.ok) {
-      const message = await res.json();
-      setMessages((prev) => [...prev, message]);
-      scrollToBottom();
-    }
-  }
-
-  // Envia o link da própria comunidade como mensagem no chat (opção "Link da
-  // comunidade" no menu de anexo) — para convidar alguém ou reencaminhar.
-  async function sendCommunityLink() {
-    setAttachMenuOpen(false);
-    const content = `${window.location.origin}/communities/${communityId}`;
-    const replyToId = replyingTo?.id;
-    setReplyingTo(null);
-    setSending(true);
     const res = await fetch(`/api/communities/${communityId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -652,7 +630,7 @@ export function CommunityChat({
       {attachMenuOpen && (
         <div
           ref={attachMenuRef}
-          className="grid grid-cols-4 gap-2 border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900"
+          className="grid grid-cols-3 gap-2 border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900"
         >
           {ATTACH_OPTIONS.map((opt) => {
             const Icon = opt.icon;
@@ -670,17 +648,6 @@ export function CommunityChat({
               </button>
             );
           })}
-          <button
-            type="button"
-            onClick={sendCommunityLink}
-            disabled={sending}
-            className="flex flex-col items-center gap-1.5 rounded-lg p-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-white/10"
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">
-              <Link2 size={20} />
-            </span>
-            Link da comunidade
-          </button>
         </div>
       )}
 
@@ -737,7 +704,15 @@ export function CommunityChat({
           </div>
         </div>
       ) : (
-        <form onSubmit={send} className="flex items-center gap-2 border-t border-slate-200 p-2 dark:border-white/10">
+        <form onSubmit={send} className="border-t border-slate-200 dark:border-white/10">
+          {/* Reconhece um link enquanto se escreve — mostra a pré-visualização
+              já aqui, sem impedir continuar a escrever o resto da mensagem. */}
+          {text.trim() && firstUrlIn(text) && (
+            <div className="px-3 pt-2">
+              <LinkPreviewCard url={firstUrlIn(text)!} />
+            </div>
+          )}
+          <div className="flex items-center gap-2 p-2">
           <button
             type="button"
             onClick={() => setAttachMenuOpen((v) => !v)}
@@ -763,6 +738,7 @@ export function CommunityChat({
           >
             <Send size={15} />
           </button>
+          </div>
         </form>
       )}
     </div>

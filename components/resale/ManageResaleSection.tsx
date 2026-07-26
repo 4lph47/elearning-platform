@@ -1,20 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
-import { Button } from "@/components/ui/Button";
-import { Input, Label } from "@/components/ui/Input";
 import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
 import { ResaleListingTile, ResaleBundleTile } from "@/components/resale/ResaleTile";
 import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
-
-export interface EligibleCourse {
-  id: string;
-  title: string;
-  minCommission: number;
-}
 
 function pillClass(active: boolean) {
   return `shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
@@ -25,27 +16,23 @@ function pillClass(active: boolean) {
 }
 
 // Listas horizontais iguais ao catálogo, sem CollapsibleCard nenhum a
-// esconder tudo atrás dum clique — só isto e o formulário de criar é que
-// vivem aqui. Editar uma listagem ou bundle já existente é só clicar no
-// tile: o link do ResaleListingTile já leva à própria página do curso
-// (?resale=id), onde o dono vê o CRUD completo (ManageResaleListingCard);
-// o do ResaleBundleTile leva à página do bundle, que mostra "Editar bundle"
-// ao dono. Nenhum dos dois precisa de UI de edição duplicada aqui.
+// esconder tudo atrás dum clique. Criar uma listagem ou bundle é sempre uma
+// página dedicada própria (/resale/listings/new, /resale/bundles/new) —
+// editar um já existente é só clicar no tile: o link do ResaleListingTile já
+// leva à própria página do curso (?resale=id), onde o dono vê o CRUD
+// completo (ManageResaleListingCard); o do ResaleBundleTile leva à página do
+// bundle, que mostra "Editar bundle" ao dono.
 export function ManageResaleSection({
-  eligibleCourses,
   listings,
   bundles,
+  canCreateListing,
   canCreateBundle,
 }: {
-  eligibleCourses: EligibleCourse[];
   listings: ResaleListingCardData[];
   bundles: ResaleBundleCardData[];
+  canCreateListing: boolean;
   canCreateBundle: boolean;
 }) {
-  const router = useRouter();
-  const [priceByCourse, setPriceByCourse] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -89,79 +76,31 @@ export function ManageResaleSection({
     );
   }, [bundles, query, categories]);
 
-  if (eligibleCourses.length === 0 && listings.length === 0 && bundles.length === 0) return null;
-
-  async function handleError(res: Response) {
-    const data = await res.json().catch(() => ({}));
-    setError(data.error ?? "Erro ao processar pedido");
-  }
-
-  async function createListing(courseId: string) {
-    setError(null);
-    const price = Number(priceByCourse[courseId]);
-    if (!price || price <= 0) {
-      setError("Indica um preço válido");
-      return;
-    }
-    setBusy(true);
-    const res = await fetch("/api/resale/listings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ courseId, price }),
-    });
-    setBusy(false);
-    if (!res.ok) return handleError(res);
-    router.refresh();
-  }
-
   const hasResults = filteredListings.length > 0 || filteredBundles.length > 0;
 
   return (
     <div className="space-y-6">
-      {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
-
-      {eligibleCourses.length > 0 && (
-        <div>
-          <Label>Cursos que podes vender</Label>
-          <div className="space-y-2">
-            {eligibleCourses.map((course) => {
-              const price = Number(priceByCourse[course.id]);
-              const validPrice = price >= course.minCommission;
-              const sellerCut = validPrice ? price - course.minCommission : null;
-              return (
-                <div key={course.id} className="rounded-md border border-slate-200 p-2 dark:border-white/10">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm">{course.title}</span>
-                    <Input
-                      type="number"
-                      min={course.minCommission}
-                      step="0.01"
-                      placeholder="Preço"
-                      value={priceByCourse[course.id] ?? ""}
-                      onChange={(e) => setPriceByCourse((prev) => ({ ...prev, [course.id]: e.target.value }))}
-                      className="w-24"
-                    />
-                    <Button type="button" variant="outline" disabled={busy} onClick={() => createListing(course.id)}>
-                      Colocar à venda
-                    </Button>
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    <span>
-                      Comissão do instrutor (fixa): <span className="font-medium text-slate-700 dark:text-slate-200">{course.minCommission.toFixed(2)}€</span>
-                    </span>
-                    <span>
-                      A tua parte:{" "}
-                      <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {sellerCut !== null ? `${sellerCut.toFixed(2)}€` : "—"}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Sempre visíveis, mesmo sem nenhuma listagem/bundle ainda — sem
+          isto, não havia forma nenhuma de começar a vender quando a lista
+          estava vazia. */}
+      <div className="flex flex-wrap gap-2">
+        {canCreateListing && (
+          <FadeLink
+            href="/resale/listings/new"
+            className="flex w-fit items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+          >
+            <Plus size={14} /> Criar revenda
+          </FadeLink>
+        )}
+        {canCreateBundle && (
+          <FadeLink
+            href="/resale/bundles/new"
+            className="flex w-fit items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
+          >
+            <Plus size={14} /> Criar bundle
+          </FadeLink>
+        )}
+      </div>
 
       {(bundles.length > 0 || listings.length > 0) && (
         <div>
@@ -263,13 +202,11 @@ export function ManageResaleSection({
         </div>
       )}
 
-      {canCreateBundle && (
-        <FadeLink
-          href="/resale/bundles/new"
-          className="flex w-fit items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
-        >
-          <Plus size={14} /> Criar bundle
-        </FadeLink>
+      {!canCreateListing && !canCreateBundle && listings.length === 0 && bundles.length === 0 && (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Ainda não tens nada para vender — termina um curso com revenda ativada pelo instrutor para poderes
+          revendê-lo aqui.
+        </p>
       )}
     </div>
   );

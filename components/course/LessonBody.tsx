@@ -204,9 +204,9 @@ export function LessonBody({
         )}
       </div>
 
-      <div className="mt-4 overflow-x-hidden">
+      <div className="mt-4 overflow-x-hidden lg:relative">
         <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:relative lg:z-10" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:relative" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -235,29 +235,23 @@ export function LessonBody({
             />
             
             {/* Título e engagement abaixo do player, apenas em desktop */}
-            <div className="mt-4 hidden lg:block">
+            <div className="mt-4 hidden lg:block relative z-10">
               {title}
               {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
             </div>
             
             {/* Comentários também no painel esquerdo em desktop */}
-            <div className="hidden lg:block">{comments}</div>
+            <div className="hidden lg:block relative z-10">{comments}</div>
           </div>
 
           {/* Resize Handle - apenas em desktop quando sideBySide */}
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors lg:z-20 hover:lg:bg-slate-100 dark:hover:lg:bg-white/5"
+              className="hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors lg:z-20"
               style={{ left: `calc(${leftWidth}% + 0.25rem)`, touchAction: 'none' }}
               title="Arrastar para redimensionar"
             >
-              {/* Linha vertical sutil no centro */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-200 dark:bg-white/10" />
-              {/* Barra azul aparece durante o resize */}
-              {isResizing && (
-                <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500" />
-              )}
             </div>
           )}
 

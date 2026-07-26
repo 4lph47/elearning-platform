@@ -1301,11 +1301,11 @@ export function LessonPlayer({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>
       ) : (
-        <div className="relative" style={cinemaMode && !youtubeId ? { contain: "layout" } : undefined}>
+        <div className="relative" style={cinemaMode && !youtubeId ? { contain: "layout", isolation: "isolate" } : undefined}>
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
-              className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
+              className="pointer-events-none absolute -inset-6 z-0 rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
               style={{ backgroundColor: ambientColor, opacity: 0.6 }}
             />
           )}
@@ -1322,7 +1322,7 @@ export function LessonPlayer({
                   "*"
                 );
               }}
-              className={playerClassName}
+              className={`${playerClassName} relative z-10`}
             />
           ) : (
             <div
@@ -1335,7 +1335,7 @@ export function LessonPlayer({
               // com jank — os dois a competir pelo mesmo gesto). pan-x só
               // permite gesto horizontal nativo (troca de aula), o vertical
               // fica 100% por conta do JS do drag.
-              className={`group relative touch-pan-x overflow-hidden ${isDraggingVideo ? "z-50" : ""} ${playerClassName}`}
+              className={`group relative touch-pan-x overflow-hidden ${isDraggingVideo ? "z-50" : "z-10"} ${playerClassName}`}
               onContextMenu={handleContextMenu}
               onTouchStart={handleFullscreenTouchStart}
               onTouchEnd={handleFullscreenTouchEnd}

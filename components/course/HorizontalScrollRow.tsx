@@ -7,7 +7,15 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // do CourseRow.tsx — sem o hover-zoom/push específico de cursos, que fica só
 // lá. Usado por secções que precisam de uma linha horizontal "à Netflix" mas
 // sem essa coreografia (pessoas, bundles, revendas).
-export function HorizontalScrollRow({ title, children }: { title: string; children: ReactNode }) {
+export function HorizontalScrollRow({
+  title,
+  titleExtra,
+  children,
+}: {
+  title: string;
+  titleExtra?: ReactNode;
+  children: ReactNode;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function scrollBy(dir: 1 | -1) {
@@ -16,7 +24,10 @@ export function HorizontalScrollRow({ title, children }: { title: string; childr
 
   return (
     <section className="group/row relative py-5">
-      <h2 className="mb-3 px-4 text-lg font-semibold text-slate-900 dark:text-white sm:px-8 sm:text-xl">{title}</h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white sm:text-xl">{title}</h2>
+        {titleExtra}
+      </div>
 
       <button
         onClick={() => scrollBy(-1)}

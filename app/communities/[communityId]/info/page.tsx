@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { FadeLink } from "@/components/course/FadeLink";
 import { MembersList } from "@/components/community/MembersList";
 import { CommunityInfoActions } from "@/components/community/CommunityInfoActions";
+import { ShareCommunityLink } from "@/components/community/ShareCommunityLink";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,15 @@ export default async function CommunityInfoPage({ params }: { params: Promise<{ 
           >
             <ArrowLeft size={14} /> Voltar ao chat
           </FadeLink>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{community.name}</h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-            <Users size={14} /> {community._count.members} membro{community._count.members !== 1 ? "s" : ""} · {community.category}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{community.name}</h1>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                <Users size={14} /> {community._count.members} membro{community._count.members !== 1 ? "s" : ""} · {community.category}
+              </p>
+            </div>
+            <ShareCommunityLink communityId={communityId} communityName={community.name} />
+          </div>
           {community.description && (
             <p className="mt-3 whitespace-pre-wrap text-slate-700 dark:text-slate-200">{community.description}</p>
           )}

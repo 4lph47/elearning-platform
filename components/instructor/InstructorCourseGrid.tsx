@@ -42,12 +42,14 @@ export function InstructorCourseGrid({
   hidePriceBySlug,
   resaleListings = [],
   resaleBundles = [],
+  belowSearch,
 }: {
   instructorFirstName: string;
   courses: CourseCardData[];
   hidePriceBySlug: Record<string, boolean>;
   resaleListings?: ResaleListingCardData[];
   resaleBundles?: ResaleBundleCardData[];
+  belowSearch?: React.ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("cursos");
   const [query, setQuery] = useState("");
@@ -253,6 +255,8 @@ export function InstructorCourseGrid({
           </div>
         )}
       </div>
+
+      {belowSearch}
 
       {hasResale && (
         <div className="mb-4 flex gap-2">

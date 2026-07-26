@@ -8,8 +8,8 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { InstructorCourseGrid } from "@/components/instructor/InstructorCourseGrid";
 import { InstructorProfileHero } from "@/components/instructor/InstructorProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
-import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
-import { CommunityTile, type CommunityCardData } from "@/components/community/CommunityTile";
+import { CommunityRow } from "@/components/community/CommunityRow";
+import type { CommunityCardData } from "@/components/community/CommunityTile";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -207,23 +207,19 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           </FadeLink>
         </div>
       )}
-      {communityCards.length > 0 && (
-        <div className="-mx-4 sm:-mx-8">
-          <HorizontalScrollRow title={isOwner ? "As tuas comunidades" : "Comunidades em comum"}>
-            {communityCards.map((c) => (
-              <div key={c.id} className="w-64 shrink-0 sm:w-72">
-                <CommunityTile community={c} />
-              </div>
-            ))}
-          </HorizontalScrollRow>
-        </div>
-      )}
       <InstructorCourseGrid
         instructorFirstName={instructorFirstName}
         courses={courseCards}
         hidePriceBySlug={hidePriceBySlug}
         resaleListings={resaleListings}
         resaleBundles={resaleBundles}
+        belowSearch={
+          communityCards.length > 0 ? (
+            <div className="-mx-4 mb-2 sm:-mx-8">
+              <CommunityRow title={isOwner ? "As tuas comunidades" : "Comunidades em comum"} communities={communityCards} />
+            </div>
+          ) : undefined
+        }
       />
 
       <FadeLink

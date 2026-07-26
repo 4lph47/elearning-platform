@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   FileText,
   Music,
+  Link2,
 } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { useFadeNav } from "@/components/course/FadeNavContext";
@@ -206,6 +207,26 @@ export function CommunityChat({
     setText("");
     const replyToId = replyingTo?.id;
     setReplyingTo(null);
+    const res = await fetch(`/api/communities/${communityId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content, replyToId }),
+    });
+    setSending(false);
+    if (res.ok) {
+      const message = await res.json();
+      setMessages((prev) => [...prev, message]);
+    }
+  }
+
+  // Envia o link da própria comunidade como mensagem no chat (opção "Link da
+  // comunidade" no menu de anexo) — para convidar alguém ou reencaminhar.
+  async function sendCommunityLink() {
+    setAttachMenuOpen(false);
+    const content = `${window.location.origin}/communities/${communityId}`;
+    const replyToId = replyingTo?.id;
+    setReplyingTo(null);
+    setSending(true);
     const res = await fetch(`/api/communities/${communityId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -486,7 +507,7 @@ export function CommunityChat({
       {attachMenuOpen && (
         <div
           ref={attachMenuRef}
-          className="grid grid-cols-3 gap-2 border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900"
+          className="grid grid-cols-4 gap-2 border-t border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900"
         >
           {ATTACH_OPTIONS.map((opt) => {
             const Icon = opt.icon;
@@ -504,6 +525,17 @@ export function CommunityChat({
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={sendCommunityLink}
+            disabled={sending}
+            className="flex flex-col items-center gap-1.5 rounded-lg p-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-white/10"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white">
+              <Link2 size={20} />
+            </span>
+            Link da comunidade
+          </button>
         </div>
       )}
 

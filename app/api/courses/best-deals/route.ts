@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // Maiores descontos do catálogo (originalPrice vs price) — mostrado como
 // sugestão fixa na searchbar quando o campo está vazio, ao lado de
 // "recentes". Filtro por originalPrice > price precisa de acontecer em JS

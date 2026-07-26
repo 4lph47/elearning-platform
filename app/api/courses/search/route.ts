@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
+
 // Prefixo "@" muda o modo: em vez de cursos/instrutores/bundles, pesquisa
 // pessoas (por nome OU username). Sem "@", cursos (também por nome do
 // instrutor), instrutores e bundles à venda (revenda no marketplace E

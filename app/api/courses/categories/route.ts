@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Force dynamic rendering - don't pre-render at build time
+export const dynamic = "force-dynamic";
+
 // Todas as categorias já usadas em qualquer curso (não só publicados) —
 // alimenta o CategoryPicker do instrutor ao criar/editar um curso, para
 // reaproveitar nomes já criados por outros em vez de duplicar variações

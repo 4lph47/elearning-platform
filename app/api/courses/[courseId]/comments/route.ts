@@ -10,6 +10,9 @@ import {
   toCourseCommentTree,
 } from "@/lib/courseComments";
 
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
+
 const commentSchema = z.object({
   content: z.string().min(1, "Escreve um comentário").max(2000),
   parentId: z.string().optional().nullable(),

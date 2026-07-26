@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
+
 // Sugestões ao vivo do dropdown do MarketplaceSearchBar — atalho direto para
 // uma listagem/bundle/vendedor específico, por cima da grelha que já vai
 // encolhendo sozinha por baixo (mesma ideia do /api/courses/search).

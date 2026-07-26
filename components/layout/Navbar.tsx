@@ -299,7 +299,7 @@ export function Navbar() {
           ? "bg-white dark:bg-black"
           : transparent
           ? "bg-gradient-to-b from-white/70 via-white/30 to-transparent dark:from-black/70 dark:via-black/30 dark:to-transparent"
-          : "border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-black/90"
+          : "bg-white/95 backdrop-blur-md dark:bg-black/90"
       }`}
     >
       <div className="grid h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-5 sm:gap-4">

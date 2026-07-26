@@ -64,8 +64,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
   const lesson = await canAccessLesson(lessonId, session.user.id);
   if (!lesson) return NextResponse.json({ error: "Não tens acesso a esta aula" }, { status: 403 });
 
+  let parent: { id: string; userId: string; lessonId: string } | null = null;
   if (parsed.data.parentId) {
-    const parent = await prisma.lessonComment.findUnique({ where: { id: parsed.data.parentId } });
+    parent = await prisma.lessonComment.findUnique({ where: { id: parsed.data.parentId } });
     if (!parent || parent.lessonId !== lessonId) {
       return NextResponse.json({ error: "Comentário original não encontrado" }, { status: 404 });
     }
@@ -100,6 +101,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
         courseSlug: lesson.module.course.slug,
         lessonId,
       })),
+    });
+  }
+
+  // Notifica o dono do comentário-pai quando alguém lhe responde — só se não
+  // for o próprio a responder-se e se já não foi notificado como menção
+  // acima (mencionar explicitamente quem já se está a responder não deve
+  // duplicar a notificação).
+  if (parent && parent.userId !== session.user.id && !mentionedUserIds.includes(parent.userId)) {
+    await prisma.notification.create({
+      data: {
+        type: "COMMENT_REPLY",
+        recipientId: parent.userId,
+        actorId: session.user.id,
+        commentId: comment.id,
+        courseSlug: lesson.module.course.slug,
+        lessonId,
+      },
     });
   }
 

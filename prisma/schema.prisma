@@ -41,6 +41,7 @@ enum ReactionType {
 enum NotificationType {
   MENTION
   RESALE_COMMISSION_CHANGE
+  COMMENT_REPLY
 }
 
 model User {

@@ -11,7 +11,7 @@ const PAGE_SIZE = 20;
 
 interface NotificationItem {
   id: string;
-  type: "MENTION" | "RESALE_COMMISSION_CHANGE";
+  type: "MENTION" | "RESALE_COMMISSION_CHANGE" | "COMMENT_REPLY";
   read: boolean;
   createdAt: string;
   actor: { id: string; name: string; image: string | null };
@@ -85,7 +85,7 @@ export default function NotificationsPage() {
   }
 
   function notificationHref(n: NotificationItem) {
-    if (n.type === "MENTION") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
+    if (n.type === "MENTION" || n.type === "COMMENT_REPLY") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
     return `/u/${session?.user.id}`;
   }
 
@@ -144,11 +144,11 @@ export default function NotificationsPage() {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                {n.type === "MENTION" ? (
+                {n.type === "MENTION" || n.type === "COMMENT_REPLY" ? (
                   <>
                     <p className="text-sm text-slate-700 dark:text-slate-200">
-                      <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> mencionou-te num
-                      comentário
+                      <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span>{" "}
+                      {n.type === "MENTION" ? "mencionou-te num comentário" : "respondeu ao teu comentário"}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
                       {n.comment ? decodeMentionContent(n.comment.content).display : ""}

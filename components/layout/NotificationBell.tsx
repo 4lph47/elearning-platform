@@ -9,7 +9,7 @@ import { decodeMentionContent } from "@/lib/mentions";
 
 interface NotificationItem {
   id: string;
-  type: "MENTION" | "RESALE_COMMISSION_CHANGE";
+  type: "MENTION" | "RESALE_COMMISSION_CHANGE" | "COMMENT_REPLY";
   read: boolean;
   createdAt: string;
   actor: { id: string; name: string };
@@ -74,7 +74,7 @@ export function NotificationBell() {
   if (status !== "authenticated") return null;
 
   function notificationHref(n: NotificationItem) {
-    if (n.type === "MENTION") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
+    if (n.type === "MENTION" || n.type === "COMMENT_REPLY") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
     return `/u/${session?.user.id}`;
   }
 
@@ -125,11 +125,11 @@ export function NotificationBell() {
                     n.read ? "" : "bg-blue-50 dark:bg-blue-500/10"
                   }`}
                 >
-                  {n.type === "MENTION" ? (
+                  {n.type === "MENTION" || n.type === "COMMENT_REPLY" ? (
                     <>
                       <p className="text-slate-700 dark:text-slate-200">
-                        <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span> mencionou-te num
-                        comentário
+                        <span className="font-medium text-slate-900 dark:text-white">{n.actor.name}</span>{" "}
+                        {n.type === "MENTION" ? "mencionou-te num comentário" : "respondeu ao teu comentário"}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
                         {n.comment ? decodeMentionContent(n.comment.content).display : ""}

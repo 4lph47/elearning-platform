@@ -1305,7 +1305,7 @@ export function LessonPlayer({
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
-              className="pointer-events-none absolute -inset-x-6 -bottom-6 -top-12 -z-10 rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-x-16 lg:-bottom-16 lg:-top-28"
+              className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
               style={{ backgroundColor: ambientColor, opacity: 0.6 }}
             />
           )}

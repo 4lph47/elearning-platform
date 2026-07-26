@@ -21,7 +21,9 @@ export default async function BundlePage({ params }: { params: Promise<{ bundleI
       seller: { select: { id: true, name: true, role: true } },
       listings: {
         where: { active: true },
-        include: { course: { select: { slug: true, title: true, thumbnailUrl: true, category: true, level: true } } },
+        include: {
+          course: { select: { slug: true, title: true, thumbnailUrl: true, trailerUrl: true, category: true, level: true } },
+        },
       },
     },
   });
@@ -37,6 +39,11 @@ export default async function BundlePage({ params }: { params: Promise<{ bundleI
         name={bundle.name}
         description={bundle.description}
         coverImageUrl={bundle.coverImageUrl}
+        courses={bundle.listings.map((l) => ({
+          title: l.course.title,
+          thumbnailUrl: l.course.thumbnailUrl,
+          trailerUrl: l.course.trailerUrl,
+        }))}
         sellerId={bundle.seller.id}
         sellerName={bundle.seller.name}
         isSellerInstructor={bundle.seller.role === "INSTRUCTOR"}

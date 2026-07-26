@@ -270,7 +270,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
                   <h4 className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">
                     {note.title}
                   </h4>
-                  <p className="line-clamp-2 text-xs text-slate-600 dark:text-slate-300">{note.content}</p>
+                  <p className="line-clamp-1 text-xs text-slate-600 dark:text-slate-300">{note.content}</p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500">
                     {new Date(note.updatedAt).toLocaleDateString("pt-PT", {
                       day: "numeric",

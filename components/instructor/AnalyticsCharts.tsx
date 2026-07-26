@@ -67,7 +67,7 @@ export interface HourPoint {
   count: number;
 }
 
-interface Totals {
+export interface Totals {
   enrollments: number;
   revenue: number;
   resaleEarnings: number;

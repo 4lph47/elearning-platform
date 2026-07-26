@@ -3,14 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FadeLink } from "@/components/course/FadeLink";
-import {
-  AnalyticsCharts,
-  type CourseMetric,
-  type HourPoint,
-  type LessonMetric,
-  type QuizScoreMetric,
-  type WeekPoint,
-} from "@/components/instructor/AnalyticsCharts";
+import { StudentAnalyticsCharts } from "@/components/student/StudentAnalyticsCharts";
+import type { CourseMetric, HourPoint, LessonMetric, QuizScoreMetric, WeekPoint } from "@/components/instructor/AnalyticsCharts";
 
 export const dynamic = "force-dynamic";
 
@@ -303,7 +297,8 @@ export default async function StudentAnalyticsPage() {
         {courses.length === 0 ? (
           <p className="text-slate-500 dark:text-slate-400">Ainda não tens cursos para analisar.</p>
         ) : (
-          <AnalyticsCharts
+          <StudentAnalyticsCharts
+            courseHrefById={courseHrefById}
             totals={{
               enrollments: totalEnrollments,
               revenue: totalResaleRevenue,
@@ -324,12 +319,6 @@ export default async function StudentAnalyticsPage() {
             lessonMetrics={lessonMetrics}
             quizScores={quizScores}
             hourOfDay={hourOfDay}
-            courseHref={(courseId) => courseHrefById[courseId] ?? "/dashboard"}
-            lessonHref={(courseId, _moduleId, lessonId) =>
-              courseHrefById[courseId] ? `${courseHrefById[courseId]}/lessons/${lessonId}` : "/dashboard"
-            }
-            quizHref={(q) => (courseHrefById[q.courseId] ? `${courseHrefById[q.courseId]}/quiz/${q.id}` : "/dashboard")}
-            courseStatusHref="/dashboard"
           />
         )}
       </div>

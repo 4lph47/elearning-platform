@@ -254,7 +254,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
               <div
                 key={note.id}
                 onClick={() => openEditor(note)}
-                className={`group relative cursor-pointer rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-white/5 ${
+                className={`group relative cursor-pointer rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-white/5 max-w-full overflow-hidden ${
                   isFromCurrentLesson
                     ? "border-blue-200 dark:border-blue-800/50"
                     : "border-slate-200 dark:border-white/10"
@@ -266,14 +266,14 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
                   </div>
                 )}
                 
-                <div className="space-y-1.5 pr-14 min-w-0">
+                <div className="space-y-1.5 pr-14 min-w-0 max-w-full">
                   <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                     {note.title}
                   </h4>
                   <p className="truncate text-xs text-slate-600 dark:text-slate-300">
                     {note.content}
                   </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
                     {new Date(note.updatedAt).toLocaleDateString("pt-PT", {
                       day: "numeric",
                       month: "short",

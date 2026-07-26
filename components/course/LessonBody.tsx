@@ -206,8 +206,8 @@ export function LessonBody({
       </div>
 
       <div className="mt-4">
-        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-stretch lg:gap-0 lg:relative" : ""}>
-          <div ref={playerBoxRef} className="lg:shrink-0" style={sideBySide ? { width: `${leftWidth}%` } : undefined}>
+        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-start lg:gap-0 lg:relative" : ""}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:pr-2" : ""} style={sideBySide ? { width: `${leftWidth}%` } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -240,13 +240,13 @@ export function LessonBody({
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="hidden lg:block lg:w-3 lg:cursor-col-resize lg:transition-colors lg:relative"
-              style={{ touchAction: 'none' }}
+              className="hidden lg:block lg:w-3 lg:cursor-col-resize lg:transition-colors lg:relative lg:self-stretch"
+              style={{ touchAction: 'none', minHeight: '100vh' }}
               title="Arrastar para redimensionar"
             >
               {/* Barra só aparece durante o resize */}
               {isResizing && (
-                <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500" />
+                <div className="fixed top-0 bottom-0 w-1 bg-blue-500 z-50" style={{ left: `calc(${leftWidth}% + 0.375rem)` }} />
               )}
             </div>
           )}
@@ -256,7 +256,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden" : ""} style={sideBySide ? { width: `${100 - leftWidth}%` } : undefined}>
+          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pl-2" : ""} style={sideBySide ? { width: `${100 - leftWidth}%` } : undefined}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

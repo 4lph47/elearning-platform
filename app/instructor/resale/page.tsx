@@ -42,7 +42,7 @@ export default async function InstructorResalePage() {
     prisma.resaleBundle.findMany({
       where: { sellerId: userId },
       orderBy: { createdAt: "desc" },
-      include: { listings: { include: { course: { select: { title: true, thumbnailUrl: true } } } } },
+      include: { listings: { include: { course: { select: { title: true, thumbnailUrl: true, category: true } } } } },
     }),
   ]);
 
@@ -72,6 +72,7 @@ export default async function InstructorResalePage() {
     courseTitles: b.listings.map((l) => l.course.title),
     sellerId: userId,
     sellerName: session.user.name ?? "",
+    category: b.listings[0]?.course.category ?? "Outros",
   }));
   const canCreateBundle = ownListings.some((l) => l.active && !l.resaleBundleId);
 

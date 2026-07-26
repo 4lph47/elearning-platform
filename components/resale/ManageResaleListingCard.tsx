@@ -109,6 +109,20 @@ export function ManageResaleListingCard({
           Guardar
         </Button>
       </div>
+      {minCommission !== null && (
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+          <span>
+            Comissão do instrutor (fixa):{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">{minCommission.toFixed(2)}€</span>
+          </span>
+          <span>
+            A tua parte:{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              {Number(price) >= minCommission ? `${(Number(price) - minCommission).toFixed(2)}€` : "—"}
+            </span>
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"

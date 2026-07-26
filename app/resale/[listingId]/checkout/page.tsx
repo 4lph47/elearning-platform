@@ -59,7 +59,12 @@ export default async function ResaleListingCheckoutPage({ params }: { params: Pr
             <p className="truncate font-semibold text-slate-900 dark:text-white">{listing.course.title}</p>
             <p className="text-sm text-slate-500 dark:text-slate-400">Revenda de {listing.seller.name}</p>
           </div>
-          <p className="ml-auto shrink-0 text-lg font-bold text-slate-900 dark:text-white">{listing.price.toFixed(2)}€</p>
+          <div className="ml-auto flex shrink-0 flex-col items-end">
+            {listing.course.price > listing.price && (
+              <p className="text-xs text-slate-400 line-through dark:text-slate-500">{listing.course.price.toFixed(2)}€</p>
+            )}
+            <p className="text-lg font-bold text-slate-900 dark:text-white">{listing.price.toFixed(2)}€</p>
+          </div>
         </div>
 
         <div className="mt-6">

@@ -363,8 +363,15 @@ export default async function CourseDetailPage({
                         Revendido por <span className="font-medium text-slate-900 dark:text-white">{resaleListing.seller.name}</span>
                       </span>
                     </span>
-                    <span className="shrink-0 text-sm font-bold text-blue-600 dark:text-blue-400">
-                      {resaleListing.price.toFixed(2)}€
+                    <span className="flex shrink-0 flex-col items-end">
+                      {course.price > resaleListing.price && (
+                        <span className="text-xs text-slate-400 line-through dark:text-slate-500">
+                          {course.price.toFixed(2)}€
+                        </span>
+                      )}
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {resaleListing.price.toFixed(2)}€
+                      </span>
                     </span>
                   </FadeLink>
                 )}

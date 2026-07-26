@@ -281,10 +281,30 @@ export function InstructorProfileHero({
     icon: p.key === "websiteUrl" ? Globe : Link2,
   })).filter((s): s is { url: string; label: string; icon: typeof Globe } => Boolean(s.url?.trim()));
 
-  const pillClass =
-    "flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white";
-  const fieldClass =
-    "rounded-md border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-white placeholder-white/50 focus:border-white/50 focus:outline-none";
+  // Sem banner próprio, o gradiente (InstructorHeroGradient) desvanece até
+  // transparente lá em baixo — no tema claro isso revela o fundo branco da
+  // página por trás, e texto sempre branco fica ilegível nessa zona. Com
+  // banner, a sobreposição é sempre escura (preto/80→preto/10), então texto
+  // branco fixo continua correto — só o caso sem banner precisa de reagir ao
+  // tema.
+  const hasBanner = Boolean(bannerUrl);
+  const textMain = hasBanner ? "text-white" : "text-slate-900 dark:text-white";
+  const textSoft = hasBanner ? "text-white/70" : "text-slate-600 dark:text-white/70";
+  const textSofter = hasBanner ? "text-white/60" : "text-slate-500 dark:text-white/60";
+  const textBody = hasBanner ? "text-white/85" : "text-slate-700 dark:text-white/85";
+  const text80 = hasBanner ? "text-white/80" : "text-slate-700 dark:text-white/80";
+  const hoverTextMain = hasBanner ? "hover:text-white" : "hover:text-slate-900 dark:hover:text-white";
+  const chipBorder = hasBanner ? "border-white/25" : "border-slate-300 dark:border-white/25";
+  const chipBg = hasBanner ? "bg-white/10" : "bg-slate-900/5 dark:bg-white/10";
+  const chipHoverBg = hasBanner ? "hover:bg-white/10" : "hover:bg-slate-900/10 dark:hover:bg-white/10";
+  const pillHoverBg = hasBanner ? "hover:bg-white/20" : "hover:bg-slate-900/10 dark:hover:bg-white/20";
+  const placeholderClass = hasBanner ? "placeholder-white/50" : "placeholder-slate-500 dark:placeholder-white/50";
+  const focusBorderClass = hasBanner ? "focus:border-white/50" : "focus:border-slate-500 dark:focus:border-white/50";
+  const amberClass = hasBanner ? "text-amber-200" : "text-amber-600 dark:text-amber-200";
+  const starClass = hasBanner ? "fill-white text-white" : "fill-slate-900 text-slate-900 dark:fill-white dark:text-white";
+
+  const pillClass = `flex items-center gap-1.5 rounded-full border ${chipBorder} ${chipBg} px-3 py-1 text-xs font-medium ${textMain}`;
+  const fieldClass = `rounded-md border ${chipBorder} ${chipBg} px-3 py-1.5 text-sm ${textMain} ${placeholderClass} focus:outline-none ${focusBorderClass}`;
 
   const content = (
     <div className="relative">
@@ -346,11 +366,11 @@ export function InstructorProfileHero({
       )}
 
       {showInputs && (
-        <div className="mb-4 max-w-md rounded-lg border border-white/25 bg-white/10 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Banner do perfil</p>
+        <div className={`mb-4 max-w-md rounded-lg border ${chipBorder} ${chipBg} p-3`}>
+          <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${textSoft}`}>Banner do perfil</p>
           <div className="flex flex-wrap items-center gap-4">
             <div className="min-w-0 flex-1">
-              <p className="mb-1 flex items-center gap-1.5 text-xs text-white/70">
+              <p className={`mb-1 flex items-center gap-1.5 text-xs ${textSoft}`}>
                 <ImageIcon size={12} /> Imagem
               </p>
               <FileUploadInput
@@ -364,7 +384,7 @@ export function InstructorProfileHero({
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="mb-1 flex items-center gap-1.5 text-xs text-white/70">
+              <p className={`mb-1 flex items-center gap-1.5 text-xs ${textSoft}`}>
                 <Film size={12} /> Vídeo
               </p>
               <FileUploadInput
@@ -385,7 +405,7 @@ export function InstructorProfileHero({
                 setBannerUrl(null);
                 setBannerType(null);
               }}
-              className="mt-2 text-xs font-medium text-white/80 hover:text-white"
+              className={`mt-2 text-xs font-medium ${text80} ${hoverTextMain}`}
             >
               Remover banner
             </button>
@@ -415,11 +435,11 @@ export function InstructorProfileHero({
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Instrutor</p>
+        <p className={`text-xs font-semibold uppercase tracking-wide ${textSoft}`}>Instrutor</p>
         {isOwner && showInputs ? (
           <UsernameField className="" onSaved={setUsername} />
         ) : (
-          username && <span className="text-xs text-white/70">@{username}</span>
+          username && <span className={`text-xs ${textSoft}`}>@{username}</span>
         )}
       </div>
 
@@ -428,16 +448,16 @@ export function InstructorProfileHero({
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={100}
-          className="mt-1 w-full max-w-lg rounded-md border border-white/25 bg-white/10 px-3 py-1.5 text-3xl font-bold text-white placeholder-white/50 focus:border-white/50 focus:outline-none sm:text-5xl"
+          className={`mt-1 w-full max-w-lg rounded-md border ${chipBorder} ${chipBg} px-3 py-1.5 text-3xl font-bold ${textMain} ${placeholderClass} focus:outline-none ${focusBorderClass} sm:text-5xl`}
         />
       ) : (
-        <h1 ref={nameRef} className="mt-1 text-3xl font-bold text-white sm:text-5xl">{name}</h1>
+        <h1 ref={nameRef} className={`mt-1 text-3xl font-bold ${textMain} sm:text-5xl`}>{name}</h1>
       )}
 
       {showInputs ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5">
-            <Briefcase size={13} className="text-white/70" />
+            <Briefcase size={13} className={textSoft} />
             <input
               value={expertise}
               onChange={(e) => setExpertise(e.target.value)}
@@ -447,7 +467,7 @@ export function InstructorProfileHero({
             />
           </span>
           <span className="flex items-center gap-1.5">
-            <Clock size={13} className="text-white/70" />
+            <Clock size={13} className={textSoft} />
             <input
               type="number"
               min={0}
@@ -486,10 +506,10 @@ export function InstructorProfileHero({
             placeholder="Conta um pouco sobre a tua experiência e o que ensinas..."
             className={`${fieldClass} w-full`}
           />
-          <p className="mt-1 text-xs text-white/60">{bio.length}/600</p>
+          <p className={`mt-1 text-xs ${textSofter}`}>{bio.length}/600</p>
         </div>
       ) : (
-        bio && <p className="mt-3 max-w-2xl whitespace-pre-wrap text-white/85">{bio}</p>
+        bio && <p className={`mt-3 max-w-2xl whitespace-pre-wrap ${textBody}`}>{bio}</p>
       )}
 
       {showInputs ? (
@@ -505,16 +525,16 @@ export function InstructorProfileHero({
                   placeholder={p.placeholder}
                   className={`${fieldClass} min-w-0 flex-1`}
                 />
-                <span className="shrink-0 text-xs text-white/60">{p.label}</span>
+                <span className={`shrink-0 text-xs ${textSofter}`}>{p.label}</span>
                 <button
                   type="button"
                   onClick={() => removePlatform(p.key)}
                   aria-label={`Remover ${p.label}`}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${textSofter} ${chipHoverBg} ${hoverTextMain}`}
                 >
                   <X size={13} />
                 </button>
-                {domainError && <p className="text-xs text-amber-200">Não parece um link do {p.label}</p>}
+                {domainError && <p className={`text-xs ${amberClass}`}>Não parece um link do {p.label}</p>}
               </div>
             );
           })}
@@ -525,7 +545,7 @@ export function InstructorProfileHero({
                   key={p.key}
                   type="button"
                   onClick={() => addPlatform(p.key)}
-                  className="rounded-full border border-white/25 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
+                  className={`rounded-full border ${chipBorder} px-3 py-1 text-xs ${text80} ${chipHoverBg}`}
                 >
                   + {p.label}
                 </button>
@@ -537,7 +557,7 @@ export function InstructorProfileHero({
         socialLinks.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {socialLinks.map(({ url, label, icon: Icon }) => (
-              <a key={label} href={url} target="_blank" rel="noopener noreferrer" className={`${pillClass} hover:bg-white/20`}>
+              <a key={label} href={url} target="_blank" rel="noopener noreferrer" className={`${pillClass} ${pillHoverBg}`}>
                 <Icon size={13} /> {label}
               </a>
             ))}
@@ -565,7 +585,7 @@ export function InstructorProfileHero({
                 type="button"
                 onClick={() => removeCertification(i)}
                 aria-label="Remover certificação"
-                className="flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full text-white/60 hover:bg-white/10 hover:text-white sm:self-center"
+                className={`flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full ${textSofter} ${chipHoverBg} ${hoverTextMain} sm:self-center`}
               >
                 <X size={13} />
               </button>
@@ -574,7 +594,7 @@ export function InstructorProfileHero({
           <button
             type="button"
             onClick={addCertification}
-            className="flex items-center gap-1 text-xs font-medium text-white/80 hover:text-white"
+            className={`flex items-center gap-1 text-xs font-medium ${text80} ${hoverTextMain}`}
           >
             <Plus size={13} /> Adicionar certificação
           </button>
@@ -583,7 +603,7 @@ export function InstructorProfileHero({
         certifications.length > 0 && (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {certifications.map((cert, i) => (
-              <a key={i} href={cert.url} target="_blank" rel="noopener noreferrer" className={`${pillClass} hover:bg-white/20`}>
+              <a key={i} href={cert.url} target="_blank" rel="noopener noreferrer" className={`${pillClass} ${pillHoverBg}`}>
                 <Award size={13} /> {cert.name}
               </a>
             ))}
@@ -591,10 +611,10 @@ export function InstructorProfileHero({
         )
       )}
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/85">
+      <div className={`mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm ${textBody}`}>
         {stats.avgRating !== null && (
           <span className="flex items-center gap-1.5">
-            <Star size={15} className="fill-white text-white" /> {stats.avgRating.toFixed(1)} média
+            <Star size={15} className={starClass} /> {stats.avgRating.toFixed(1)} média
           </span>
         )}
         {stats.totalReviews > 0 && (

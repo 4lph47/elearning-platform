@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState, useEffect } from "react";
 import { Search, SlidersHorizontal, X, ShoppingBag } from "lucide-react";
-import { CourseTile } from "@/components/course/CourseTile";
+import { CourseRow } from "@/components/course/CourseRow";
+import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
 import type { CourseCardData } from "@/components/course/CourseCard";
 import { useInstructorAccent } from "@/components/instructor/InstructorAccentContext";
 import { ResaleListingTile, ResaleBundleTile } from "@/components/resale/ResaleTile";
@@ -119,6 +120,27 @@ export function InstructorCourseGrid({
       (b) => b.name.toLowerCase().includes(q) || b.courseTitles.some((t) => t.toLowerCase().includes(q))
     );
   }, [resaleBundles, query]);
+
+  // Sem ordenação explícita, separa por categoria (linhas horizontais, como
+  // no catálogo) — com ordenação ativa a progressão #1→último ficaria
+  // partida por várias linhas, por isso aí é uma lista só.
+  const coursesByCategory = useMemo(() => {
+    const map = new Map<string, CourseCardData[]>();
+    for (const c of filtered) {
+      if (!map.has(c.category)) map.set(c.category, []);
+      map.get(c.category)!.push(c);
+    }
+    return map;
+  }, [filtered]);
+
+  const resaleListingsByCategory = useMemo(() => {
+    const map = new Map<string, ResaleListingCardData[]>();
+    for (const l of filteredResaleListings) {
+      if (!map.has(l.courseCategory)) map.set(l.courseCategory, []);
+      map.get(l.courseCategory)!.push(l);
+    }
+    return map;
+  }, [filteredResaleListings]);
 
   // Mobile: tocar no campo traz o teclado, que come metade do ecrã — sem
   // aproximar a barra do header primeiro, ela ficava escondida atrás dele.
@@ -264,12 +286,24 @@ export function InstructorCourseGrid({
               {resaleListings.length === 0 && resaleBundles.length === 0 ? "Nada à venda de momento." : "Nenhum resultado encontrado."}
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredResaleBundles.map((bundle) => (
-                <ResaleBundleTile key={bundle.id} bundle={bundle} />
-              ))}
-              {filteredResaleListings.map((listing) => (
-                <ResaleListingTile key={listing.id} listing={listing} />
+            <div className="-mx-4 space-y-1 sm:-mx-8">
+              {filteredResaleBundles.length > 0 && (
+                <HorizontalScrollRow title="Bundles">
+                  {filteredResaleBundles.map((bundle) => (
+                    <div key={bundle.id} className="w-64 shrink-0 sm:w-72">
+                      <ResaleBundleTile bundle={bundle} />
+                    </div>
+                  ))}
+                </HorizontalScrollRow>
+              )}
+              {Array.from(resaleListingsByCategory.entries()).map(([cat, list]) => (
+                <HorizontalScrollRow key={cat} title={cat}>
+                  {list.map((listing) => (
+                    <div key={listing.id} className="w-64 shrink-0 sm:w-72">
+                      <ResaleListingTile listing={listing} />
+                    </div>
+                  ))}
+                </HorizontalScrollRow>
               ))}
             </div>
           )}
@@ -303,10 +337,14 @@ export function InstructorCourseGrid({
             <p className="text-slate-500 dark:text-slate-400">Ainda não tem cursos publicados.</p>
           ) : filtered.length === 0 ? (
             <p className="text-slate-500 dark:text-slate-400">Nenhum curso encontrado.</p>
+          ) : sort ? (
+            <div className="-mx-4 sm:-mx-8">
+              <CourseRow title="Resultados" courses={filtered} hidePriceBySlug={hidePriceBySlug} />
+            </div>
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((course) => (
-                <CourseTile key={course.slug} course={course} hidePrice={hidePriceBySlug[course.slug]} />
+            <div className="-mx-4 space-y-1 sm:-mx-8">
+              {Array.from(coursesByCategory.entries()).map(([cat, list]) => (
+                <CourseRow key={cat} title={cat} courses={list} hidePriceBySlug={hidePriceBySlug} />
               ))}
             </div>
           )}

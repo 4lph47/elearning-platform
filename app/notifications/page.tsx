@@ -86,7 +86,7 @@ export default function NotificationsPage() {
 
   function notificationHref(n: NotificationItem) {
     if (n.type === "MENTION" || n.type === "COMMENT_REPLY") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
-    return `/u/${session?.user.id}`;
+    return session?.user.role === "STUDENT" ? "/dashboard/resale" : "/instructor/resale";
   }
 
   function commissionText(n: NotificationItem) {

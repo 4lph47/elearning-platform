@@ -26,7 +26,8 @@ interface NotificationItem {
 const POLL_MS = 30000;
 
 // Menções apontam para a aula do comentário; mudanças de comissão de revenda
-// apontam para o próprio perfil de quem recebeu (onde ManageResaleSection vive).
+// apontam para a página de gestão de revendas do próprio (app/dashboard/resale
+// ou app/instructor/resale, conforme o papel de quem recebeu a notificação).
 export function NotificationBell() {
   const { data: session, status } = useSession();
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -75,7 +76,7 @@ export function NotificationBell() {
 
   function notificationHref(n: NotificationItem) {
     if (n.type === "MENTION" || n.type === "COMMENT_REPLY") return `/courses/${n.courseSlug}/lessons/${n.lessonId}`;
-    return `/u/${session?.user.id}`;
+    return session?.user.role === "STUDENT" ? "/dashboard/resale" : "/instructor/resale";
   }
 
   function commissionText(n: NotificationItem) {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Check, X } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
@@ -20,7 +20,9 @@ export interface OwnListing {
   active: boolean;
   courseId: string;
   courseTitle: string;
+  courseSlug: string;
   bundleId: string | null;
+  salesCount: number;
 }
 
 export interface OwnBundle {
@@ -44,6 +46,8 @@ export function ManageResaleSection({
 }) {
   const router = useRouter();
   const [priceByCourse, setPriceByCourse] = useState<Record<string, string>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -103,6 +107,36 @@ export function ManageResaleSection({
     router.refresh();
   }
 
+  function startEditPrice(listing: OwnListing) {
+    setError(null);
+    setEditingId(listing.id);
+    setEditPrice(String(listing.price));
+  }
+
+  function cancelEditPrice() {
+    setEditingId(null);
+    setEditPrice("");
+  }
+
+  async function saveEditPrice(listingId: string) {
+    setError(null);
+    const price = Number(editPrice);
+    if (!price || price <= 0) {
+      setError("Indica um preço válido");
+      return;
+    }
+    setBusy(true);
+    const res = await fetch(`/api/resale/listings/${listingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ price }),
+    });
+    setBusy(false);
+    if (!res.ok) return handleError(res);
+    setEditingId(null);
+    router.refresh();
+  }
+
   const unbundledActiveListings = listings.filter((l) => l.active && !l.bundleId);
 
   return (
@@ -142,11 +176,58 @@ export function ManageResaleSection({
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm dark:border-white/10"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm dark:border-white/10"
               >
-                <span className="min-w-0 flex-1 truncate">
-                  {listing.courseTitle} · {listing.price.toFixed(2)}€ {!listing.active && "(desativada)"}
+                <FadeLink
+                  href={`/courses/${listing.courseSlug}?resale=${listing.id}`}
+                  className="min-w-0 flex-1 truncate hover:underline"
+                >
+                  {listing.courseTitle}
+                </FadeLink>
+
+                {editingId === listing.id ? (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                      className="w-20 py-1"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => saveEditPrice(listing.id)}
+                      aria-label="Guardar preço"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditPrice}
+                      aria-label="Cancelar"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startEditPrice(listing)}
+                    className="flex shrink-0 items-center gap-1 text-xs font-medium text-slate-700 hover:underline dark:text-slate-200"
+                  >
+                    {listing.price.toFixed(2)}€ <Pencil size={11} />
+                  </button>
+                )}
+
+                <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                  {listing.salesCount} venda{listing.salesCount !== 1 ? "s" : ""}
+                  {!listing.active && " · desativada"}
                 </span>
+
                 <button
                   type="button"
                   disabled={busy}

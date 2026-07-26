@@ -23,4 +23,8 @@ export interface ResaleBundleCardData {
   courseTitles: string[];
   sellerId: string;
   sellerName: string;
+  // Opcional — só o marketplace usa isto para agrupar bundles por categoria
+  // (categoria do primeiro curso incluído, um bundle não tem categoria
+  // própria). Ausente nos outros sítios que constroem este tipo.
+  category?: string;
 }

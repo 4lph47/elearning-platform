@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { MarketplaceSearchBar } from "@/components/resale/MarketplaceSearchBar";
 import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
-import { ResaleListingTile } from "@/components/resale/ResaleTile";
-import { PeopleRow, BundlesRow, type PersonResult } from "@/components/course/SearchExtras";
+import { ResaleListingTile, ResaleBundleTile } from "@/components/resale/ResaleTile";
+import { PeopleRow, type PersonResult } from "@/components/course/SearchExtras";
 import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
 
 export const dynamic = "force-dynamic";
@@ -95,7 +95,7 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
           orderBy: { createdAt: "desc" },
           include: {
             seller: { select: { id: true, name: true } },
-            listings: { where: { active: true }, include: { course: { select: { title: true, thumbnailUrl: true } } } },
+            listings: { where: { active: true }, include: { course: { select: { title: true, thumbnailUrl: true, category: true } } } },
           },
         })
       : Promise.resolve([]),
@@ -130,6 +130,9 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
       courseTitles: bundle.listings.map((l) => l.course.title),
       sellerId: bundle.seller.id,
       sellerName: bundle.seller.name,
+      // Bundle não tem categoria própria — agrupa pela do primeiro curso
+      // incluído, só para conseguir juntar-se à secção certa por baixo.
+      category: bundle.listings[0]?.course.category ?? "Outros",
     }))
     .filter((b) => maxPriceNum === null || b.price <= maxPriceNum);
 
@@ -184,6 +187,13 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
 
   const isEmpty = listingCards.length === 0 && bundleCards.length === 0 && peopleResults.length === 0;
 
+  // Cursos e bundles à venda, separados por categoria (Fotografia, Negócios,
+  // ...) tal como o catálogo — cada secção junta os bundles dessa categoria
+  // (categoria do 1º curso incluído) com os cursos individuais dela.
+  const categoriesInOrder = Array.from(
+    new Set([...listingCards.map((l) => l.courseCategory), ...bundleCards.map((b) => b.category ?? "Outros")])
+  );
+
   return (
     <div className="mx-auto max-w-6xl py-3">
       {isEmpty ? (
@@ -191,16 +201,25 @@ async function MarketplaceResults({ searchParams }: { searchParams: MarketplaceS
       ) : (
         <>
           <PeopleRow people={peopleResults} />
-          {showBundlesSection && <BundlesRow resaleBundles={bundleCards} instructorBundles={[]} />}
-          {showListings && listingCards.length > 0 && (
-            <HorizontalScrollRow title="Cursos à venda">
-              {listingCards.map((listing) => (
-                <div key={listing.id} className="w-64 shrink-0 sm:w-72">
-                  <ResaleListingTile listing={listing} showSeller />
-                </div>
-              ))}
-            </HorizontalScrollRow>
-          )}
+          {categoriesInOrder.map((cat) => {
+            const catBundles = showBundlesSection ? bundleCards.filter((b) => (b.category ?? "Outros") === cat) : [];
+            const catListings = showListings ? listingCards.filter((l) => l.courseCategory === cat) : [];
+            if (catBundles.length === 0 && catListings.length === 0) return null;
+            return (
+              <HorizontalScrollRow key={cat} title={cat}>
+                {catBundles.map((b) => (
+                  <div key={b.id} className="w-64 shrink-0 sm:w-72">
+                    <ResaleBundleTile bundle={b} showSeller />
+                  </div>
+                ))}
+                {catListings.map((listing) => (
+                  <div key={listing.id} className="w-64 shrink-0 sm:w-72">
+                    <ResaleListingTile listing={listing} showSeller />
+                  </div>
+                ))}
+              </HorizontalScrollRow>
+            );
+          })}
         </>
       )}
     </div>

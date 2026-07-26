@@ -83,6 +83,7 @@ export function Sidebar() {
             children: [
               { href: "/dashboard", label: "Painel", icon: LayoutDashboard, exact: true },
               { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+              { href: "/dashboard/resale", label: "Gerir revendas", icon: ShoppingBag },
               { href: `/students/${session.user.id}`, label: "Perfil público", icon: UserCircle },
             ],
           } as GroupItem,
@@ -106,6 +107,7 @@ export function Sidebar() {
             children: [
               { href: "/instructor", label: "Painel", icon: LayoutDashboard, exact: true },
               { href: "/instructor/analytics", label: "Analytics", icon: BarChart3 },
+              { href: "/instructor/resale", label: "Gerir revendas", icon: ShoppingBag },
               {
                 href: `/instructors/${session?.user.id ?? ""}`,
                 label: "Perfil público",

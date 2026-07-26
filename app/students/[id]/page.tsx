@@ -3,12 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/socialPlatforms";
-import { BookOpen, Settings, BarChart3 } from "lucide-react";
+import { BookOpen, Settings, BarChart3, ShoppingBag } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { StudentCourseGrid } from "@/components/student/StudentCourseGrid";
 import { StudentProfileHero } from "@/components/student/StudentProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
-import { ManageResaleSection } from "@/components/resale/ManageResaleSection";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -136,47 +135,6 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
     sellerName: student.name,
   }));
 
-  // Painel de gestão só para o dono — cursos terminados com revenda ativada
-  // pelo instrutor e ainda sem listagem criada, mais as listagens/bundles já
-  // existentes para editar (ver components/resale/ManageResaleSection.tsx).
-  let manageResaleProps: {
-    eligibleCourses: { id: string; title: string; minCommission: number }[];
-    listings: { id: string; price: number; active: boolean; courseId: string; courseTitle: string; bundleId: string | null }[];
-    bundles: { id: string; name: string; listingIds: string[] }[];
-  } | null = null;
-  if (isOwner) {
-    const [completedCourses, ownListings] = await Promise.all([
-      prisma.enrollment.findMany({
-        where: { userId: student.id, completedAt: { not: null }, course: { resaleMinCommission: { not: null } } },
-        select: { course: { select: { id: true, title: true, resaleMinCommission: true } } },
-      }),
-      prisma.resaleListing.findMany({
-        where: { sellerId: student.id },
-        orderBy: { createdAt: "desc" },
-        include: { course: { select: { id: true, title: true } } },
-      }),
-    ]);
-    const listedCourseIds = new Set(ownListings.map((l) => l.courseId));
-    manageResaleProps = {
-      eligibleCourses: completedCourses
-        .filter((e) => !listedCourseIds.has(e.course.id))
-        .map((e) => ({ id: e.course.id, title: e.course.title, minCommission: e.course.resaleMinCommission! })),
-      listings: ownListings.map((l) => ({
-        id: l.id,
-        price: l.price,
-        active: l.active,
-        courseId: l.courseId,
-        courseTitle: l.course.title,
-        bundleId: l.resaleBundleId,
-      })),
-      bundles: resaleBundles.map((b, i) => ({
-        id: b.id,
-        name: b.name,
-        listingIds: student.resaleBundlesSold[i].listings.map((l) => l.id),
-      })),
-    };
-  }
-
   const belowContent = (
     <div className="mx-auto max-w-5xl px-4 pb-10 pt-4 sm:px-8">
       {isOwner && (
@@ -194,16 +152,17 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             <BarChart3 size={13} /> Analytics
           </FadeLink>
           <FadeLink
+            href="/dashboard/resale"
+            className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <ShoppingBag size={13} /> Gerir revendas
+          </FadeLink>
+          <FadeLink
             href="/account"
             className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
             <Settings size={13} /> Definições
           </FadeLink>
-        </div>
-      )}
-      {manageResaleProps && (
-        <div className="mb-4">
-          <ManageResaleSection {...manageResaleProps} />
         </div>
       )}
       <StudentCourseGrid

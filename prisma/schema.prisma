@@ -42,7 +42,6 @@ enum NotificationType {
   MENTION
   RESALE_COMMISSION_CHANGE
   COMMENT_REPLY
-  DIRECT_MESSAGE
 }
 
 model User {
@@ -114,9 +113,9 @@ model User {
   resaleListingsSold    ResaleListing[]  @relation("ResaleListingsSold")
   resaleBundlesSold     ResaleBundle[]   @relation("ResaleBundlesSold")
   resalePurchases       ResaleSale[]     @relation("ResalePurchases")
-  conversationsAsA      Conversation[]   @relation("ConversationUserA")
-  conversationsAsB      Conversation[]   @relation("ConversationUserB")
-  sentMessages          Message[]        @relation("MessageSender")
+  communitiesCreated    Community[]        @relation("CommunityCreator")
+  communityMemberships  CommunityMember[]  @relation("CommunityMemberships")
+  communityMessages     CommunityMessage[] @relation("CommunityMessageSender")
 }
 
 model Certification {
@@ -240,6 +239,7 @@ model Course {
   reviews        Review[]
   comments       CourseComment[]
   resaleListings ResaleListing[]
+  communityRequirements CommunityRequirement[]
 
   @@index([instructorId])
   @@index([published])
@@ -493,33 +493,102 @@ model Notification {
   @@index([recipientId, read])
 }
 
-// Chat 1:1 entre dois utilizadores quaisquer (não ligado a curso nenhum) —
-// userAId/userBId sempre em ordem canónica (menor id primeiro, ver
-// lib/conversations.ts) para a dupla nunca criar duas conversas trocadas.
-model Conversation {
-  id        String   @id @default(cuid())
-  userAId   String
-  userBId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userA    User      @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB    User      @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
-  messages Message[]
-
-  @@unique([userAId, userBId])
+// Comunidades (grupos, tipo WhatsApp+Reddit) — substitui o chat 1:1 que
+// existia antes. Qualquer aluno/instrutor pode criar uma, outros juntam-se
+// livremente (CommunityMember) sujeitos às regras do criador (Community.rules),
+// e dentro debatem por texto ou anexo (imagem/vídeo/áudio/ficheiro — ver
+// CommunityMessage). Hierarquia de moderação: OWNER (criador, único, nunca
+// removível) > ADMIN (promovido pelo OWNER, remove/silencia MEMBER comuns,
+// não mexe noutros ADMIN) > MEMBER.
+enum CommunityRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
-model Message {
-  id             String       @id @default(cuid())
-  content        String
-  createdAt      DateTime     @default(now())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  sender         User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+// Requisitos que o criador define para poder entrar — verificados no
+// servidor tanto ao mostrar o ecrã de aceitação (ver lib/communityAccess.ts
+// checkRequirements) como de novo no próprio POST /join (nunca confia só no
+// que o cliente já mostrou).
+enum CommunityRequirementType {
+  PURCHASED_COURSE
+  COMPLETED_COURSE
+  MIN_ENROLLMENTS
+  MIN_COMPLETED_COURSES
+  MIN_REVIEWS
+  INSTRUCTOR_ONLY
+  STUDENT_ONLY
+}
 
-  @@index([conversationId])
+model CommunityRequirement {
+  id          String                   @id @default(cuid())
+  communityId String
+  community   Community                @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  type        CommunityRequirementType
+  // Só usado por PURCHASED_COURSE/COMPLETED_COURSE.
+  courseId    String?
+  course      Course?                  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  // Só usado pelos requisitos de mínimo (MIN_*).
+  minValue    Int?
+  createdAt   DateTime                 @default(now())
+
+  @@index([communityId])
+}
+
+model Community {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  // Regras definidas pelo criador — mostradas no ecrã de aceitação antes de
+  // entrar (ver app/communities/[communityId]/page.tsx), a par dos
+  // requisitos, que são verificados a sério (rules é só texto lido, não tem
+  // verificação automática nenhuma).
+  rules       String?
+  // Avatar pequeno (tiles, cabeçalho do chat) — bannerUrl é a faixa grande no
+  // topo da página da comunidade, mesmo padrão do perfil público.
+  coverImageUrl String?
+  bannerUrl     String?
+  // Mesma taxonomia livre das categorias de curso (Fotografia, Negócios...)
+  // — é o que agrupa a listagem de comunidades em filas horizontais por
+  // categoria, tal como o catálogo agrupa cursos.
+  category      String
+  createdAt     DateTime @default(now())
+
+  createdById String
+  createdBy   User   @relation("CommunityCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  members      CommunityMember[]
+  messages     CommunityMessage[]
+  requirements CommunityRequirement[]
+}
+
+model CommunityMember {
+  id          String        @id @default(cuid())
+  communityId String
+  community   Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation("CommunityMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  role        CommunityRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+
+  @@unique([communityId, userId])
+  @@index([userId])
+}
+
+model CommunityMessage {
+  id          String    @id @default(cuid())
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User      @relation("CommunityMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  content        String?
+  attachmentUrl  String?
+  attachmentType String?
+  attachmentName String?
+
+  @@index([communityId, createdAt])
 }
 
 model LessonResource {

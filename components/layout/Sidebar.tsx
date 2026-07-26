@@ -15,6 +15,7 @@ import {
   BarChart3,
   UserCircle,
   Bell,
+  Users,
   ChevronDown,
   type LucideIcon,
 } from "lucide-react";
@@ -91,6 +92,9 @@ export function Sidebar() {
       : []),
     ...(status === "authenticated" && session.user.role !== "STUDENT"
       ? [{ href: "/dashboard", label: "A minha aprendizagem", icon: BookOpen } as LeafItem]
+      : []),
+    ...(status === "authenticated"
+      ? [{ href: "/communities", label: "Comunidades", icon: Users } as LeafItem]
       : []),
     ...(status === "authenticated"
       ? [{ href: "/notifications", label: "Notificações", icon: Bell } as LeafItem]

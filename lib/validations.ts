@@ -242,6 +242,47 @@ export const resaleBundleUpdateSchema = z.object({
 });
 export type ResaleBundleUpdateInput = z.infer<typeof resaleBundleUpdateSchema>;
 
+export const communityRequirementSchema = z.object({
+  type: z.enum([
+    "PURCHASED_COURSE",
+    "COMPLETED_COURSE",
+    "MIN_ENROLLMENTS",
+    "MIN_COMPLETED_COURSES",
+    "MIN_REVIEWS",
+    "INSTRUCTOR_ONLY",
+    "STUDENT_ONLY",
+  ]),
+  courseId: z.string().min(1).optional(),
+  minValue: z.number().int().min(1).optional(),
+});
+export type CommunityRequirementInput = z.infer<typeof communityRequirementSchema>;
+
+export const communitySchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
+  category: z.string().min(1, "Escolhe uma categoria"),
+  description: z.string().max(2000).optional().nullable(),
+  rules: z.string().max(4000).optional().nullable(),
+  coverImageUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().url().optional().nullable(),
+  requirements: z.array(communityRequirementSchema).max(20).optional(),
+});
+export type CommunityInput = z.infer<typeof communitySchema>;
+
+export const communityUpdateSchema = communitySchema.omit({ requirements: true }).partial();
+export type CommunityUpdateInput = z.infer<typeof communityUpdateSchema>;
+
+export const communityMessageSchema = z
+  .object({
+    content: z.string().trim().max(2000).optional(),
+    attachmentUrl: z.string().url().optional(),
+    attachmentType: z.string().max(50).optional(),
+    attachmentName: z.string().max(255).optional(),
+  })
+  .refine((data) => Boolean(data.content?.trim()) || Boolean(data.attachmentUrl), {
+    message: "Escreve uma mensagem ou anexa um ficheiro",
+  });
+export type CommunityMessageInput = z.infer<typeof communityMessageSchema>;
+
 export const progressSchema = z.object({
   lessonId: z.string().min(1),
   watchedSeconds: z.number().int().min(0).optional(),
@@ -254,6 +295,24 @@ const ALLOWED_MIME_BY_TYPE: Record<string, string[]> = {
   TRAILER: ["video/mp4", "video/webm"],
   DOCUMENT: ["application/pdf"],
   IMAGE: ["image/png", "image/jpeg", "image/webp"],
+  // Anexos de mensagens de comunidade — qualquer membro (aluno ou
+  // instrutor) pode enviar, ao contrário do resto desta tabela (só
+  // instrutor, ver app/api/upload/sign/route.ts). Conjunto mais largo de
+  // propósito (vídeo/áudio/imagem/documento/genérico, "tipo WhatsApp").
+  COMMUNITY_ATTACHMENT: [
+    "video/mp4",
+    "video/webm",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+    "application/zip",
+    "text/plain",
+  ],
 };
 
 const MAX_SIZE_BY_TYPE: Record<string, number> = {
@@ -272,6 +331,10 @@ const MAX_SIZE_BY_TYPE: Record<string, number> = {
   // fica com margem abaixo disso, não nos 20MB de antes (vídeo/documento já
   // não têm este problema, vão diretos para o Storage).
   IMAGE: 4 * 1024 * 1024,
+  // Anexos de comunidade vão diretos pro Supabase Storage (raw, sem worker
+  // nenhum a comprimir) — sujeitos ao mesmo teto real de 50MB por objeto do
+  // bucket que o TRAILER já respeita.
+  COMMUNITY_ATTACHMENT: 45 * 1024 * 1024,
 };
 
 // Todas as mensagens de erro de um ZodError, não só a primeira — usado pelo
@@ -288,7 +351,11 @@ export function zodIssueDetails(error: z.ZodError): { message: string; field?: s
   return error.issues.map((i) => ({ message: i.message, field: i.path.length > 0 ? String(i.path[0]) : undefined }));
 }
 
-export function validateUpload(kind: "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE", mimeType: string, sizeBytes: number) {
+export function validateUpload(
+  kind: "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE" | "COMMUNITY_ATTACHMENT",
+  mimeType: string,
+  sizeBytes: number
+) {
   const allowedMimes = ALLOWED_MIME_BY_TYPE[kind];
   if (!allowedMimes.includes(mimeType)) {
     return { ok: false as const, error: `Tipo de ficheiro não permitido para ${kind}: ${mimeType}` };

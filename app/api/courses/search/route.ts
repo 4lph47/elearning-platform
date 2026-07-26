@@ -36,7 +36,7 @@ export async function GET(request: Request) {
           { instructor: { username: { contains: raw, mode: "insensitive" } } },
         ],
       },
-      select: { slug: true, title: true, thumbnailUrl: true },
+      select: { id: true, slug: true, title: true, thumbnailUrl: true },
       orderBy: { ratingCount: "desc" },
       take: 6,
     }),

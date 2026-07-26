@@ -8,7 +8,8 @@ import { FadeLink } from "@/components/course/FadeLink";
 import { InstructorCourseGrid } from "@/components/instructor/InstructorCourseGrid";
 import { InstructorProfileHero } from "@/components/instructor/InstructorProfileHero";
 import { InstructorAccentProvider } from "@/components/instructor/InstructorAccentContext";
-import { ChatButton } from "@/components/chat/ChatButton";
+import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
+import { CommunityTile, type CommunityCardData } from "@/components/community/CommunityTile";
 import type { CourseCardData } from "@/components/course/CourseCard";
 
 export const dynamic = "force-dynamic";
@@ -156,6 +157,32 @@ export default async function InstructorProfilePage({ params }: { params: Promis
     sellerName: instructor.name,
   }));
 
+  // Dono vê todas as suas comunidades; visitante só as que tem em comum com
+  // este perfil (interseção das duas listas de membership).
+  const theirCommunityIds = (
+    await prisma.communityMember.findMany({ where: { userId: instructor.id }, select: { communityId: true } })
+  ).map((m) => m.communityId);
+  const myCommunityIds = session
+    ? (await prisma.communityMember.findMany({ where: { userId: session.user.id }, select: { communityId: true } })).map(
+        (m) => m.communityId
+      )
+    : [];
+  const relevantCommunityIds = isOwner ? theirCommunityIds : theirCommunityIds.filter((id) => myCommunityIds.includes(id));
+  const sharedCommunities =
+    relevantCommunityIds.length > 0
+      ? await prisma.community.findMany({
+          where: { id: { in: relevantCommunityIds } },
+          include: { _count: { select: { members: true } } },
+        })
+      : [];
+  const communityCards: CommunityCardData[] = sharedCommunities.map((c) => ({
+    id: c.id,
+    name: c.name,
+    category: c.category,
+    coverImageUrl: c.coverImageUrl,
+    memberCount: c._count.members,
+  }));
+
   const belowContent = (
     <div className="mx-auto max-w-5xl px-4 pb-10 pt-4 sm:px-8">
       {isOwner && (
@@ -180,6 +207,17 @@ export default async function InstructorProfilePage({ params }: { params: Promis
           </FadeLink>
         </div>
       )}
+      {communityCards.length > 0 && (
+        <div className="-mx-4 sm:-mx-8">
+          <HorizontalScrollRow title={isOwner ? "As tuas comunidades" : "Comunidades em comum"}>
+            {communityCards.map((c) => (
+              <div key={c.id} className="w-64 shrink-0 sm:w-72">
+                <CommunityTile community={c} />
+              </div>
+            ))}
+          </HorizontalScrollRow>
+        </div>
+      )}
       <InstructorCourseGrid
         instructorFirstName={instructorFirstName}
         courses={courseCards}
@@ -199,7 +237,6 @@ export default async function InstructorProfilePage({ params }: { params: Promis
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
-      <ChatButton otherUserId={instructor.id} otherUserName={instructor.name} otherUserImage={instructor.image} />
       <InstructorAccentProvider imageUrl={instructor.image}>
         <InstructorProfileHero
           isOwner={isOwner}

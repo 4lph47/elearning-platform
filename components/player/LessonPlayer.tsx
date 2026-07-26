@@ -28,7 +28,6 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useSidebarCollapsed } from "@/components/course/ChatOpenContext";
 import { getYouTubeId } from "@/lib/youtube";
 import { useAmbientColor } from "@/lib/useAmbientColor";
 import {
@@ -172,7 +171,6 @@ export function LessonPlayer({
   const thumbHlsRef = useRef<Hls | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const mobileMenuBtnRef = useRef<HTMLDivElement>(null);
-  const collapsed = useSidebarCollapsed();
   const youtubeId = contentUrl ? getYouTubeId(contentUrl) : null;
   const ambientColor = useAmbientColor(videoRef, Boolean(cinemaMode) && !youtubeId && type === "VIDEO");
 
@@ -1289,7 +1287,7 @@ export function LessonPlayer({
     };
   }, [usingHls, hlsMasterUrl, activeSrc]);
 
-  const widthClass = fluidWidth ? "" : `lg:max-w-none ${collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"}`;
+  const widthClass = fluidWidth ? "" : "";
   const playerClassName = `aspect-video w-full rounded-lg bg-black ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);

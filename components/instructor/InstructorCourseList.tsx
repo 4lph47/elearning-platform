@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, BookOpen, Users, Star, Wallet, ArrowRight, Package } from "lucide-react";
+import { Search, BookOpen, Users, Star, Wallet, Package } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 
 export interface InstructorCourseSummary {
@@ -102,32 +102,31 @@ export function InstructorCourseList({
         ) : (
           <div className="space-y-4">
             {filteredBundles.map((bundle) => (
-              <div
-                key={bundle.id}
-                className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
-              >
-                {bundle.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={bundle.thumbnailUrl} alt={bundle.name} className="h-16 w-24 shrink-0 rounded-md object-cover" />
-                ) : (
-                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-md bg-slate-100 text-lg font-bold text-slate-400 dark:bg-slate-900 dark:text-slate-600">
-                    {bundle.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+              <FadeLink key={bundle.id} href={`/instructor/bundles/${bundle.id}/edit`} className="block">
+                <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20">
+                  {bundle.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={bundle.thumbnailUrl} alt={bundle.name} className="h-16 w-24 shrink-0 rounded-md object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-md bg-slate-100 text-lg font-bold text-slate-400 dark:bg-slate-900 dark:text-slate-600">
+                      {bundle.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
 
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-medium text-slate-900 dark:text-white">{bundle.name}</h3>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <BookOpen size={12} /> {bundle.courseTitles.length} curso{bundle.courseTitles.length !== 1 ? "s" : ""}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Wallet size={12} /> {bundle.price.toFixed(2)}€
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate font-medium text-slate-900 dark:text-white">{bundle.name}</h3>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <BookOpen size={12} /> {bundle.courseTitles.length} curso{bundle.courseTitles.length !== 1 ? "s" : ""}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Wallet size={12} /> {bundle.price.toFixed(2)}€
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-xs text-slate-400 dark:text-slate-500">{bundle.courseTitles.join(", ")}</p>
                   </div>
-                  <p className="mt-1 truncate text-xs text-slate-400 dark:text-slate-500">{bundle.courseTitles.join(", ")}</p>
                 </div>
-              </div>
+              </FadeLink>
             ))}
           </div>
         )
@@ -182,8 +181,6 @@ export function InstructorCourseList({
                     </span>
                   </div>
                 </div>
-
-                <ArrowRight size={16} className="shrink-0 text-slate-500" />
               </div>
             </FadeLink>
           ))}

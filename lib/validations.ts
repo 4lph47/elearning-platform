@@ -252,6 +252,20 @@ export const resaleBundleUpdateSchema = z.object({
 });
 export type ResaleBundleUpdateInput = z.infer<typeof resaleBundleUpdateSchema>;
 
+// Bundle do próprio instrutor (agrupa cursos que ele dá para venda direta,
+// sem desconto/preço próprio) — distinto do ResaleBundle acima.
+export const bundleSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  courseIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos um curso"),
+});
+export type BundleInput = z.infer<typeof bundleSchema>;
+
+export const bundleUpdateSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").optional(),
+  courseIds: z.array(z.string().min(1)).min(1, "Escolhe pelo menos um curso").optional(),
+});
+export type BundleUpdateInput = z.infer<typeof bundleUpdateSchema>;
+
 export const communityRequirementSchema = z.object({
   type: z.enum([
     "PURCHASED_COURSE",

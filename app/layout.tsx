@@ -5,6 +5,7 @@ import { SessionProviderWrapper } from "@/components/layout/SessionProviderWrapp
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { ConditionalFooter } from "@/components/layout/ConditionalFooter";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SidebarMainShell } from "@/components/layout/SidebarMainShell";
@@ -54,7 +55,9 @@ export default function RootLayout({
                     <PageEntranceFade>
                       <SidebarMainShell>{children}</SidebarMainShell>
                     </PageEntranceFade>
-                    <Footer />
+                    <ConditionalFooter>
+                      <Footer />
+                    </ConditionalFooter>
                   </SidebarProvider>
                   <FadeOutScrim />
                   <CardTransitionOverlay />

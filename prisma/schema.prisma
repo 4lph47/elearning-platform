@@ -587,6 +587,13 @@ model CommunityMessage {
   attachmentUrl  String?
   attachmentType String?
   attachmentName String?
+  // Apagar não remove a linha (ia partir a resposta de quem citou esta
+  // mensagem) — só limpa o conteúdo e marca deleted, igual ao WhatsApp.
+  deleted        Boolean @default(false)
+
+  replyToId String?
+  replyTo   CommunityMessage?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   CommunityMessage[] @relation("MessageReplies")
 
   @@index([communityId, createdAt])
 }

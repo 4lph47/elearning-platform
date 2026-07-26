@@ -2,12 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Send, Paperclip, Users, X, Loader2, ShieldCheck, ShieldOff, UserMinus } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, ChevronRight, Reply, Trash2, X, Loader2 } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { useFadeNav } from "@/components/course/FadeNavContext";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type CommunityRole = "OWNER" | "ADMIN" | "MEMBER";
+
+interface ReplySnippet {
+  id: string;
+  content: string | null;
+  attachmentName: string | null;
+  deleted: boolean;
+  sender: { id: string; name: string };
+}
 
 interface Message {
   id: string;
@@ -15,18 +23,23 @@ interface Message {
   attachmentUrl: string | null;
   attachmentType: string | null;
   attachmentName: string | null;
+  deleted: boolean;
   createdAt: string;
   senderId: string;
   sender: { id: string; name: string; image: string | null };
-}
-
-interface Member {
-  userId: string;
-  role: CommunityRole;
-  user: { id: string; name: string; image: string | null; role: "STUDENT" | "INSTRUCTOR" | "ADMIN" };
+  replyTo: ReplySnippet | null;
 }
 
 const POLL_MS = 4000;
+
+function timeLabel(iso: string) {
+  return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+}
+
+function snippetOf(m: { content: string | null; attachmentName: string | null; deleted: boolean }) {
+  if (m.deleted) return "Mensagem apagada";
+  return m.content || m.attachmentName || "Anexo";
+}
 
 function AttachmentPreview({ url, type, name }: { url: string; type: string | null; name: string | null }) {
   if (type?.startsWith("image/")) {
@@ -56,144 +69,6 @@ function AttachmentPreview({ url, type, name }: { url: string; type: string | nu
   );
 }
 
-function MembersPanel({
-  communityId,
-  currentUserId,
-  currentUserRole,
-  onClose,
-}: {
-  communityId: string;
-  currentUserId: string;
-  currentUserRole: CommunityRole;
-  onClose: () => void;
-}) {
-  const [members, setMembers] = useState<Member[] | null>(null);
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    const res = await fetch(`/api/communities/${communityId}/members`);
-    if (res.ok) {
-      const data = await res.json();
-      setMembers(data.members);
-    }
-  }
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [communityId]);
-
-  const canActOn = (m: Member) => {
-    if (m.role === "OWNER" || m.userId === currentUserId) return false;
-    if (m.role === "ADMIN" && currentUserRole !== "OWNER") return false;
-    return currentUserRole === "OWNER" || currentUserRole === "ADMIN";
-  };
-
-  async function setRole(userId: string, role: "ADMIN" | "MEMBER") {
-    setError(null);
-    setBusyUserId(userId);
-    const res = await fetch(`/api/communities/${communityId}/members/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
-    });
-    setBusyUserId(null);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Erro ao alterar membro");
-      return;
-    }
-    load();
-  }
-
-  async function kick(userId: string) {
-    setError(null);
-    setBusyUserId(userId);
-    const res = await fetch(`/api/communities/${communityId}/members/${userId}`, { method: "DELETE" });
-    setBusyUserId(null);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Erro ao remover membro");
-      return;
-    }
-    load();
-  }
-
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
-      <div
-        className="flex h-full w-80 max-w-[85vw] flex-col bg-white shadow-2xl dark:bg-neutral-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-white/10">
-          <p className="font-semibold text-slate-900 dark:text-white">Membros</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"
-          >
-            <X size={16} />
-          </button>
-        </div>
-        {error && <p className="px-4 pt-2 text-xs text-red-500 dark:text-red-400">{error}</p>}
-        <div className="flex-1 space-y-1 overflow-y-auto p-3">
-          {!members ? (
-            <div className="flex justify-center py-6">
-              <Loader2 size={18} className="animate-spin text-slate-400" />
-            </div>
-          ) : (
-            members.map((m) => (
-              <div key={m.userId} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5">
-                {m.user.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.user.image} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                    {m.user.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-slate-900 dark:text-white">{m.user.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {m.role === "OWNER" ? "Criador" : m.role === "ADMIN" ? "Administrador" : "Membro"}
-                  </p>
-                </div>
-                {canActOn(m) && (
-                  <div className="flex shrink-0 items-center gap-1">
-                    {busyUserId === m.userId ? (
-                      <Loader2 size={14} className="animate-spin text-slate-400" />
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setRole(m.userId, m.role === "ADMIN" ? "MEMBER" : "ADMIN")}
-                          aria-label={m.role === "ADMIN" ? "Despromover" : "Promover a admin"}
-                          className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
-                        >
-                          {m.role === "ADMIN" ? <ShieldOff size={14} /> : <ShieldCheck size={14} />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => kick(m.userId)}
-                          aria-label="Remover"
-                          className="flex h-7 w-7 items-center justify-center rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-                        >
-                          <UserMinus size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function CommunityChat({
   communityId,
   communityName,
@@ -218,10 +93,12 @@ export function CommunityChat({
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [membersOpen, setMembersOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   async function fetchMessages() {
     const res = await fetch(`/api/communities/${communityId}/messages`);
@@ -244,16 +121,24 @@ export function CommunityChat({
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages]);
 
+  function scrollToMessage(id: string) {
+    messageRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    setTimeout(() => setHighlightId((h) => (h === id ? null : h)), 1500);
+  }
+
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const content = text.trim();
     if (!content || sending) return;
     setSending(true);
     setText("");
+    const replyToId = replyingTo?.id;
+    setReplyingTo(null);
     const res = await fetch(`/api/communities/${communityId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, replyToId }),
     });
     setSending(false);
     if (res.ok) {
@@ -268,6 +153,7 @@ export function CommunityChat({
     if (!file) return;
     setError(null);
     setUploading(true);
+    const replyToId = replyingTo?.id;
     try {
       const signRes = await fetch("/api/upload/community-sign", {
         method: "POST",
@@ -285,7 +171,7 @@ export function CommunityChat({
       const res = await fetch(`/api/communities/${communityId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attachmentUrl: signData.publicUrl, attachmentType: file.type, attachmentName: file.name }),
+        body: JSON.stringify({ attachmentUrl: signData.publicUrl, attachmentType: file.type, attachmentName: file.name, replyToId }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -293,10 +179,19 @@ export function CommunityChat({
       }
       const message = await res.json();
       setMessages((prev) => [...prev, message]);
+      setReplyingTo(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar ficheiro");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function deleteMessage(id: string) {
+    const res = await fetch(`/api/communities/${communityId}/messages/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      const updated = await res.json();
+      setMessages((prev) => prev.map((m) => (m.id === id ? updated : m)));
     }
   }
 
@@ -307,9 +202,11 @@ export function CommunityChat({
     if (res.ok) fadeNavigate("/communities");
   }
 
+  const canDelete = (m: Message) => m.senderId === currentUserId || currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-white dark:bg-black">
-      <div className="flex items-center gap-3 border-b border-slate-200 px-3 py-2.5 dark:border-white/10">
+      <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5 dark:border-white/10">
         <FadeLink
           href="/communities"
           aria-label="Voltar às comunidades"
@@ -317,28 +214,33 @@ export function CommunityChat({
         >
           <ArrowLeft size={18} />
         </FadeLink>
-        {coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverImageUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
-        ) : (
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-            {communityName.charAt(0).toUpperCase()}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{communityName}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {memberCount} membro{memberCount !== 1 ? "s" : ""}
-          </p>
-        </div>
+
+        {/* Clicar na parte de cima (avatar+nome) abre a página de info da
+            comunidade — banner, descrição, regras e a lista de membros logo
+            abaixo do título, tal como o ecrã de info de um grupo no
+            WhatsApp/Telegram. */}
         <button
           type="button"
-          onClick={() => setMembersOpen(true)}
-          aria-label="Ver membros"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+          onClick={() => fadeNavigate(`/communities/${communityId}/info`)}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1 text-left hover:bg-slate-50 dark:hover:bg-white/5"
         >
-          <Users size={17} />
+          {coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={coverImageUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+              {communityName.charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{communityName}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {memberCount} membro{memberCount !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <ChevronRight size={16} className="shrink-0 text-slate-400" />
         </button>
+
         {currentUserRole !== "OWNER" && (
           <button
             type="button"
@@ -370,22 +272,87 @@ export function CommunityChat({
         ) : (
           messages.map((m) => {
             const isMine = m.senderId === currentUserId;
+            const highlighted = highlightId === m.id;
             return (
-              <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
+              <div
+                key={m.id}
+                ref={(el) => {
+                  messageRefs.current[m.id] = el;
+                }}
+                className={`group flex items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}
+              >
+                {/* Ações (responder/apagar) — ficam do lado de fora da bolha,
+                    só visíveis ao passar o rato (mesmo padrão hover-actions do
+                    WhatsApp Web), ordem invertida quando é a tua mensagem para
+                    ficarem sempre coladas à bolha. */}
+                <div
+                  className={`flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 ${
+                    isMine ? "order-2" : "order-1"
+                  }`}
+                >
+                  {!m.deleted && (
+                    <button
+                      type="button"
+                      onClick={() => setReplyingTo(m)}
+                      aria-label="Responder"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
+                    >
+                      <Reply size={13} />
+                    </button>
+                  )}
+                  {!m.deleted && canDelete(m) && (
+                    <button
+                      type="button"
+                      onClick={() => deleteMessage(m.id)}
+                      aria-label="Apagar"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+
+                <div className={`order-1 max-w-[80%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
                   {!isMine && (
                     <p className="mb-0.5 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">{m.sender.name}</p>
                   )}
                   <div
-                    className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-sm ${
-                      isMine ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-900 dark:bg-white/10 dark:text-white"
+                    className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-1.5 text-sm transition-shadow ${
+                      m.deleted
+                        ? "italic text-slate-400 dark:text-slate-500"
+                        : isMine
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-900 dark:bg-white/10 dark:text-white"
+                    } ${m.deleted ? (isMine ? "bg-blue-600/40" : "bg-slate-100 dark:bg-white/5") : ""} ${
+                      highlighted ? "ring-2 ring-amber-400" : ""
                     }`}
                   >
-                    {m.content}
-                    {m.attachmentUrl && (
-                      <AttachmentPreview url={m.attachmentUrl} type={m.attachmentType} name={m.attachmentName} />
+                    {m.replyTo && (
+                      <button
+                        type="button"
+                        onClick={() => scrollToMessage(m.replyTo!.id)}
+                        className={`mb-1 block w-full rounded border-l-2 px-2 py-1 text-left text-xs ${
+                          isMine
+                            ? "border-white/50 bg-black/10 text-white/90"
+                            : "border-slate-400 bg-black/5 text-slate-600 dark:border-white/30 dark:bg-white/10 dark:text-slate-300"
+                        }`}
+                      >
+                        <p className="truncate font-medium">{m.replyTo.sender.name}</p>
+                        <p className="truncate opacity-80">{snippetOf(m.replyTo)}</p>
+                      </button>
+                    )}
+                    {m.deleted ? (
+                      "Mensagem apagada"
+                    ) : (
+                      <>
+                        {m.content}
+                        {m.attachmentUrl && (
+                          <AttachmentPreview url={m.attachmentUrl} type={m.attachmentType} name={m.attachmentName} />
+                        )}
+                      </>
                     )}
                   </div>
+                  <span className="mt-0.5 px-1 text-[10px] text-slate-400 dark:text-slate-500">{timeLabel(m.createdAt)}</span>
                 </div>
               </div>
             );
@@ -394,6 +361,23 @@ export function CommunityChat({
       </div>
 
       {error && <p className="px-3 pb-1 text-xs text-red-500 dark:text-red-400">{error}</p>}
+
+      {replyingTo && (
+        <div className="flex items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-white/10 dark:bg-white/5">
+          <div className="min-w-0 border-l-2 border-blue-500 pl-2">
+            <p className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">A responder a {replyingTo.sender.name}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{snippetOf(replyingTo)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyingTo(null)}
+            aria-label="Cancelar resposta"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <form onSubmit={send} className="flex items-center gap-2 border-t border-slate-200 p-2 dark:border-white/10">
         <input ref={fileInputRef} type="file" onChange={handleFile} className="hidden" />
@@ -421,15 +405,6 @@ export function CommunityChat({
           <Send size={15} />
         </button>
       </form>
-
-      {membersOpen && (
-        <MembersPanel
-          communityId={communityId}
-          currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
-          onClose={() => setMembersOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -1,0 +1,18 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+
+// A página de comunidade é ecrã inteiro (chat estilo WhatsApp/Telegram, ou o
+// ecrã de info) — o rodapé normal do site não faz sentido aí. Não afeta
+// /communities (a listagem) nem /communities/new (o form de criação).
+function hidesFooter(pathname: string | null) {
+  if (!pathname) return false;
+  return /^\/communities\/(?!new(\/|$))[^/]+/.test(pathname);
+}
+
+export function ConditionalFooter({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  if (hidesFooter(pathname)) return null;
+  return <>{children}</>;
+}

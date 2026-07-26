@@ -19,7 +19,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ com
     where: { communityId },
     orderBy: { createdAt: "asc" },
     take: TAKE,
-    include: { sender: { select: { id: true, name: true, image: true } } },
+    include: {
+      sender: { select: { id: true, name: true, image: true } },
+      replyTo: { include: { sender: { select: { id: true, name: true } } } },
+    },
   });
 
   return NextResponse.json({ messages });
@@ -38,9 +41,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
+  const { replyToId, ...data } = parsed.data;
+  if (replyToId) {
+    const original = await prisma.communityMessage.findUnique({ where: { id: replyToId }, select: { communityId: true } });
+    if (!original || original.communityId !== communityId) {
+      return NextResponse.json({ error: "Mensagem original inválida" }, { status: 400 });
+    }
+  }
+
   const message = await prisma.communityMessage.create({
-    data: { communityId, senderId: session.user.id, ...parsed.data },
-    include: { sender: { select: { id: true, name: true, image: true } } },
+    data: { communityId, senderId: session.user.id, replyToId, ...data },
+    include: {
+      sender: { select: { id: true, name: true, image: true } },
+      replyTo: { include: { sender: { select: { id: true, name: true } } } },
+    },
   });
 
   return NextResponse.json(message, { status: 201 });

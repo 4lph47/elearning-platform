@@ -277,6 +277,7 @@ export const communityMessageSchema = z
     attachmentUrl: z.string().url().optional(),
     attachmentType: z.string().max(50).optional(),
     attachmentName: z.string().max(255).optional(),
+    replyToId: z.string().min(1).optional(),
   })
   .refine((data) => Boolean(data.content?.trim()) || Boolean(data.attachmentUrl), {
     message: "Escreve uma mensagem ou anexa um ficheiro",

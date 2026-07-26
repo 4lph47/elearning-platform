@@ -73,7 +73,6 @@ export function LessonBody({
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
-  const belowVideoWidth = `lg:max-w-none ${collapsed ? "lg:w-[1080px]" : "lg:w-[800px]"}`;
 
   const playerBoxRef = useRef<HTMLDivElement>(null);
   const engagementLikeRef = useRef<(() => void) | null>(null);
@@ -206,8 +205,8 @@ export function LessonBody({
       </div>
 
       <div className="mt-4">
-        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-start lg:gap-0 lg:relative" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:pr-2" : ""} style={sideBySide ? { width: `${leftWidth}%` } : undefined}>
+        <div ref={containerRef} className={sideBySide ? "lg:flex lg:items-stretch lg:gap-0 lg:relative" : ""}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:shrink-0" : ""} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -234,19 +233,30 @@ export function LessonBody({
                   : undefined
               }
             />
+            
+            {/* Título e engagement abaixo do player, apenas em desktop */}
+            <div className="mt-4 hidden lg:block">
+              {title}
+              {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
+            </div>
+            
+            {/* Comentários também no painel esquerdo em desktop */}
+            <div className="hidden lg:block">{comments}</div>
           </div>
 
           {/* Resize Handle - apenas em desktop quando sideBySide */}
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="hidden lg:block lg:w-3 lg:cursor-col-resize lg:transition-colors lg:relative lg:self-stretch"
-              style={{ touchAction: 'none', minHeight: '100vh' }}
+              className="hidden lg:flex lg:w-3 lg:cursor-col-resize lg:transition-colors lg:relative lg:items-stretch lg:justify-center hover:lg:bg-slate-100 dark:hover:lg:bg-white/5"
+              style={{ touchAction: 'none' }}
               title="Arrastar para redimensionar"
             >
-              {/* Barra só aparece durante o resize */}
+              {/* Linha vertical sutil no centro */}
+              <div className="w-px bg-slate-200 dark:bg-white/10" />
+              {/* Barra azul aparece durante o resize */}
               {isResizing && (
-                <div className="fixed top-0 bottom-0 w-1 bg-blue-500 z-50" style={{ left: `calc(${leftWidth}% + 0.375rem)` }} />
+                <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500" />
               )}
             </div>
           )}
@@ -256,7 +266,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden lg:pl-2" : ""} style={sideBySide ? { width: `${100 - leftWidth}%` } : undefined}>
+          <div className={sideBySide ? "mt-6 lg:mt-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden" : ""} style={sideBySide ? { width: `${100 - leftWidth}%`, paddingLeft: '0.5rem' } : undefined}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
@@ -312,15 +322,6 @@ export function LessonBody({
             <PreviewContent resource={previewResource} />
           </div>
         )}
-
-        <div className={belowVideoWidth}>
-          <div className="mt-4 hidden lg:block">
-            {title}
-            {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
-          </div>
-
-          <div className="hidden lg:block">{comments}</div>
-        </div>
       </div>
 
       {previewResource && maximized && (

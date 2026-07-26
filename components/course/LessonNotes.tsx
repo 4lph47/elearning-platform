@@ -254,7 +254,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
               <div
                 key={note.id}
                 onClick={() => openEditor(note)}
-                className={`group relative cursor-pointer rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-white/5 max-w-full overflow-hidden ${
+                className={`group relative cursor-pointer rounded-xl border bg-white p-3 pr-16 transition-all hover:shadow-md dark:bg-white/5 ${
                   isFromCurrentLesson
                     ? "border-blue-200 dark:border-blue-800/50"
                     : "border-slate-200 dark:border-white/10"
@@ -266,7 +266,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
                   </div>
                 )}
                 
-                <div className="space-y-1.5 pr-14 min-w-0 max-w-full">
+                <div className="space-y-1.5">
                   <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                     {note.title}
                   </h4>

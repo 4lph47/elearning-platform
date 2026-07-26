@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
-import { FadeLink } from "@/components/course/FadeLink";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { HorizontalScrollRow } from "@/components/course/HorizontalScrollRow";
 import { ResaleListingTile, ResaleBundleTile } from "@/components/resale/ResaleTile";
 import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
@@ -80,28 +79,6 @@ export function ManageResaleSection({
 
   return (
     <div className="space-y-6">
-      {/* Sempre visíveis, mesmo sem nenhuma listagem/bundle ainda — sem
-          isto, não havia forma nenhuma de começar a vender quando a lista
-          estava vazia. */}
-      <div className="flex flex-wrap gap-2">
-        {canCreateListing && (
-          <FadeLink
-            href="/resale/listings/new"
-            className="flex w-fit items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
-          >
-            <Plus size={14} /> Criar revenda
-          </FadeLink>
-        )}
-        {canCreateBundle && (
-          <FadeLink
-            href="/resale/bundles/new"
-            className="flex w-fit items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
-          >
-            <Plus size={14} /> Criar bundle
-          </FadeLink>
-        )}
-      </div>
-
       {(bundles.length > 0 || listings.length > 0) && (
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">

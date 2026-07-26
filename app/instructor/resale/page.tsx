@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FadeLink } from "@/components/course/FadeLink";
 import { ManageResaleSection } from "@/components/resale/ManageResaleSection";
+import { CreateResaleMenu } from "@/components/resale/CreateResaleMenu";
 import type { ResaleListingCardData, ResaleBundleCardData } from "@/components/resale/types";
 
 export const dynamic = "force-dynamic";
@@ -84,14 +85,17 @@ export default async function InstructorResalePage() {
               Cursos que podes revender, as tuas listagens e bundles.
             </p>
           </div>
-          {listings.length === 0 && bundles.length === 0 && (
-            <FadeLink
-              href="/instructor"
-              className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            >
-              ← Voltar à área de instrutor
-            </FadeLink>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {listings.length === 0 && bundles.length === 0 && (
+              <FadeLink
+                href="/instructor"
+                className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              >
+                ← Voltar à área de instrutor
+              </FadeLink>
+            )}
+            <CreateResaleMenu canCreateListing={canCreateListing} canCreateBundle={canCreateBundle} />
+          </div>
         </div>
 
         <ManageResaleSection

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, Plus, Edit, Trash2, X, Save, BookOpen, Filter } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { useEffect, useState, useRef } from "react";
+import { Search, Plus, Edit, Trash2, X, Save, Filter } from "lucide-react";
 
 interface Note {
   id: string;
@@ -31,6 +30,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
   const [noteContent, setNoteContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadNotes();
@@ -118,6 +118,15 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
     setError(null);
   }
 
+  function handleSearchFocus() {
+    // Scroll suave para o searchbar quando focado (mobile)
+    if (searchBarRef.current && window.innerWidth < 768) {
+      setTimeout(() => {
+        searchBarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }
+
   const filteredNotes = notes.filter((n) => {
     const matchesSearch =
       n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -129,53 +138,56 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
     return matchesSearch && matchesFilter;
   });
 
-  const currentLessonNotes = notes.filter((n) => n.lessonId === currentLessonId);
-
+  // Modo de edição/criação em tela cheia no mobile
   if (isCreating || editingNote) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+      <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white dark:bg-neutral-900 md:relative md:z-auto md:overflow-visible md:bg-transparent">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white md:text-sm">
             {editingNote ? "Editar nota" : "Nova nota"}
           </h3>
           <button
             onClick={closeEditor}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200 md:h-auto md:w-auto md:rounded-md"
             aria-label="Fechar"
           >
-            <X size={18} />
+            <X size={20} className="md:h-4 md:w-4" />
           </button>
         </div>
 
-        {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+        {error && <p className="mx-4 mt-2 text-sm text-red-500 dark:text-red-400 md:mx-0">{error}</p>}
 
-        <div className="space-y-3">
+        <div className="flex-1 space-y-3 p-4 md:p-0 md:pt-3">
           <input
             type="text"
             placeholder="Título (opcional - se vazio, será gerado automaticamente)"
             value={noteTitle}
             onChange={(e) => setNoteTitle(e.target.value)}
             maxLength={200}
-            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
           />
 
           <textarea
             placeholder="Escreve aqui as tuas notas..."
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
-            rows={12}
+            rows={window.innerWidth < 768 ? 15 : 12}
             maxLength={50000}
-            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
           />
 
           <div className="flex items-center gap-2">
-            <Button onClick={saveNote} disabled={saving}>
-              <Save size={14} className="mr-1.5" />
+            <button
+              onClick={saveNote}
+              disabled={saving}
+              className="flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Save size={16} />
               {saving ? "A guardar..." : "Guardar"}
-            </Button>
+            </button>
             <button
               onClick={closeEditor}
-              className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+              className="rounded-full px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
             >
               Cancelar
             </button>
@@ -187,47 +199,42 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      {/* Botão de adicionar no topo */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => openEditor()}
+          className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <Plus size={16} />
+          Adicionar
+        </button>
+      </div>
+
+      {/* Searchbar e filtro */}
+      <div ref={searchBarRef} className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <input
             type="text"
             placeholder="Procurar notas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+            onFocus={handleSearchFocus}
+            className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-white/10"
           />
-          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setFilterCurrentLesson(!filterCurrentLesson)}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-              filterCurrentLesson
-                ? "bg-blue-600 text-white"
-                : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-            }`}
-          >
-            <Filter size={14} />
-            Só desta aula
-          </button>
-          <button
-            onClick={() => openEditor()}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 sm:text-sm"
-          >
-            <Plus size={14} />
-            Adicionar
-          </button>
-        </div>
+        <button
+          onClick={() => setFilterCurrentLesson(!filterCurrentLesson)}
+          className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-medium transition-colors ${
+            filterCurrentLesson
+              ? "bg-blue-600 text-white"
+              : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+          }`}
+        >
+          <Filter size={16} />
+          Desta aula
+        </button>
       </div>
-
-      {!filterCurrentLesson && currentLessonNotes.length > 0 && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900/50 dark:bg-blue-900/20">
-          <p className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-300">
-            <BookOpen size={13} />
-            {currentLessonNotes.length} nota{currentLessonNotes.length !== 1 ? "s" : ""} desta aula
-          </p>
-        </div>
-      )}
 
       {loading ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">A carregar notas...</p>
@@ -240,68 +247,60 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
               : "Ainda não tens notas para este curso."}
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredNotes.map((note) => {
             const isFromCurrentLesson = note.lessonId === currentLessonId;
             return (
               <div
                 key={note.id}
-                className={`group relative flex items-start gap-4 rounded-lg border bg-white p-4 hover:shadow-md dark:bg-white/5 ${
+                onClick={() => openEditor(note)}
+                className={`group relative cursor-pointer rounded-xl border bg-white p-3 transition-all hover:shadow-md dark:bg-white/5 ${
                   isFromCurrentLesson
-                    ? "border-blue-300 ring-2 ring-blue-100 dark:border-blue-700 dark:ring-blue-900/50"
+                    ? "border-blue-200 dark:border-blue-800/50"
                     : "border-slate-200 dark:border-white/10"
                 }`}
               >
                 {isFromCurrentLesson && (
-                  <div className="absolute right-3 top-3 rounded bg-blue-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
-                    Aula atual
+                  <div className="absolute right-2 top-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                    Atual
                   </div>
                 )}
                 
-                {/* Coluna esquerda - Ícone */}
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10">
-                  <BookOpen size={24} className="text-slate-600 dark:text-slate-300" />
-                </div>
-
-                {/* Coluna central - Conteúdo */}
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div>
-                    <h4 className="line-clamp-1 pr-20 text-base font-semibold text-slate-900 dark:text-white">
-                      {note.title}
-                    </h4>
-                    <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="truncate">
-                        {note.lesson.module.title} → {note.lesson.title}
-                      </span>
-                    </p>
-                  </div>
-                  <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">{note.content}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    Editada {new Date(note.updatedAt).toLocaleDateString("pt-PT", {
+                <div className="space-y-1.5 pr-14">
+                  <h4 className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">
+                    {note.title}
+                  </h4>
+                  <p className="line-clamp-2 text-xs text-slate-600 dark:text-slate-300">{note.content}</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {new Date(note.updatedAt).toLocaleDateString("pt-PT", {
                       day: "numeric",
                       month: "short",
-                      year: "numeric",
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
                   </p>
                 </div>
 
-                {/* Coluna direita - Ações */}
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="absolute bottom-3 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
-                    onClick={() => openEditor(note)}
-                    className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditor(note);
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                    aria-label="Editar"
                   >
-                    <Edit size={14} />
-                    Editar
+                    <Edit size={12} />
                   </button>
                   <button
-                    onClick={() => deleteNote(note.id)}
-                    className="flex items-center gap-1.5 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:bg-white/5 dark:text-red-400 dark:hover:bg-red-500/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNote(note.id);
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:bg-white/5 dark:text-red-400 dark:hover:bg-red-500/10"
+                    aria-label="Remover"
                   >
-                    <Trash2 size={14} />
-                    Remover
+                    <Trash2 size={12} />
                   </button>
                 </div>
               </div>

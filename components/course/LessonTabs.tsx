@@ -42,7 +42,7 @@ export function LessonTabs({
 
   return (
     <div className="min-w-0 w-full max-w-full">
-      <div className="flex gap-4 overflow-x-auto scrollbar-hide lg:gap-6">
+      <div className="flex gap-6 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setTab("overview")}
           className={`border-b-2 px-1 py-2 text-sm font-medium whitespace-nowrap shrink-0 ${

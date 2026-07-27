@@ -143,51 +143,61 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
     return (
       <div className="fixed left-0 top-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-neutral-900 md:static md:z-auto md:h-auto md:w-auto md:overflow-visible md:bg-transparent">
         <div className="flex h-full flex-col">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+          {/* Header fixo */}
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white md:text-sm">
               {editingNote ? "Editar nota" : "Nova nota"}
             </h3>
             <button
               onClick={closeEditor}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200 md:h-auto md:w-auto md:rounded-md"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200 md:h-auto md:w-auto md:rounded-md"
               aria-label="Fechar"
             >
-              <X size={18} className="md:h-4 md:w-4" />
+              <X size={20} className="md:h-4 md:w-4" />
             </button>
           </div>
 
-          {error && <p className="mx-3 mt-1.5 shrink-0 text-xs text-red-500 dark:text-red-400 md:mx-0 md:text-sm">{error}</p>}
+          {/* Mensagem de erro */}
+          {error && (
+            <div className="mx-4 mt-3 shrink-0 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400 md:mx-0 md:mt-2">
+              {error}
+            </div>
+          )}
 
-          <div className="flex min-h-0 flex-1 flex-col gap-2 p-3 md:gap-3 md:overflow-visible md:p-0 md:pt-3">
+          {/* Área de conteúdo com scroll apenas no textarea */}
+          <div className="flex min-h-0 flex-1 flex-col gap-3 p-4 md:gap-3 md:overflow-visible md:p-0 md:pt-3">
+            {/* Input de título - fixo */}
             <input
               type="text"
               placeholder="Título (opcional)"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
               maxLength={200}
-              className="w-full shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+              className="w-full shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
             />
 
+            {/* Textarea - ocupa todo espaço disponível com scroll interno */}
             <textarea
               placeholder="Escreve aqui as tuas notas..."
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               maxLength={50000}
-              className="min-h-0 w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+              className="min-h-0 w-full flex-1 resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
             />
 
-            <div className="flex shrink-0 items-center gap-2">
+            {/* Botões de ação - fixos no fundo */}
+            <div className="flex shrink-0 items-center gap-2 pt-1">
               <button
                 onClick={saveNote}
                 disabled={saving}
-                className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 md:flex-none"
               >
-                <Save size={14} />
+                <Save size={16} />
                 {saving ? "A guardar..." : "Guardar"}
               </button>
               <button
                 onClick={closeEditor}
-                className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                className="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 md:flex-none"
               >
                 Cancelar
               </button>

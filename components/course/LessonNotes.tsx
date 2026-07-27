@@ -141,7 +141,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
   // Modo de edição/criação em tela cheia no mobile
   if (isCreating || editingNote) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white dark:bg-neutral-900 md:relative md:z-auto md:overflow-visible md:bg-transparent">
+      <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto bg-white dark:bg-neutral-900 md:relative md:z-auto md:overflow-visible md:bg-transparent">
         <div className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
           <h3 className="text-base font-semibold text-slate-900 dark:text-white md:text-sm">
             {editingNote ? "Editar nota" : "Nova nota"}

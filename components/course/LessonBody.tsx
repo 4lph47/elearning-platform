@@ -204,8 +204,8 @@ export function LessonBody({
         )}
       </div>
 
-      <div className="mt-4 overflow-x-hidden lg:relative">
-        <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
+      <div className="mt-4 overflow-x-hidden overflow-y-visible lg:relative">
+        <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full overflow-visible" : "overflow-visible"}>
           {sideBySide && (
             <style dangerouslySetInnerHTML={{
               __html: `
@@ -219,7 +219,7 @@ export function LessonBody({
           )}
           <div 
             ref={playerBoxRef} 
-            className={sideBySide ? "player-container-resize w-full lg:relative lg:z-20" : "relative -mx-4 lg:mx-0"}
+            className={sideBySide ? "player-container-resize w-full lg:relative lg:z-20 overflow-visible" : "relative -mx-4 lg:mx-0 overflow-visible"}
           >
             <LessonPlayer
               lessonId={lessonId}

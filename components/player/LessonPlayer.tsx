@@ -1287,13 +1287,13 @@ export function LessonPlayer({
     };
   }, [usingHls, hlsMasterUrl, activeSrc]);
 
-  const widthClass = fluidWidth ? "" : "max-w-full";
+  const widthClass = fluidWidth ? "" : "lg:max-w-full";
   const playerClassName = `aspect-video w-full rounded-none bg-black lg:rounded-lg ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:space-y-4">
       {type === "TEXT" ? (
         <div
           className={`overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-neutral-900 ${widthClass}`}
@@ -1301,11 +1301,11 @@ export function LessonPlayer({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>
       ) : (
-        <div className="relative" style={cinemaMode && !youtubeId ? { contain: "layout", isolation: "isolate" } : undefined}>
+        <div className="relative overflow-visible" style={cinemaMode && !youtubeId ? { contain: "layout", isolation: "isolate" } : undefined}>
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
-              className="pointer-events-none absolute -inset-6 z-[-1] rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
+              className="pointer-events-none absolute -inset-4 z-[-1] rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
               style={{ backgroundColor: ambientColor, opacity: 0.6 }}
             />
           )}

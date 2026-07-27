@@ -42,10 +42,10 @@ export function LessonTabs({
 
   return (
     <div className="min-w-0 w-full max-w-full">
-      <div className="flex gap-3 sm:gap-6 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide border-b border-slate-200 dark:border-white/10">
         <button
           onClick={() => setTab("overview")}
-          className={`border-b-2 px-2 sm:px-1 py-2 text-sm font-medium whitespace-nowrap shrink-0 ${
+          className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 -mb-px ${
             tab === "overview" ? "border-blue-500 text-slate-900 dark:text-white" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
         >
@@ -53,7 +53,7 @@ export function LessonTabs({
         </button>
         <button
           onClick={() => setTab("resources")}
-          className={`border-b-2 px-2 sm:px-1 py-2 text-sm font-medium whitespace-nowrap shrink-0 ${
+          className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 -mb-px ${
             tab === "resources" ? "border-blue-500 text-slate-900 dark:text-white" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
         >
@@ -62,7 +62,7 @@ export function LessonTabs({
         {notes && (
           <button
             onClick={() => setTab("notes")}
-            className={`border-b-2 px-2 sm:px-1 py-2 text-sm font-medium whitespace-nowrap shrink-0 ${
+            className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 -mb-px ${
               tab === "notes" ? "border-blue-500 text-slate-900 dark:text-white" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
@@ -72,7 +72,7 @@ export function LessonTabs({
         {progress && (
           <button
             onClick={() => setTab("progress")}
-            className={`border-b-2 px-2 sm:px-1 py-2 text-sm font-medium whitespace-nowrap shrink-0 lg:hidden ${
+            className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 -mb-px lg:hidden ${
               tab === "progress" ? "border-blue-500 text-slate-900 dark:text-white" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
@@ -82,7 +82,7 @@ export function LessonTabs({
         {comments && (
           <button
             onClick={() => setTab("comments")}
-            className={`border-b-2 px-2 sm:px-1 py-2 text-sm font-medium whitespace-nowrap shrink-0 lg:hidden ${
+            className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap shrink-0 -mb-px lg:hidden ${
               tab === "comments" ? "border-blue-500 text-slate-900 dark:text-white" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >

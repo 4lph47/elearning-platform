@@ -260,7 +260,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:overflow-x-hidden" : ""} style={sideBySide ? { left: `calc(${leftWidth}% + 1rem)`, paddingLeft: '0.5rem' } : undefined}>
+          <div className={sideBySide ? "mt-6 hidden lg:block lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:overflow-x-hidden" : "mt-6"} style={sideBySide ? { left: `calc(${leftWidth}% + 1rem)`, paddingLeft: '0.5rem' } : undefined}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

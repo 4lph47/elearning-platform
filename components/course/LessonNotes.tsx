@@ -141,7 +141,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
   // Modo de edição/criação em tela cheia no mobile
   if (isCreating || editingNote) {
     return (
-      <div className="fixed left-0 top-0 z-[9999] h-screen w-screen bg-white dark:bg-neutral-900 md:static md:z-auto md:h-auto md:w-auto md:bg-transparent">
+      <div className="fixed left-0 top-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-neutral-900 md:static md:z-auto md:h-auto md:w-auto md:overflow-visible md:bg-transparent">
         <div className="flex h-full flex-col">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
             <h3 className="text-base font-semibold text-slate-900 dark:text-white md:text-sm">

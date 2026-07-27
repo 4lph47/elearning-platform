@@ -141,23 +141,24 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
   // Modo de edição/criação em tela cheia no mobile
   if (isCreating || editingNote) {
     return (
-      <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto bg-white dark:bg-neutral-900 md:relative md:z-auto md:overflow-visible md:bg-transparent">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white md:text-sm">
-            {editingNote ? "Editar nota" : "Nova nota"}
-          </h3>
-          <button
-            onClick={closeEditor}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200 md:h-auto md:w-auto md:rounded-md"
-            aria-label="Fechar"
-          >
-            <X size={20} className="md:h-4 md:w-4" />
-          </button>
-        </div>
+      <div className="fixed left-0 top-0 z-[9999] h-screen w-screen bg-white dark:bg-neutral-900 md:static md:z-auto md:h-auto md:w-auto md:bg-transparent">
+        <div className="flex h-full flex-col">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 md:border-0 md:bg-transparent md:p-0 md:pb-3">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white md:text-sm">
+              {editingNote ? "Editar nota" : "Nova nota"}
+            </h3>
+            <button
+              onClick={closeEditor}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200 md:h-auto md:w-auto md:rounded-md"
+              aria-label="Fechar"
+            >
+              <X size={20} className="md:h-4 md:w-4" />
+            </button>
+          </div>
 
-        {error && <p className="mx-4 mt-2 text-sm text-red-500 dark:text-red-400 md:mx-0">{error}</p>}
+          {error && <p className="mx-4 mt-2 shrink-0 text-sm text-red-500 dark:text-red-400 md:mx-0">{error}</p>}
 
-        <div className="flex-1 space-y-3 p-4 md:p-0 md:pt-3">
+          <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 md:overflow-visible md:p-0 md:pt-3">
           <input
             type="text"
             placeholder="Título (opcional - se vazio, será gerado automaticamente)"
@@ -171,9 +172,9 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
             placeholder="Escreve aqui as tuas notas..."
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
-            rows={window.innerWidth < 768 ? 15 : 12}
+            rows={12}
             maxLength={50000}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+            className="w-full flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 md:flex-none"
           />
 
           <div className="flex items-center gap-2">
@@ -194,6 +195,7 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
           </div>
         </div>
       </div>
+    </div>
     );
   }
 

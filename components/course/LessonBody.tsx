@@ -204,13 +204,13 @@ export function LessonBody({
         )}
       </div>
 
-      <div className="mt-4 overflow-x-hidden overflow-y-visible lg:relative">
-        <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full overflow-visible" : "overflow-visible"}>
+      <div className="mt-4 lg:relative">
+        <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
           {sideBySide && (
             <style dangerouslySetInnerHTML={{
               __html: `
                 @media (min-width: 1024px) {
-                  .player-container-resize { width: ${leftWidth}%; padding-right: 0.5rem; }
+                  .player-container-resize { width: ${leftWidth}%; padding-right: 0.5rem; position: relative; z-index: 1; }
                   .resize-handle { left: calc(${leftWidth}% + 0.25rem); }
                   .right-panel-resize { left: calc(${leftWidth}% + 1rem); padding-left: 0.5rem; }
                 }
@@ -219,7 +219,7 @@ export function LessonBody({
           )}
           <div 
             ref={playerBoxRef} 
-            className={sideBySide ? "player-container-resize w-full lg:relative overflow-visible" : "relative -mx-4 lg:mx-0 overflow-visible"}
+            className={sideBySide ? "player-container-resize w-full lg:relative" : "relative -mx-4 lg:mx-0"}
           >
             <LessonPlayer
               lessonId={lessonId}
@@ -274,9 +274,7 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div 
-            className={sideBySide ? "right-panel-resize mt-6 hidden lg:block lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:overflow-x-hidden" : "mt-6"}
-          >
+          <div className={sideBySide ? "right-panel-resize mt-6 lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:z-10" : "mt-6"}>
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

@@ -206,7 +206,7 @@ export function LessonBody({
 
       <div className="mt-4 overflow-x-hidden lg:relative">
         <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:relative lg:z-10" : "max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
+          <div ref={playerBoxRef} className={sideBySide ? "lg:relative lg:z-20" : "relative z-10 max-w-full"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -235,13 +235,13 @@ export function LessonBody({
             />
             
             {/* Título e engagement abaixo do player, apenas em desktop */}
-            <div className="mt-4 hidden lg:block relative z-10">
+            <div className="mt-4 hidden lg:block relative z-[15]">
               {title}
               {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
             </div>
             
             {/* Comentários também no painel esquerdo em desktop */}
-            <div className="hidden lg:block relative z-10">{comments}</div>
+            <div className="hidden lg:block relative z-[15]">{comments}</div>
           </div>
 
           {/* Resize Handle - apenas em desktop quando sideBySide */}

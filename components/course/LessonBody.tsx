@@ -206,7 +206,21 @@ export function LessonBody({
 
       <div className="mt-4 overflow-x-hidden lg:relative">
         <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
-          <div ref={playerBoxRef} className={sideBySide ? "lg:relative lg:z-20" : "relative -mx-4 lg:mx-0"} style={sideBySide ? { width: `${leftWidth}%`, paddingRight: '0.5rem' } : undefined}>
+          {sideBySide && (
+            <style dangerouslySetInnerHTML={{
+              __html: `
+                @media (min-width: 1024px) {
+                  .player-container-resize { width: ${leftWidth}%; padding-right: 0.5rem; }
+                  .resize-handle { left: calc(${leftWidth}% + 0.25rem); }
+                  .right-panel-resize { left: calc(${leftWidth}% + 1rem); padding-left: 0.5rem; }
+                }
+              `
+            }} />
+          )}
+          <div 
+            ref={playerBoxRef} 
+            className={sideBySide ? "player-container-resize w-full lg:relative lg:z-20" : "relative -mx-4 lg:mx-0"}
+          >
             <LessonPlayer
               lessonId={lessonId}
               type={type}
@@ -248,8 +262,8 @@ export function LessonBody({
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors lg:z-20"
-              style={{ left: `calc(${leftWidth}% + 0.25rem)`, touchAction: 'none' }}
+              className="resize-handle hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors lg:z-20"
+              style={{ touchAction: 'none' }}
               title="Arrastar para redimensionar"
             >
             </div>
@@ -260,7 +274,9 @@ export function LessonBody({
             {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
           </div>
 
-          <div className={sideBySide ? "mt-6 hidden lg:block lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:overflow-x-hidden" : "mt-6"} style={sideBySide ? { left: `calc(${leftWidth}% + 1rem)`, paddingLeft: '0.5rem' } : undefined}>
+          <div 
+            className={sideBySide ? "right-panel-resize mt-6 hidden lg:block lg:mt-0 lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:overflow-y-auto lg:overflow-x-hidden" : "mt-6"}
+          >
             {inlinePreview ? (
               <div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-900 ${inlinePreviewHeight}`}>
                 <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">

@@ -1288,7 +1288,7 @@ export function LessonPlayer({
   }, [usingHls, hlsMasterUrl, activeSrc]);
 
   const widthClass = fluidWidth ? "" : "max-w-full";
-  const playerClassName = `aspect-video w-full rounded-lg bg-black ${widthClass}`;
+  const playerClassName = `aspect-video w-full rounded-none bg-black lg:rounded-lg ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);
 
@@ -1301,7 +1301,7 @@ export function LessonPlayer({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>
       ) : (
-        <div className="relative z-10" style={cinemaMode && !youtubeId ? { contain: "layout", isolation: "isolate" } : undefined}>
+        <div className="relative" style={cinemaMode && !youtubeId ? { contain: "layout", isolation: "isolate" } : undefined}>
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
@@ -1322,7 +1322,7 @@ export function LessonPlayer({
                   "*"
                 );
               }}
-              className={`${playerClassName} relative z-[1]`}
+              className={`${playerClassName} relative`}
             />
           ) : (
             <div
@@ -1335,7 +1335,7 @@ export function LessonPlayer({
               // com jank — os dois a competir pelo mesmo gesto). pan-x só
               // permite gesto horizontal nativo (troca de aula), o vertical
               // fica 100% por conta do JS do drag.
-              className={`group relative touch-pan-x overflow-hidden ${isDraggingVideo ? "z-50" : "z-[1]"} ${playerClassName}`}
+              className={`group relative touch-pan-x overflow-hidden ${isDraggingVideo ? "z-50" : ""} ${playerClassName}`}
               onContextMenu={handleContextMenu}
               onTouchStart={handleFullscreenTouchStart}
               onTouchEnd={handleFullscreenTouchEnd}

@@ -1287,7 +1287,7 @@ export function LessonPlayer({
     };
   }, [usingHls, hlsMasterUrl, activeSrc]);
 
-  const widthClass = fluidWidth ? "" : "lg:max-w-full";
+  const widthClass = fluidWidth ? "" : "";
   const playerClassName = `aspect-video w-full rounded-none bg-black lg:rounded-lg ${widthClass}`;
   const heatmapPath = buildHeatmapAreaPath(heatmapRef.current);
   const heatmapLinePath = buildHeatmapLinePath(heatmapRef.current);

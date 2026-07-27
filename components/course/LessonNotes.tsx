@@ -158,42 +158,41 @@ export function LessonNotes({ lessonId }: { lessonId: string }) {
 
           {error && <p className="mx-4 mt-2 shrink-0 text-sm text-red-500 dark:text-red-400 md:mx-0">{error}</p>}
 
-          <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 md:overflow-visible md:p-0 md:pt-3">
-          <input
-            type="text"
-            placeholder="Título (opcional - se vazio, será gerado automaticamente)"
-            value={noteTitle}
-            onChange={(e) => setNoteTitle(e.target.value)}
-            maxLength={200}
-            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
-          />
+          <div className="flex min-h-0 flex-1 flex-col p-4 md:overflow-visible md:p-0 md:pt-3">
+            <input
+              type="text"
+              placeholder="Título (opcional - se vazio, será gerado automaticamente)"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              maxLength={200}
+              className="mb-3 w-full shrink-0 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+            />
 
-          <textarea
-            placeholder="Escreve aqui as tuas notas..."
-            value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
-            rows={12}
-            maxLength={50000}
-            className="w-full flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 md:flex-none"
-          />
+            <textarea
+              placeholder="Escreve aqui as tuas notas..."
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              maxLength={50000}
+              className="mb-3 min-h-0 w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+            />
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={saveNote}
-              disabled={saving}
-              className="flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Save size={16} />
-              {saving ? "A guardar..." : "Guardar"}
-            </button>
-            <button
-              onClick={closeEditor}
-              className="rounded-full px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
-            >
-              Cancelar
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={saveNote}
+                disabled={saving}
+                className="flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Save size={16} />
+                {saving ? "A guardar..." : "Guardar"}
+              </button>
+              <button
+                onClick={closeEditor}
+                className="rounded-full px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
-        </div>
       </div>
     </div>
     );

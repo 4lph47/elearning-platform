@@ -219,7 +219,7 @@ export function LessonBody({
           )}
           <div 
             ref={playerBoxRef} 
-            className={sideBySide ? "player-container-resize w-full lg:relative lg:z-20 overflow-visible" : "relative -mx-4 lg:mx-0 overflow-visible"}
+            className={sideBySide ? "player-container-resize w-full lg:relative overflow-visible" : "relative -mx-4 lg:mx-0 overflow-visible"}
           >
             <LessonPlayer
               lessonId={lessonId}
@@ -249,20 +249,20 @@ export function LessonBody({
             />
             
             {/* Título e engagement abaixo do player, apenas em desktop */}
-            <div className="mt-4 hidden lg:block relative z-[15]">
+            <div className="mt-4 hidden lg:block relative">
               {title}
               {engagementWithButton && <div className="mt-3">{engagementWithButton}</div>}
             </div>
             
             {/* Comentários também no painel esquerdo em desktop */}
-            <div className="hidden lg:block relative z-[15]">{comments}</div>
+            <div className="hidden lg:block relative">{comments}</div>
           </div>
 
           {/* Resize Handle - apenas em desktop quando sideBySide */}
           {sideBySide && (
             <div
               onMouseDown={handleMouseDown}
-              className="resize-handle hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors lg:z-20"
+              className="resize-handle hidden lg:block lg:absolute lg:top-0 lg:bottom-0 lg:w-3 lg:cursor-col-resize lg:transition-colors"
               style={{ touchAction: 'none' }}
               title="Arrastar para redimensionar"
             >

@@ -30,9 +30,9 @@ export function LessonLayoutShell({
 
   return (
     <div
-      className={`min-h-screen bg-white transition-[padding] duration-200 dark:bg-black ${effectiveChatOpen ? "lg:pr-[440px]" : ""}`}
+      className={`min-h-screen overflow-visible bg-white transition-[padding] duration-200 dark:bg-black ${effectiveChatOpen ? "lg:pr-[440px]" : ""}`}
     >
-      <div className="mx-auto max-w-[1600px] px-4 pt-6">
+      <div className="mx-auto max-w-[1600px] px-4 pt-6 overflow-visible">
         <Link
           href={`/courses/${courseSlug}`}
           prefetch
@@ -49,13 +49,13 @@ export function LessonLayoutShell({
       </div>
 
       <div
-        className={`mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-4 py-6 ${
+        className={`mx-auto grid max-w-[1600px] overflow-visible grid-cols-1 gap-8 px-4 py-6 ${
           collapsed ? "" : "lg:grid-cols-[300px_1fr]"
         }`}
       >
         <div className={`hidden ${collapsed ? "lg:hidden" : "lg:block"}`}>{sidebar}</div>
 
-        <div className={collapsed ? "lg:pl-10" : ""}>
+        <div className={`${collapsed ? "lg:pl-10" : ""} overflow-visible`}>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}

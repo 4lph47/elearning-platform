@@ -1301,11 +1301,11 @@ export function LessonPlayer({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-200">{textContent}</p>
         </div>
       ) : (
-        <div className="relative overflow-visible" style={cinemaMode && !youtubeId ? { contain: "layout", isolation: "isolate" } : undefined}>
+        <div className="relative overflow-visible" style={cinemaMode && !youtubeId ? { contain: "layout" } : undefined}>
           {cinemaMode && !youtubeId && (
             <div
               aria-hidden
-              className="pointer-events-none absolute -inset-4 z-[-1] rounded-[40px] blur-3xl transition-colors duration-500 lg:-inset-16"
+              className="pointer-events-none fixed inset-0 z-[-1] blur-3xl transition-colors duration-500"
               style={{ backgroundColor: ambientColor, opacity: 0.6 }}
             />
           )}

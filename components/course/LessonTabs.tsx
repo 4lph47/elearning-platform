@@ -41,7 +41,7 @@ export function LessonTabs({
   const [showDetails, setShowDetails] = useState(false);
 
   return (
-    <div className="min-w-0 w-full max-w-full">
+    <div className="min-w-0 w-full max-w-full -mx-4 px-4 sm:mx-0 sm:px-0">
       <div className="flex gap-2 overflow-x-auto border-b border-slate-200 dark:border-white/10 pb-px">
         <button
           onClick={() => setTab("overview")}

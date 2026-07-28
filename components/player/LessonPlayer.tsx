@@ -527,22 +527,21 @@ export function LessonPlayer({
     });
   }
 
-  function handleLoadedMetadata(e: React.SyntheticEvent<HTMLVideoElement>) {
-    setDuration(e.currentTarget.duration);
+  function initializeVideo(video: HTMLVideoElement) {
+    setDuration(video.duration);
     // playbackRate persistido (lib/playerPreferences) aplica-se aqui — o
     // <video> nasce sempre a 1x, só fica na velocidade guardada depois disto.
-    e.currentTarget.playbackRate = playbackRate;
+    video.playbackRate = playbackRate;
     // Só na 1ª carga real — trocar de qualidade também dispara loadedmetadata
     // (o <video> recarrega do zero com o novo src) e tem o seu próprio
     // resume de posição em setQuality(), não deve saltar de volta para o
     // watchedSeconds antigo guardado no servidor.
     const isFirstLoad = !hasAppliedInitialSeekRef.current;
-    if (isFirstLoad && initialWatchedSeconds > 0 && initialWatchedSeconds < e.currentTarget.duration) {
-      e.currentTarget.currentTime = initialWatchedSeconds;
+    if (isFirstLoad && initialWatchedSeconds > 0 && initialWatchedSeconds < video.duration) {
+      video.currentTime = initialWatchedSeconds;
     }
     if (isFirstLoad) {
       hasAppliedInitialSeekRef.current = true;
-      const video = e.currentTarget;
       // Autoplay com som só passa nos browsers se já houve engagement
       // prévio no domínio — sem isso o play() rejeita e o vídeo fica
       // parado, sem erro nenhum visível. Truque padrão (Netflix, etc.):
@@ -554,9 +553,33 @@ export function LessonPlayer({
         .then(() => {
           video.muted = false;
         })
-        .catch(() => {});
+        .catch(() => {
+          // Autoplay recusado mesmo mudo (raro) — não deixa o vídeo parado
+          // sem indicação nenhuma: mostra os controlos (ícone de play
+          // central) já nesta 1ª carga, tal como aconteceria depois de
+          // qualquer pausa manual.
+          setControlsShown(true);
+        });
     }
   }
+
+  function handleLoadedMetadata(e: React.SyntheticEvent<HTMLVideoElement>) {
+    initializeVideo(e.currentTarget);
+  }
+
+  // O <video src> já vem no HTML gerado pelo servidor — o browser pode
+  // disparar "loadedmetadata" antes da hidratação chegar a anexar o
+  // onLoadedMetadata do React (perde-se o evento, o vídeo fica parado e sem
+  // seek/autoplay nenhum aplicado). Num refresh isso é muito mais provável
+  // que numa navegação client-side (aí o React já está de pé antes do
+  // <video> existir). Se os metadados já estiverem prontos mal montamos,
+  // inicializa diretamente em vez de esperar por um evento que já passou.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || youtubeId) return;
+    if (video.readyState >= 1) initializeVideo(video);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setQuality(quality: string) {
     const video = videoRef.current;
@@ -1189,10 +1212,16 @@ export function LessonPlayer({
       const dy = t.clientY - start.startY;
 
       if (!start.dragging) {
-        // só confirma o drag com movimento vertical claro — evita competir
+        // só confirma o drag com movimento vertical CLARO — evita competir
         // com um tap simples (toggle play) ou um swipe horizontal (troca
-        // de aula) que passem por cima do vídeo.
-        if (Math.abs(dy) < DRAG_ACTIVATE_PX || Math.abs(dx) > Math.abs(dy)) return;
+        // de aula) que passem por cima do vídeo. Exige dx ainda pequeno (não
+        // só menor que dy) — um swipe horizontal real quase sempre tem uma
+        // pequena oscilação vertical no início (arco natural do dedo), e só
+        // comparar dx com dy nesse 1º instante bastava pra ela "ganhar" e
+        // prender o gesto em modo minimize/maximize (vídeo encolhia/crescia
+        // a meio de um swipe de trocar de aula que nunca teve intenção
+        // vertical nenhuma).
+        if (Math.abs(dy) < DRAG_ACTIVATE_PX || Math.abs(dx) > DRAG_ACTIVATE_PX) return;
         const isFsNow = Boolean(document.fullscreenElement);
         if (!isFsNow && dy < 0) start.mode = "maximize";
         else if (isFsNow && dy > 0) start.mode = "minimize";

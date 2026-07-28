@@ -70,6 +70,12 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
     const start = touchStart.current;
     touchStart.current = null;
     if (!start || window.innerWidth >= 1024) return;
+    // Vídeo em fullscreen fica no mesmo sítio da árvore (a Fullscreen API só
+    // muda o stacking, não reparenta) — o toque continua a chegar a este
+    // wrapper por baixo. Sem isto, qualquer gesto horizontal em cima do
+    // vídeo maximizado (ajustar o dedo, tentar avançar/recuar) trocava de
+    // aula/quiz a meio da reprodução em vez de ser ignorado pelo player.
+    if (document.fullscreenElement) return;
 
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;

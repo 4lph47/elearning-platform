@@ -1935,7 +1935,7 @@ export function LessonPlayer({
                             className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
                           >
                             <Captions size={16} />
-                            Legendas (automáticas)
+                            Legendas
                             <span
                               role="switch"
                               aria-checked={captionsOn}

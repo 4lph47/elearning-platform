@@ -123,8 +123,12 @@ export const MentionInput = forwardRef<
   }
 
   function handleSelect(e: React.SyntheticEvent<HTMLInputElement>) {
+    if (triggerStart === null) return;
     const caret = e.currentTarget.selectionStart ?? value.length;
-    syncTrigger(value, caret);
+    if (!detectTrigger(value, caret)) {
+      setTriggerStart(null);
+      setSuggestions([]);
+    }
   }
 
   function pick(user: MentionUser) {

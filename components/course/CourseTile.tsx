@@ -291,12 +291,13 @@ export function CourseTile({
         // Traço fino colado à borda a andar ao longo do perímetro (stroke-
         // dashoffset), não um gradiente cónico a rodar em torno do centro —
         // esse dava sensação de disco a girar, não de linha a percorrer a
-        // margem. viewBox 320x180 tem o mesmo rácio do aspect-video do
-        // card, por isso a escala fica sempre uniforme (x e y iguais)
-        // independente do tamanho real renderizado.
+        // margem. SVG do MESMO tamanho da caixa de vídeo (sem outset em
+        // px fixos) — um outset fixo desalinhava o rácio 16:9 real (a
+        // largura do card varia, os px fixos não escalam com ela), o que
+        // distorcia a escala e desalinhava o traço da margem real.
         <svg
           aria-hidden
-          className="pointer-events-none absolute -inset-[3px]"
+          className="pointer-events-none absolute inset-0 overflow-visible"
           viewBox="0 0 320 180"
           preserveAspectRatio="none"
           fill="none"

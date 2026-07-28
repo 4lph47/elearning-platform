@@ -1586,7 +1586,12 @@ export function LessonPlayer({
                   transition: "transform 200ms ease-out, opacity 150ms",
                 }}
                 className={`absolute left-1/2 top-1/2 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm lg:hidden ${
-                  controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
+                  // Pausado: fica sempre visível, nunca esconde com o resto
+                  // dos controlos por inatividade — precisa de dar pra ver
+                  // (e clicar) mesmo que o vídeo tenha nascido em pausa (ex.:
+                  // reprodução automática desligada, autoplay recusado pelo
+                  // browser num refresh) sem ninguém ter mexido no ecrã ainda.
+                  controlsShown || !playing ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
                 {playing ? <Pause size={30} className="fill-white" /> : <Play size={30} className="fill-white" />}

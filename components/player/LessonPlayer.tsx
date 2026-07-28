@@ -542,7 +542,19 @@ export function LessonPlayer({
     }
     if (isFirstLoad) {
       hasAppliedInitialSeekRef.current = true;
-      e.currentTarget.play().catch(() => {});
+      const video = e.currentTarget;
+      // Autoplay com som só passa nos browsers se já houve engagement
+      // prévio no domínio — sem isso o play() rejeita e o vídeo fica
+      // parado, sem erro nenhum visível. Truque padrão (Netflix, etc.):
+      // arranca mudo (sempre permitido), tira o mute assim que a
+      // reprodução pega — desmutar depois de já a tocar não é bloqueado.
+      video.muted = true;
+      video
+        .play()
+        .then(() => {
+          video.muted = false;
+        })
+        .catch(() => {});
     }
   }
 

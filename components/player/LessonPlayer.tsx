@@ -536,9 +536,13 @@ export function LessonPlayer({
     // (o <video> recarrega do zero com o novo src) e tem o seu próprio
     // resume de posição em setQuality(), não deve saltar de volta para o
     // watchedSeconds antigo guardado no servidor.
-    if (!hasAppliedInitialSeekRef.current && initialWatchedSeconds > 0 && initialWatchedSeconds < e.currentTarget.duration) {
+    const isFirstLoad = !hasAppliedInitialSeekRef.current;
+    if (isFirstLoad && initialWatchedSeconds > 0 && initialWatchedSeconds < e.currentTarget.duration) {
       e.currentTarget.currentTime = initialWatchedSeconds;
+    }
+    if (isFirstLoad) {
       hasAppliedInitialSeekRef.current = true;
+      e.currentTarget.play().catch(() => {});
     }
   }
 
@@ -1338,7 +1342,7 @@ export function LessonPlayer({
           {youtubeId ? (
             <iframe
               ref={iframeRef}
-              src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1&playsinline=1`}
+              src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1&playsinline=1&autoplay=1`}
               title="Vídeo da aula"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen

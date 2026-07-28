@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 import Image from "next/image";
 import { getYouTubeId } from "@/lib/youtube";
 
@@ -21,16 +21,38 @@ export const MediaCarouselBackground = forwardRef<
     items: MediaCarouselItem[];
     activeIndex: number;
     onHoverChange?: (hovering: boolean) => void;
+    onSwipe?: (direction: "left" | "right") => void;
     minHeightClassName?: string;
     children: ReactNode;
   }
 >(function MediaCarouselBackground(
-  { items, activeIndex, onHoverChange, minHeightClassName = "min-h-[520px] sm:min-h-[460px] lg:min-h-[600px]", children },
+  {
+    items,
+    activeIndex,
+    onHoverChange,
+    onSwipe,
+    minHeightClassName = "min-h-[520px] sm:min-h-[460px] lg:min-h-[600px]",
+    children,
+  },
   ref
 ) {
   const [mediaIndex, setMediaIndex] = useState(activeIndex);
   const [mediaVisible, setMediaVisible] = useState(true);
   const mediaMounted = useRef(false);
+  const touchStartX = useRef<number | null>(null);
+
+  function handleTouchStart(e: TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: TouchEvent) {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    const SWIPE_THRESHOLD = 40;
+    if (deltaX <= -SWIPE_THRESHOLD) onSwipe?.("left");
+    else if (deltaX >= SWIPE_THRESHOLD) onSwipe?.("right");
+  }
 
   useEffect(() => {
     if (!mediaMounted.current) {
@@ -55,6 +77,8 @@ export const MediaCarouselBackground = forwardRef<
       className={`relative overflow-hidden ${minHeightClassName}`}
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => onHoverChange?.(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <div className="absolute inset-0">
         {items.map((item, i) => (

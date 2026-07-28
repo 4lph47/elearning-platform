@@ -11,6 +11,8 @@ import { ResourcePreviewContent as PreviewContent } from "@/components/course/Re
 import { boxFromRect, useCardTransition } from "@/components/course/CardTransitionContext";
 import { getStoredAmbient, setStoredAmbient } from "@/lib/playerPreferences";
 
+const SWIPE_HINT_SEEN_KEY = "lessonSwipeHintSeen";
+
 export function LessonBody({
   title,
   courseSlug,
@@ -72,6 +74,8 @@ export function LessonBody({
   
   const { handleTouchStart, handleTouchEnd, swipeClassName, isTransitioning, goPrevious, goNext, showSpinner } =
     useSwipeNav(previousHref, nextHref);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const hintTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const sideBySide = !chatOpen;
   const inlinePreview = sideBySide && previewResource !== null;
   const inlinePreviewHeight = collapsed ? "h-[88vh]" : "h-[70vh]";
@@ -94,6 +98,36 @@ export function LessonBody({
   function closePreview() {
     setPreviewResource(null);
     setMaximized(false);
+  }
+
+  // Dica de swipe (mobile, 1ª visita a uma aula) — pointer no fim porque
+  // localStorage só existe no cliente.
+  useEffect(() => {
+    if (!localStorage.getItem(SWIPE_HINT_SEEN_KEY)) setShowSwipeHint(true);
+  }, []);
+
+  function dismissSwipeHint() {
+    localStorage.setItem(SWIPE_HINT_SEEN_KEY, "1");
+    setShowSwipeHint(false);
+  }
+
+  function handleHintTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    hintTouchStartRef.current = { x: t.clientX, y: t.clientY };
+  }
+
+  function handleHintTouchEnd(e: React.TouchEvent) {
+    const start = hintTouchStartRef.current;
+    hintTouchStartRef.current = null;
+    dismissSwipeHint();
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const isSwipe = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 2;
+    if (!isSwipe) return;
+    if (dx < 0 && nextHref) goNext();
+    else if (dx > 0 && previousHref) goPrevious();
   }
 
   async function markComplete() {
@@ -178,8 +212,26 @@ export function LessonBody({
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-white/15 dark:border-t-white/70" />
       </div>
     )}
+    {showSwipeHint && (
+      <div
+        className="fixed inset-0 z-[999] flex items-center justify-center bg-black/45 backdrop-blur-[2px] lg:hidden"
+        onClick={dismissSwipeHint}
+        onTouchStart={handleHintTouchStart}
+        onTouchEnd={handleHintTouchEnd}
+      >
+        <div className="flex items-center gap-6 px-10 text-center text-white">
+          <ArrowLeft size={26} className="shrink-0 opacity-90" />
+          <p className="text-sm font-medium leading-snug">
+            Deslize para a esquerda ou direita
+            <br />
+            para mudar de aula
+          </p>
+          <ArrowRight size={26} className="shrink-0 opacity-90" />
+        </div>
+      </div>
+    )}
     <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
-      <div className="flex items-center justify-between">
+      <div className="hidden items-center justify-between lg:flex">
         {previousHref && (
           <button
             type="button"
@@ -206,7 +258,7 @@ export function LessonBody({
         )}
       </div>
 
-      <div className="mt-4 lg:relative">
+      <div className="mt-1 lg:relative lg:mt-4">
         <div ref={containerRef} className={sideBySide ? "lg:relative lg:w-full" : ""}>
           {sideBySide && (
             <style dangerouslySetInnerHTML={{
@@ -219,9 +271,9 @@ export function LessonBody({
               `
             }} />
           )}
-          <div 
-            ref={playerBoxRef} 
-            className={sideBySide ? "player-container-resize w-full lg:relative" : "relative -mx-4 lg:mx-0"}
+          <div
+            ref={playerBoxRef}
+            className={`-mx-4 lg:mx-0 ${sideBySide ? "player-container-resize w-full lg:relative" : "relative"}`}
           >
             <LessonPlayer
               lessonId={lessonId}

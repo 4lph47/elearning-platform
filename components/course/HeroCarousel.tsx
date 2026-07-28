@@ -48,6 +48,9 @@ export function HeroCarousel({ items }: { items: HeroCarouselItem[] }) {
       items={items.map((item) => ({ thumbnailUrl: item.card.thumbnailUrl, videoUrl: item.videoUrl }))}
       activeIndex={index}
       onHoverChange={setPaused}
+      onSwipe={(direction) =>
+        setIndex((i) => (direction === "left" ? (i + 1) % items.length : (i - 1 + items.length) % items.length))
+      }
     >
       <div
         className={`transition-all duration-500 ${textVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}

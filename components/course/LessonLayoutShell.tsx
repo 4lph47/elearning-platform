@@ -49,7 +49,7 @@ export function LessonLayoutShell({
       </div>
 
       <div
-        className={`mx-auto grid max-w-[1600px] overflow-visible grid-cols-1 gap-8 px-4 py-6 ${
+        className={`mx-auto grid max-w-[1600px] overflow-visible grid-cols-1 gap-8 px-4 pt-2 pb-6 lg:py-6 ${
           collapsed ? "" : "lg:grid-cols-[300px_1fr]"
         }`}
       >

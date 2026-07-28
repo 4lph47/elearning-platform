@@ -29,7 +29,7 @@ export function SwipeNavShell({
         </div>
       )}
       <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 hidden items-center justify-between lg:flex">
           {previousHref && (
             <button
               type="button"

@@ -26,34 +26,62 @@ export interface MentionableUser {
   image: string | null;
 }
 
+const MENTIONABLE_LIMIT = 8;
+
 // Quem pode ser @mencionado numa aula: instrutor, colaboradores e alunos
 // inscritos no curso — o mesmo universo de quem já pode ver/comentar ali,
 // nunca a base de utilizadores toda (evita notificar/expor gente de fora).
 // Quem ainda não escolheu username (registo por completar) fica de fora —
-// não há tag nenhuma para inserir.
-export async function getMentionableUsers(lessonId: string): Promise<MentionableUser[]> {
+// não há tag nenhuma para inserir. Filtra e limita já na query — nunca
+// carrega a lista de inscritos toda para depois cortar em memória.
+export async function getMentionableUsers(
+  lessonId: string,
+  query: string,
+  excludeUserId: string
+): Promise<MentionableUser[]> {
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
-    select: {
-      module: {
-        select: {
-          course: {
-            select: {
-              instructor: { select: { id: true, name: true, username: true, image: true } },
-              collaborators: { select: { id: true, name: true, username: true, image: true } },
-              enrollments: { select: { user: { select: { id: true, name: true, username: true, image: true } } } },
-            },
-          },
-        },
-      },
-    },
+    select: { module: { select: { course: { select: { id: true, instructorId: true } } } } },
   });
   if (!lesson) return [];
 
-  const course = lesson.module.course;
-  const byId = new Map<string, MentionableUser>();
-  for (const u of [course.instructor, ...course.collaborators, ...course.enrollments.map((e) => e.user)]) {
-    if (u.username) byId.set(u.id, { id: u.id, name: u.name, username: u.username, image: u.image });
-  }
-  return Array.from(byId.values());
+  const { id: courseId, instructorId } = lesson.module.course;
+
+  const users = await prisma.user.findMany({
+    where: {
+      id: { not: excludeUserId },
+      username: { not: null },
+      OR: [{ id: instructorId }, { collaboratingCourses: { some: { id: courseId } } }, { enrollments: { some: { courseId } } }],
+      ...(query
+        ? { AND: [{ OR: [{ name: { contains: query, mode: "insensitive" } }, { username: { contains: query, mode: "insensitive" } }] }] }
+        : {}),
+    },
+    select: { id: true, name: true, username: true, image: true },
+    orderBy: { name: "asc" },
+    take: MENTIONABLE_LIMIT,
+  });
+
+  return users as MentionableUser[];
+}
+
+// Valida ids de @menção já escritos num comentário (não a busca do
+// dropdown) — sem limite nem texto de query, só filtra quem de facto pode
+// ser mencionado nesta aula, para nunca notificar um id fabricado à mão.
+export async function filterMentionableUserIds(lessonId: string, userIds: string[]): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: { module: { select: { course: { select: { id: true, instructorId: true } } } } },
+  });
+  if (!lesson) return [];
+
+  const { id: courseId, instructorId } = lesson.module.course;
+  const users = await prisma.user.findMany({
+    where: {
+      id: { in: userIds },
+      OR: [{ id: instructorId }, { collaboratingCourses: { some: { id: courseId } } }, { enrollments: { some: { courseId } } }],
+    },
+    select: { id: true },
+  });
+  return users.map((u) => u.id);
 }

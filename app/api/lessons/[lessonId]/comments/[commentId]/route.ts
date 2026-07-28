@@ -5,7 +5,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { commentsTag } from "@/lib/commentsCache";
-import { getMentionableUsers } from "@/lib/lessonAccess";
+import { filterMentionableUserIds } from "@/lib/lessonAccess";
 import { extractMentionIds } from "@/lib/mentions";
 
 const editSchema = z.object({ content: z.string().min(1, "Escreve um comentário").max(2000) });
@@ -34,11 +34,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Só podes editar os teus próprios comentários" }, { status: 403 });
   }
 
-  const mentionable = await getMentionableUsers(lessonId);
-  const mentionableIds = new Set(mentionable.map((u) => u.id));
-  const mentionedUserIds = extractMentionIds(parsed.data.content).filter(
-    (id) => id !== session.user.id && mentionableIds.has(id)
-  );
+  const candidateIds = extractMentionIds(parsed.data.content).filter((id) => id !== session.user.id);
+  const mentionedUserIds = await filterMentionableUserIds(lessonId, candidateIds);
   // Só notifica quem foi mencionado de novo — reeditar sem mudar as menções
   // não deve re-disparar notificação pra quem já tinha recebido a 1ª vez.
   const newlyMentioned = mentionedUserIds.filter((id) => !comment.mentionedUserIds.includes(id));

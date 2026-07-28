@@ -22,15 +22,31 @@ export interface MentionableUser {
   image: string | null;
 }
 
-export async function getMentionableUsers(communityId: string): Promise<MentionableUser[]> {
+const MENTIONABLE_LIMIT = 8;
+
+// Filtra e limita já na query — nunca carrega a lista de membros toda
+// (comunidades podem ter milhares) para depois cortar em memória.
+export async function getMentionableUsers(
+  communityId: string,
+  query: string,
+  excludeUserId: string
+): Promise<MentionableUser[]> {
   const members = await prisma.communityMember.findMany({
-    where: { communityId },
+    where: {
+      communityId,
+      userId: { not: excludeUserId },
+      user: {
+        username: { not: null },
+        ...(query
+          ? { OR: [{ name: { contains: query, mode: "insensitive" } }, { username: { contains: query, mode: "insensitive" } }] }
+          : {}),
+      },
+    },
     select: { user: { select: { id: true, name: true, username: true, image: true } } },
+    orderBy: { user: { name: "asc" } },
+    take: MENTIONABLE_LIMIT,
   });
-  return members
-    .map((m) => m.user)
-    .filter((u): u is MentionableUser => Boolean(u.username))
-    .map((u) => ({ id: u.id, name: u.name, username: u.username as string, image: u.image }));
+  return members.map((m) => m.user) as MentionableUser[];
 }
 
 export interface RequirementCheck {

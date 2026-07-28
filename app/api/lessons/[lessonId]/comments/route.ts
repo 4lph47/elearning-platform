@@ -4,7 +4,7 @@ import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { canAccessLesson, getMentionableUsers } from "@/lib/lessonAccess";
+import { canAccessLesson, filterMentionableUserIds } from "@/lib/lessonAccess";
 import { extractMentionIds } from "@/lib/mentions";
 import {
   commentsTag,
@@ -74,11 +74,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
 
   // Só notifica quem realmente pode ver esta aula (participante do curso) —
   // um id de menção fabricado à mão no pedido nunca chega a criar Notification.
-  const mentionable = await getMentionableUsers(lessonId);
-  const mentionableIds = new Set(mentionable.map((u) => u.id));
-  const mentionedUserIds = extractMentionIds(parsed.data.content).filter(
-    (id) => id !== session.user.id && mentionableIds.has(id)
-  );
+  const candidateIds = extractMentionIds(parsed.data.content).filter((id) => id !== session.user.id);
+  const mentionedUserIds = await filterMentionableUserIds(lessonId, candidateIds);
 
   const comment = await prisma.lessonComment.create({
     data: {

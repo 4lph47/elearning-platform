@@ -1596,11 +1596,7 @@ export function LessonPlayer({
                   setas minimalistas pros lados pra trocar de aula — só aparecem se
                   houver mesmo aula anterior/seguinte. */}
               {videoEnded && (
-                <div
-                  className={`absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6 transition-opacity duration-150 ${
-                    controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
-                  }`}
-                >
+                <div className="absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6">
                   {hasPrevious ? (
                     <button type="button"
                       onClick={() => {

@@ -288,18 +288,32 @@ export function CourseTile({
         )}
       </div>
       {showTrailer && (
-        <div
+        // Traço fino colado à borda a andar ao longo do perímetro (stroke-
+        // dashoffset), não um gradiente cónico a rodar em torno do centro —
+        // esse dava sensação de disco a girar, não de linha a percorrer a
+        // margem. viewBox 320x180 tem o mesmo rácio do aspect-video do
+        // card, por isso a escala fica sempre uniforme (x e y iguais)
+        // independente do tamanho real renderizado.
+        <svg
           aria-hidden
-          className="pointer-events-none absolute -inset-[3px] rounded-lg animate-[spin_2.2s_linear_infinite]"
-          style={{
-            background:
-              "conic-gradient(from 0deg, transparent 0%, transparent 70%, #60a5fa 88%, #bfdbfe 96%, transparent 100%)",
-            padding: 3,
-            WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-            WebkitMaskComposite: "xor",
-            maskComposite: "exclude",
-          }}
-        />
+          className="pointer-events-none absolute -inset-[3px]"
+          viewBox="0 0 320 180"
+          preserveAspectRatio="none"
+          fill="none"
+        >
+          <rect
+            x="1.5"
+            y="1.5"
+            width="317"
+            height="177"
+            rx="8"
+            stroke="#60a5fa"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="110 864"
+            className="animate-trailer-trace"
+          />
+        </svg>
       )}
       </div>
 

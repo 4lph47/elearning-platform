@@ -44,6 +44,16 @@ const config: Config = {
         // (0-20%, sem rotação nenhuma), só DEPOIS sobe até ao pico e volta a
         // assentar nivelado. Rotação só começa quando já dá pra ver o
         // ícone parado, senão o 1º frame visível já vinha inclinado.
+        // Traço fino a percorrer o perímetro do card (dashoffset a andar ao
+        // longo do rect, não rotação em torno do centro) — com rotação
+        // (conic-gradient a girar) a velocidade angular era constante mas a
+        // projetada no retângulo largo (aspect-video) não, dava sensação de
+        // "disco a girar" em vez de linha a andar. Valor final do offset é
+        // o perímetro do rect 317x177 rx8 (924 lados retos + ~50.3 dos 4
+        // cantos) com sinal negativo pra andar no sentido horário.
+        "trailer-trace": {
+          to: { strokeDashoffset: "-974" },
+        },
         "like-pop": {
           "0%": {
             opacity: "0",
@@ -84,6 +94,7 @@ const config: Config = {
         "corner-card-in": "corner-card-in 220ms ease-out",
         "center-pop": "center-pop 700ms ease-out forwards",
         "like-pop": "like-pop 700ms linear forwards",
+        "trailer-trace": "trailer-trace 2.6s linear infinite",
       },
     },
   },

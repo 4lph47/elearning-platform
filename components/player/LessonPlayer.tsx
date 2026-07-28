@@ -547,7 +547,13 @@ export function LessonPlayer({
     // resume de posição em setQuality(), não deve saltar de volta para o
     // watchedSeconds antigo guardado no servidor.
     const isFirstLoad = !hasAppliedInitialSeekRef.current;
-    if (isFirstLoad && initialWatchedSeconds > 0 && initialWatchedSeconds < video.duration) {
+    // < 95% (não só < duration) — um progresso guardado já perto do fim
+    // (aula vista até ao fim antes) fazia reabrir saltar quase pro fim,
+    // tocar uma fração de segundo, terminar sozinho e já disparar o avanço
+    // automático pra próxima aula/quiz sem o utilizador chegar a ver nada.
+    // Reabrir uma aula já dada deve deixar rever desde o início, não
+    // empurrar logo pra fora dela.
+    if (isFirstLoad && initialWatchedSeconds > 0 && initialWatchedSeconds < video.duration * 0.95) {
       video.currentTime = initialWatchedSeconds;
     }
     if (isFirstLoad) {

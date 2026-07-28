@@ -223,6 +223,7 @@ export function CourseTile({
       onMouseLeave={handleLeave}
       onClick={handleClick}
     >
+      <div className="relative">
       <div
         ref={videoBoxRef}
         className="relative aspect-video overflow-hidden rounded-lg bg-slate-800 ring-1 ring-white/10 transition-all duration-200 group-hover:ring-slate-400 group-hover:shadow-lg group-hover:shadow-black/40 dark:group-hover:ring-white/40"
@@ -285,6 +286,21 @@ export function CourseTile({
             <div className="h-full bg-blue-500" style={{ width: `${progressPercent}%` }} />
           </div>
         )}
+      </div>
+      {showTrailer && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-[3px] rounded-lg animate-[spin_2.2s_linear_infinite]"
+          style={{
+            background:
+              "conic-gradient(from 0deg, transparent 0%, transparent 70%, #60a5fa 88%, #bfdbfe 96%, transparent 100%)",
+            padding: 3,
+            WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+          }}
+        />
+      )}
       </div>
 
       <div className="mt-2.5">

@@ -296,37 +296,44 @@ export function LessonBody({
             }} />
           )}
           <div
-            ref={playerBoxRef}
             className={`-mx-4 lg:mx-0 ${sideBySide ? "player-container-resize lg:w-full lg:relative" : "relative"}`}
           >
-            <LessonPlayer
-              lessonId={lessonId}
-              type={type}
-              contentUrl={contentUrl}
-              hlsMasterUrl={hlsMasterUrl}
-              captionsUrl={captionsUrl}
-              videoRenditions={videoRenditions}
-              textContent={textContent}
-              initialWatchedSeconds={initialWatchedSeconds}
-              onComplete={markComplete}
-              cinemaMode={cinemaMode}
-              onDoubleTapLike={() => engagementLikeRef.current?.()}
-              hasPrevious={Boolean(previousHref)}
-              hasNext={Boolean(nextHref)}
-              onGoPrevious={previousHref ? goPrevious : undefined}
-              onGoNext={nextHref ? goNext : undefined}
-              autoplayNext={autoplayNext}
-              onToggleCinemaMode={
-                type === "VIDEO"
-                  ? () =>
-                      setCinemaMode((c) => {
-                        setStoredAmbient(!c);
-                        return !c;
-                      })
-                  : undefined
-              }
-            />
-            
+            {/* Só o player em si (não o título/engagement/comentários abaixo,
+                visíveis em desktop) — arrive() usa este rect como alvo do voo
+                do clone vindo do card "Continuar onde paraste"; medir o
+                bloco inteiro (com o resto do conteúdo por baixo) fazia o
+                clone aterrar bem mais alto do que o vídeo real, sobrando por
+                baixo do limite dele. */}
+            <div ref={playerBoxRef}>
+              <LessonPlayer
+                lessonId={lessonId}
+                type={type}
+                contentUrl={contentUrl}
+                hlsMasterUrl={hlsMasterUrl}
+                captionsUrl={captionsUrl}
+                videoRenditions={videoRenditions}
+                textContent={textContent}
+                initialWatchedSeconds={initialWatchedSeconds}
+                onComplete={markComplete}
+                cinemaMode={cinemaMode}
+                onDoubleTapLike={() => engagementLikeRef.current?.()}
+                hasPrevious={Boolean(previousHref)}
+                hasNext={Boolean(nextHref)}
+                onGoPrevious={previousHref ? goPrevious : undefined}
+                onGoNext={nextHref ? goNext : undefined}
+                autoplayNext={autoplayNext}
+                onToggleCinemaMode={
+                  type === "VIDEO"
+                    ? () =>
+                        setCinemaMode((c) => {
+                          setStoredAmbient(!c);
+                          return !c;
+                        })
+                    : undefined
+                }
+              />
+            </div>
+
             {/* Título e engagement abaixo do player, apenas em desktop */}
             <div className="mt-4 hidden lg:block relative">
               {title}

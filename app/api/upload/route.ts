@@ -32,7 +32,7 @@ async function compressImage(file: File): Promise<File> {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN")) {
+  if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
@@ -45,6 +45,13 @@ export async function POST(request: Request) {
   }
   if (typeof kind !== "string" || !ALLOWED_KINDS.includes(kind as Kind)) {
     return NextResponse.json({ error: "Tipo de conteúdo inválido" }, { status: 400 });
+  }
+
+  // IMAGE serve avatares/capas de comunidade também — qualquer utilizador
+  // autenticado pode criar comunidade, por isso não fica restrito a
+  // instrutor/admin como VIDEO/DOCUMENT (conteúdo de curso).
+  if (kind !== "IMAGE" && session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
   const validation = validateUpload(kind as Kind, file.type, file.size);

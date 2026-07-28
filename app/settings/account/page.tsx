@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { Download, Trash2, Briefcase, Loader2 } from "lucide-react";
+import { Download, Trash2, Briefcase, Loader2, X } from "lucide-react";
 import { FadeLink } from "@/components/course/FadeLink";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
@@ -35,6 +35,9 @@ export default function SettingsAccountPage() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
 
   useEffect(() => {
     fetch("/api/settings")
@@ -45,6 +48,9 @@ export default function SettingsAccountPage() {
         setPhone(d.phone ?? "");
         setBirthDate(d.birthDate ? d.birthDate.slice(0, 10) : "");
       });
+    fetch("/api/account/username")
+      .then((res) => res.json())
+      .then((d: { username: string | null }) => setUsername(d.username));
   }, []);
 
   async function handleSaveProfile() {
@@ -108,7 +114,6 @@ export default function SettingsAccountPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Eliminar a tua conta e todos os teus dados? Esta ação não pode ser desfeita.")) return;
     setDeleting(true);
     setDeleteError(null);
     const res = await fetch("/api/account", { method: "DELETE" });
@@ -119,6 +124,7 @@ export default function SettingsAccountPage() {
     const err = await res.json().catch(() => ({}));
     setDeleteError(err.error ?? "Não foi possível eliminar a conta.");
     setDeleting(false);
+    setShowDeleteModal(false);
   }
 
   if (!data) {
@@ -205,10 +211,57 @@ export default function SettingsAccountPage() {
 
       <SettingsSection title="Eliminar conta" description="Remove permanentemente a tua conta e todos os dados associados.">
         {deleteError && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{deleteError}</p>}
-        <Button onClick={handleDelete} disabled={deleting} variant="danger">
-          <Trash2 size={15} /> {deleting ? "A eliminar..." : "Eliminar conta"}
+        <Button
+          onClick={() => {
+            setDeleteConfirmInput("");
+            setShowDeleteModal(true);
+          }}
+          disabled={deleting}
+          variant="danger"
+        >
+          <Trash2 size={15} /> Eliminar conta
         </Button>
       </SettingsSection>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Eliminar conta</h3>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              Esta ação não pode ser desfeita. Para confirmar, escreve{" "}
+              <span className="font-mono font-semibold text-slate-900 dark:text-white">@{username}</span> abaixo.
+            </p>
+            <Input
+              className="mt-3"
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={`@${username ?? ""}`}
+              autoFocus
+            />
+            {deleteError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{deleteError}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={deleting}>
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={deleting || !username || deleteConfirmInput.trim().replace(/^@/, "") !== username}
+              >
+                {deleting ? "A eliminar..." : "Eliminar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

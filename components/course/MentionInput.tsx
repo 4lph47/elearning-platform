@@ -105,10 +105,7 @@ export const MentionInput = forwardRef<
     }, 50);
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = e.target.value;
-    onChange(v);
-    const caret = e.target.selectionStart ?? v.length;
+  function syncTrigger(v: string, caret: number) {
     const trig = detectTrigger(v, caret);
     if (trig) {
       setTriggerStart(trig.start);
@@ -117,6 +114,17 @@ export const MentionInput = forwardRef<
       setTriggerStart(null);
       setSuggestions([]);
     }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    onChange(v);
+    syncTrigger(v, e.target.selectionStart ?? v.length);
+  }
+
+  function handleSelect(e: React.SyntheticEvent<HTMLInputElement>) {
+    const caret = e.currentTarget.selectionStart ?? value.length;
+    syncTrigger(value, caret);
   }
 
   function pick(user: MentionUser) {
@@ -167,7 +175,12 @@ export const MentionInput = forwardRef<
         ref={inputRef}
         value={value}
         onChange={handleChange}
+        onSelect={handleSelect}
         onKeyDown={handleKeyDown}
+        onBlur={() => {
+          setSuggestions([]);
+          setTriggerStart(null);
+        }}
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={className}

@@ -4,6 +4,7 @@ const SPEED_KEY = "player:speed";
 const AMBIENT_KEY = "player:ambient";
 const QUALITY_KEY = "player:quality";
 const CAPTIONS_KEY = "player:captions";
+const AUTOPLAY_KEY = "player:autoplay";
 
 export function getStoredSpeed(): number {
   if (typeof window === "undefined") return 1;
@@ -43,4 +44,15 @@ export function getStoredCaptionsOn(): boolean {
 
 export function setStoredCaptionsOn(on: boolean) {
   if (typeof window !== "undefined") localStorage.setItem(CAPTIONS_KEY, on ? "1" : "0");
+}
+
+// Ligado por omissão (nunca gravado ainda) — só desliga se o utilizador
+// desligar explicitamente no menu de definições.
+export function getStoredAutoplayOn(): boolean {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem(AUTOPLAY_KEY) !== "0";
+}
+
+export function setStoredAutoplayOn(on: boolean) {
+  if (typeof window !== "undefined") localStorage.setItem(AUTOPLAY_KEY, on ? "1" : "0");
 }

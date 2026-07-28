@@ -37,6 +37,8 @@ import {
   setStoredQuality,
   getStoredCaptionsOn,
   setStoredCaptionsOn,
+  getStoredAutoplayOn,
+  setStoredAutoplayOn,
 } from "@/lib/playerPreferences";
 
 export interface VideoRendition {
@@ -313,6 +315,14 @@ export function LessonPlayer({
   const [qualityOpen, setQualityOpen] = useState(false);
   const [loop, setLoop] = useState(false);
   const [captionsOn, setCaptionsOn] = useState(getStoredCaptionsOn);
+  const [autoplayOn, setAutoplayOn] = useState(getStoredAutoplayOn);
+  function toggleAutoplay() {
+    setAutoplayOn((v) => {
+      const next = !v;
+      setStoredAutoplayOn(next);
+      return next;
+    });
+  }
   const trackRef = useRef<HTMLTrackElement>(null);
   // <track default={...}> só decide o estado INICIAL de quando a track é
   // adicionada — não é reativo depois disso. Controla-se o modo (showing/
@@ -542,6 +552,13 @@ export function LessonPlayer({
     }
     if (isFirstLoad) {
       hasAppliedInitialSeekRef.current = true;
+      if (!autoplayOn) {
+        // Reprodução automática desligada nas definições — nasce em pausa,
+        // com os controlos já visíveis (ícone de play central) pra ficar
+        // óbvio que é preciso clicar.
+        setControlsShown(true);
+        return;
+      }
       // Autoplay com som só passa nos browsers se já houve engagement
       // prévio no domínio — sem isso o play() rejeita e o vídeo fica
       // parado, sem erro nenhum visível. Truque padrão (Netflix, etc.):
@@ -1383,7 +1400,7 @@ export function LessonPlayer({
           {youtubeId ? (
             <iframe
               ref={iframeRef}
-              src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1&playsinline=1&autoplay=1`}
+              src={`https://www.youtube.com/embed/${youtubeId}?modestbranding=1&rel=0&enablejsapi=1&playsinline=1&autoplay=${autoplayOn ? 1 : 0}`}
               title="Vídeo da aula"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -1960,6 +1977,30 @@ export function LessonPlayer({
                             </span>
                           </button>
                         )}
+
+                        <button type="button"
+                          onClick={() => {
+                            toggleAutoplay();
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
+                        >
+                          <Play size={16} />
+                          Reprodução automática
+                          <span
+                            role="switch"
+                            aria-checked={autoplayOn}
+                            className={`ml-auto flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+                              autoplayOn ? "bg-blue-500" : "bg-white/20"
+                            }`}
+                          >
+                            <span
+                              className={`h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                                autoplayOn ? "translate-x-3.5" : "translate-x-0.5"
+                              }`}
+                            />
+                          </span>
+                        </button>
                         </div>,
                         // Em ecrã inteiro de verdade (Fullscreen API), o
                         // browser só desenha o próprio elemento fullscreen —

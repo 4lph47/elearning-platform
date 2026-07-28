@@ -18,6 +18,7 @@ import { TextFlyProvider } from "@/components/course/TextFlyContext";
 import { TextFlyOverlay } from "@/components/course/TextFlyOverlay";
 import { CookieConsentBanner } from "@/components/layout/CookieConsentBanner";
 import { BFCacheGuard } from "@/components/layout/BFCacheGuard";
+import { AppearanceEffects } from "@/components/layout/AppearanceEffects";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -47,6 +48,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <SessionProviderWrapper>
+            <AppearanceEffects />
             <CardTransitionProvider>
               <FadeNavProvider>
                 <TextFlyProvider>

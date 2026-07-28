@@ -5,6 +5,31 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  /* Cor de destaque (Definições > Aparência) — usada pelos botões variante
+     accent/premium, pelo Toggle ligado e pelo item ativo das sidebars.
+     Valor por omissão igual ao blue-600 do Tailwind, para nada mudar antes
+     do AppearanceEffects aplicar a preferência guardada. */
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+}
+
+/* Definições > Aparência > Tamanho do texto — escala rem inteira da app
+   (Tailwind é rem-based), sem precisar de tocar em cada componente. */
+html[data-font-size="sm"] {
+  font-size: 14px;
+}
+html[data-font-size="lg"] {
+  font-size: 18px;
+}
+
+/* Definições > Aparência > Reduzir animações. */
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }
 
 body {

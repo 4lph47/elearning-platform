@@ -33,7 +33,7 @@ export default async function LessonPage({
     redirect(`/login?callbackUrl=${encodeURIComponent(`/courses/${slug}/lessons/${lessonId}`)}`);
   }
 
-  const [course, resources, progress, videoRenditions] = await Promise.all([
+  const [course, resources, progress, videoRenditions, viewer] = await Promise.all([
     getCachedCourseBySlug(slug),
     prisma.lessonResource.findMany({ where: { lessonId } }),
     prisma.lessonProgress.findUnique({
@@ -44,6 +44,7 @@ export default async function LessonPage({
       orderBy: { height: "desc" },
       select: { quality: true, url: true, width: true, height: true },
     }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { autoplayNextLesson: true } }),
   ]);
   if (!course) notFound();
 
@@ -226,6 +227,7 @@ export default async function LessonPage({
             />
           }
           notes={<LessonNotes lessonId={lesson.id} />}
+          autoplayNext={viewer?.autoplayNextLesson ?? true}
           videoMeta={{
             authors,
             viewCount: updatedLesson.viewCount,

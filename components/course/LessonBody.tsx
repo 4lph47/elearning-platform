@@ -34,6 +34,7 @@ export function LessonBody({
   previousTitle,
   nextHref,
   nextTitle,
+  autoplayNext,
 }: {
   title: React.ReactNode;
   courseSlug: string;
@@ -57,6 +58,7 @@ export function LessonBody({
   previousTitle?: string | null;
   nextHref?: string | null;
   nextTitle?: string | null;
+  autoplayNext?: boolean;
 }) {
   const chatOpen = useChatOpen();
   const collapsed = useSidebarCollapsed();
@@ -237,6 +239,7 @@ export function LessonBody({
               hasNext={Boolean(nextHref)}
               onGoPrevious={previousHref ? goPrevious : undefined}
               onGoNext={nextHref ? goNext : undefined}
+              autoplayNext={autoplayNext}
               onToggleCinemaMode={
                 type === "VIDEO"
                   ? () =>

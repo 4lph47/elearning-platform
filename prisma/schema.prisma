@@ -16,6 +16,11 @@ enum Role {
   ADMIN
 }
 
+enum ProfileVisibility {
+  PUBLIC
+  PRIVATE
+}
+
 enum ResourceType {
   PDF
   IMAGE
@@ -47,13 +52,13 @@ enum NotificationType {
 }
 
 model User {
-  id                           String          @id @default(cuid())
+  id                           String            @id @default(cuid())
   name                         String
-  email                        String          @unique
+  email                        String            @unique
   emailVerified                DateTime?
   image                        String?
   passwordHash                 String?
-  role                         Role            @default(STUDENT)
+  role                         Role              @default(STUDENT)
   bio                          String?
   expertise                    String?
   yearsExperience              Int?
@@ -81,23 +86,49 @@ model User {
   // @tag único usado nas @menções dos comentários e mostrado no perfil
   // público — escolhido no registo (credenciais) ou em /register/complete
   // (Google/link mágico, cuja conta o adapter já cria sem isto).
-  username                     String?         @unique
+  username                     String?           @unique
   // Quando o username foi alterado pela última vez (null = nunca, ainda é o
   // escolhido no registo) — usado para bloquear trocas a cada 14 dias.
   usernameChangedAt            DateTime?
+  phone                        String?
+  birthDate                    DateTime?
+  // Preferência de idioma — guardada para uso futuro, a plataforma ainda só
+  // tem UI em português (ver app/settings/language).
+  locale                       String            @default("pt")
+  adsPersonalization           Boolean           @default(true)
+  profileVisibility            ProfileVisibility @default(PUBLIC)
+  searchByEmail                Boolean           @default(true)
+  searchByPhone                Boolean           @default(true)
+  showCommunitiesOnProfile     Boolean           @default(true)
+  notifyEmail                  Boolean           @default(true)
+  notifyPush                   Boolean           @default(true)
+  notifySms                    Boolean           @default(false)
+  // Definições > Cursos — avança sozinho pra próxima aula quando o vídeo
+  // acaba (ver components/player/LessonPlayer.tsx, ecrã de fim).
+  autoplayNextLesson           Boolean           @default(true)
+  // Definições > Venda — sugestão pré-preenchida no formulário de criar
+  // curso (Course.resaleMinCommission), nunca aplicada sozinha a cursos
+  // já existentes.
+  defaultResaleMinCommission   Float?
+  // Definições > Aparência — aplicados no cliente por AppearanceEffects
+  // (ver components/layout/AppearanceEffects.tsx) via CSS vars/atributos
+  // em <html>, lidos por app/globals.css.
+  accentColor                  String            @default("blue")
+  fontSize                     String            @default("md")
+  reduceMotion                 Boolean           @default(false)
   // Código de 6 dígitos enviado por email às contas por password — só
   // essas precisam disto (Google/link mágico já provam dono do email só
   // por completarem o respetivo fluxo).
   emailVerificationCode        String?
   emailVerificationCodeExpires DateTime?
-  createdAt                    DateTime        @default(now())
-  updatedAt                    DateTime        @updatedAt
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime          @updatedAt
 
   accounts              Account[]
   sessions              Session[]
-  coursesTaught         Course[]         @relation("InstructorCourses")
-  collaboratingCourses  Course[]         @relation("CourseCollaborators")
-  lessonContributions   Lesson[]         @relation("LessonContributors")
+  coursesTaught         Course[]            @relation("InstructorCourses")
+  collaboratingCourses  Course[]            @relation("CourseCollaborators")
+  lessonContributions   Lesson[]            @relation("LessonContributors")
   bundles               Bundle[]
   cartItems             CartItem[]
   enrollments           Enrollment[]
@@ -111,14 +142,31 @@ model User {
   courseCommentLikes    CourseCommentLike[]
   lessonReactions       LessonReaction[]
   watchEvents           WatchEvent[]
-  notificationsReceived Notification[]   @relation("NotificationRecipient")
-  notificationsSent     Notification[]   @relation("NotificationActor")
-  resaleListingsSold    ResaleListing[]  @relation("ResaleListingsSold")
-  resaleBundlesSold     ResaleBundle[]   @relation("ResaleBundlesSold")
-  resalePurchases       ResaleSale[]     @relation("ResalePurchases")
-  communitiesCreated    Community[]        @relation("CommunityCreator")
-  communityMemberships  CommunityMember[]  @relation("CommunityMemberships")
-  communityMessages     CommunityMessage[] @relation("CommunityMessageSender")
+  notificationsReceived Notification[]      @relation("NotificationRecipient")
+  notificationsSent     Notification[]      @relation("NotificationActor")
+  resaleListingsSold    ResaleListing[]     @relation("ResaleListingsSold")
+  resaleBundlesSold     ResaleBundle[]      @relation("ResaleBundlesSold")
+  resalePurchases       ResaleSale[]        @relation("ResalePurchases")
+  communitiesCreated    Community[]         @relation("CommunityCreator")
+  communityMemberships  CommunityMember[]   @relation("CommunityMemberships")
+  communityMessages     CommunityMessage[]  @relation("CommunityMessageSender")
+  blockedUsers          UserBlock[]         @relation("BlockerUser")
+  blockedByUsers        UserBlock[]         @relation("BlockedUser")
+}
+
+// Lista de bloqueio de "Definições > Privacidade" — só impede pedidos futuros
+// de bloqueio duplicados (@@unique) e alimenta a lista da UI; não filtra
+// ainda conteúdo noutras partes da plataforma (feed, comentários, chat).
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("BlockerUser", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }
 
 model Certification {
@@ -237,13 +285,13 @@ model Course {
   // já está inscrito, nunca no catálogo público.
   resaleMinCommission Float?
 
-  modules        Module[]
-  enrollments    Enrollment[]
-  cartItems      CartItem[]
-  quiz           Quiz?
-  reviews        Review[]
-  comments       CourseComment[]
-  resaleListings ResaleListing[]
+  modules               Module[]
+  enrollments           Enrollment[]
+  cartItems             CartItem[]
+  quiz                  Quiz?
+  reviews               Review[]
+  comments              CourseComment[]
+  resaleListings        ResaleListing[]
   communityRequirements CommunityRequirement[]
 
   @@index([instructorId])
@@ -279,13 +327,13 @@ model ResaleListing {
 // (mesma convenção do Bundle de instrutor, sem desconto próprio), nunca
 // guardado à parte.
 model ResaleBundle {
-  id             String   @id @default(cuid())
-  name           String
-  category       String   @default("Outros")
-  description    String?
-  coverImageUrl  String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  category      String   @default("Outros")
+  description   String?
+  coverImageUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   sellerId String
   seller   User   @relation("ResaleBundlesSold", fields: [sellerId], references: [id], onDelete: Cascade)
@@ -557,14 +605,14 @@ model CommunityRequirement {
 }
 
 model Community {
-  id          String  @id @default(cuid())
-  name        String
-  description String?
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
   // Regras definidas pelo criador — mostradas no ecrã de aceitação antes de
   // entrar (ver app/communities/[communityId]/page.tsx), a par dos
   // requisitos, que são verificados a sério (rules é só texto lido, não tem
   // verificação automática nenhuma).
-  rules       String?
+  rules         String?
   // Avatar pequeno (tiles, cabeçalho do chat) — bannerUrl é a faixa grande no
   // topo da página da comunidade, mesmo padrão do perfil público.
   coverImageUrl String?

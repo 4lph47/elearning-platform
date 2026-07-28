@@ -28,8 +28,17 @@ export async function POST(request: Request) {
     slug = `${baseSlug}-${++suffix}`;
   }
 
+  // Sugestão de "Definições > Venda" (defaultResaleMinCommission) só entra
+  // se o formulário de criação não mandou nada — nunca sobrepõe um valor
+  // explícito.
+  const instructor = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { defaultResaleMinCommission: true },
+  });
+
   const course = await prisma.course.create({
     data: {
+      resaleMinCommission: instructor?.defaultResaleMinCommission ?? null,
       ...parsed.data,
       slug,
       instructorId: session.user.id,

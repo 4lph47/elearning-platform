@@ -53,7 +53,7 @@ export async function Footer() {
       links: [
         { label: "Iniciar sessão", href: "/login" },
         { label: "Criar conta", href: "/register" },
-        { label: "A minha conta", href: "/account" },
+        { label: "A minha conta", href: "/settings/account" },
         { label: "Privacidade", href: "/privacidade" },
         { label: "Termos e Serviços", href: "/termos" },
       ],

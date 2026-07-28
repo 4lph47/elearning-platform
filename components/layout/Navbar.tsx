@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Search, GraduationCap, ChevronDown, LayoutGrid, LayoutDashboard, LogOut, Sun, Moon, ShoppingCart, ShoppingBag, BookOpen, Menu, X, ArrowLeft, Mic, Bell } from "lucide-react";
+import { Search, GraduationCap, ChevronDown, LogOut, Sun, Moon, ShoppingCart, BookOpen, Menu, X, ArrowLeft, Mic, Bell, UserCog, Eye, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useFadeNav } from "@/components/course/FadeNavContext";
@@ -644,48 +644,9 @@ export function Navbar() {
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">{session.user.email}</p>
                   </div>
 
-                  <FadeLink
-                    href="/courses"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
-                  >
-                    <LayoutGrid size={14} /> Catálogo
-                  </FadeLink>
-
-                  <FadeLink
-                    href="/marketplace"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
-                  >
-                    <ShoppingBag size={14} /> Marketplace de revenda
-                  </FadeLink>
-
-                  {session.user.role !== "STUDENT" && (
-                    <FadeLink
-                      href="/instructor"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
-                    >
-                      <GraduationCap size={14} /> Área de Instrutor
-                    </FadeLink>
-                  )}
-
-                  <FadeLink
-                    href="/dashboard"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
-                  >
-                    <LayoutDashboard size={14} /> A minha aprendizagem
-                  </FadeLink>
-
-                  <FadeLink
-                    href="/notifications"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
-                  >
-                    <Bell size={14} /> Notificações
-                  </FadeLink>
-
+                  {/* Navegação principal (Catálogo, Marketplace, Painel, Notificações)
+                      já vive na Sidebar — este menu foca-se em atalhos de conta/definições
+                      que a Sidebar não tem, para não duplicar os mesmos links nos dois sítios. */}
                   <FadeLink
                     href="/cart"
                     onClick={() => setMenuOpen(false)}
@@ -701,10 +662,42 @@ export function Navbar() {
                     )}
                   </FadeLink>
 
+                  <FadeLink
+                    href="/settings/account"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <UserCog size={14} /> Dados pessoais
+                  </FadeLink>
+
+                  <FadeLink
+                    href="/settings/privacy"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <Eye size={14} /> Privacidade
+                  </FadeLink>
+
+                  <FadeLink
+                    href="/settings/notifications"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <Bell size={14} /> Preferências de notificação
+                  </FadeLink>
+
+                  <FadeLink
+                    href="/settings/payments"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    <CreditCard size={14} /> Pagamentos
+                  </FadeLink>
+
                   {mounted && (
                     <button
                       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                      className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                     >
                       {resolvedTheme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
                       {resolvedTheme === "dark" ? "Tema claro" : "Tema escuro"}

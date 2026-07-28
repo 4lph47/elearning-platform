@@ -189,7 +189,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             <ShoppingBag size={13} /> Gerir revendas
           </FadeLink>
           <FadeLink
-            href="/account"
+            href="/settings/account"
             className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
             <Settings size={13} /> Definições

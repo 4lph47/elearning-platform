@@ -9,9 +9,11 @@ const variantClasses: Record<Variant, string> = {
   ghost: "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10",
   danger: "bg-red-600 text-white hover:bg-red-700",
   light: "bg-white text-slate-900 shadow-md hover:bg-slate-100",
-  accent: "bg-blue-600 text-white hover:bg-blue-500",
+  // Cor de destaque escolhida em Definições > Aparência (--accent, default
+  // blue-600) — ver app/globals.css e components/layout/AppearanceEffects.
+  accent: "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]",
   "outline-dark": "border border-slate-900/25 text-slate-900 hover:bg-slate-900/10 dark:border-white/25 dark:text-white dark:hover:bg-white/10",
-  premium: "bg-blue-600 text-white shadow-md shadow-blue-600/30 hover:bg-blue-500 active:scale-95",
+  premium: "bg-[var(--accent)] text-white shadow-md shadow-blue-600/30 hover:bg-[var(--accent-hover)] active:scale-95",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

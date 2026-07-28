@@ -16,6 +16,7 @@ import {
   UserCircle,
   Bell,
   Users,
+  Settings,
   ChevronDown,
   type LucideIcon,
 } from "lucide-react";
@@ -101,6 +102,9 @@ export function Sidebar() {
       : []),
     ...(status === "authenticated"
       ? [{ href: "/cart", label: "Carrinho", icon: ShoppingCart } as LeafItem]
+      : []),
+    ...(status === "authenticated"
+      ? [{ href: "/settings", label: "Definições", icon: Settings } as LeafItem]
       : []),
     ...(isInstructor
       ? [

@@ -131,6 +131,7 @@ export function LessonPlayer({
   hasNext,
   onGoPrevious,
   onGoNext,
+  autoplayNext,
 }: {
   lessonId: string;
   type: "VIDEO" | "TEXT";
@@ -153,6 +154,9 @@ export function LessonPlayer({
   hasNext?: boolean;
   onGoPrevious?: () => void;
   onGoNext?: () => void;
+  // Definições > Cursos ("Reproduzir próxima aula automaticamente") — só
+  // liga o contador quando true e há mesmo aula seguinte.
+  autoplayNext?: boolean;
   // Página da aula usa larguras fixas em lg (alinhadas ao resto do layout,
   // sidebar/chat incluídos) — em qualquer sítio mais estreito (ex.: preview
   // no editor, dentro de uma card a meio de um grid) isso transbordava.
@@ -278,6 +282,24 @@ export function LessonPlayer({
 
   const [playing, setPlaying] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
+  // Contagem decrescente do "a avançar em Xs" no ecrã de fim — cada tick
+  // reagenda-se a si próprio via setTimeout; ao chegar a 0 dispara onGoNext
+  // fora do setState (nunca dentro do updater, que corre durante o commit).
+  const [autoAdvanceIn, setAutoAdvanceIn] = useState<number | null>(null);
+  function cancelAutoAdvance() {
+    setAutoAdvanceIn(null);
+  }
+  useEffect(() => {
+    if (autoAdvanceIn === null) return;
+    if (autoAdvanceIn <= 0) {
+      setAutoAdvanceIn(null);
+      onGoNext?.();
+      return;
+    }
+    const t = setTimeout(() => setAutoAdvanceIn((s) => (s === null ? null : s - 1)), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdvanceIn]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [muted, setMuted] = useState(false);
@@ -570,6 +592,10 @@ export function LessonPlayer({
     setVideoEnded(true);
     await sendProgress({ completed: true });
     onComplete();
+
+    if (autoplayNext && hasNext && onGoNext) {
+      setAutoAdvanceIn(5);
+    }
   }
 
   function togglePlay() {
@@ -1498,7 +1524,10 @@ export function LessonPlayer({
                 <div className="absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6">
                   {hasPrevious ? (
                     <button type="button"
-                      onClick={onGoPrevious}
+                      onClick={() => {
+                        cancelAutoAdvance();
+                        onGoPrevious?.();
+                      }}
                       aria-label="Aula anterior"
                       className="flex h-12 w-12 shrink-0 items-center justify-center text-white/70 transition-colors hover:text-white"
                     >
@@ -1510,6 +1539,7 @@ export function LessonPlayer({
 
                   <button type="button"
                     onClick={() => {
+                      cancelAutoAdvance();
                       const video = videoRef.current;
                       if (!video) return;
                       video.currentTime = 0;
@@ -1522,13 +1552,27 @@ export function LessonPlayer({
                   </button>
 
                   {hasNext ? (
-                    <button type="button"
-                      onClick={onGoNext}
-                      aria-label="Próxima aula"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center text-white/70 transition-colors hover:text-white"
-                    >
-                      <ChevronRight size={36} strokeWidth={1.25} />
-                    </button>
+                    <div className="flex shrink-0 flex-col items-center gap-1.5">
+                      <button type="button"
+                        onClick={() => {
+                          cancelAutoAdvance();
+                          onGoNext?.();
+                        }}
+                        aria-label="Próxima aula"
+                        className="flex h-12 w-12 items-center justify-center text-white/70 transition-colors hover:text-white"
+                      >
+                        <ChevronRight size={36} strokeWidth={1.25} />
+                      </button>
+                      {autoAdvanceIn !== null && (
+                        <button
+                          type="button"
+                          onClick={cancelAutoAdvance}
+                          className="whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] text-white/80 hover:text-white"
+                        >
+                          Próxima em {autoAdvanceIn}s · cancelar
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="h-12 w-12 shrink-0" />
                   )}

@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">4. Os teus direitos (RGPD)</h2>
           <p>
             Podes aceder, exportar ou eliminar os teus dados a qualquer momento na página{" "}
-            <FadeLink href="/account" className="text-blue-500 hover:underline">
+            <FadeLink href="/settings/account" className="text-blue-500 hover:underline">
               A minha conta
             </FadeLink>
             . Para pedidos que não consigas resolver aí (ex: transferência de cursos de instrutor), contacta-nos.

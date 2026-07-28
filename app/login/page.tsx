@@ -210,9 +210,6 @@ function LoginForm() {
       </div>
 
       <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
-        Demo: instrutor@example.com / aluno@example.com — password: password123
-      </p>
-      <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
         Ao entrar, concordas com os{" "}
         <Link href="/termos" target="_blank" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
           Termos e Serviços

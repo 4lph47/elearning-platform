@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Check } from "lucide-react";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
 import { Toggle } from "@/components/ui/Toggle";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { ACCENT_COLORS } from "@/components/layout/AppearanceEffects";
@@ -14,7 +14,7 @@ const FONT_SIZE_OPTIONS: { value: "sm" | "md" | "lg"; label: string }[] = [
 ];
 
 export default function SettingsAppearancePage() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [accentColor, setAccentColor] = useState("blue");
@@ -63,32 +63,30 @@ export default function SettingsAppearancePage() {
   }
 
   if (!mounted) return null;
-  const isDark = resolvedTheme === "dark";
+
+  const THEME_OPTIONS: { value: "system" | "light" | "dark"; label: string; icon: typeof Sun }[] = [
+    { value: "system", label: "Sistema", icon: Monitor },
+    { value: "light", label: "Claro", icon: Sun },
+    { value: "dark", label: "Escuro", icon: Moon },
+  ];
 
   return (
     <div className="space-y-5">
-      <SettingsSection title="Tema" description="Escolhe entre tema claro ou escuro para toda a plataforma.">
+      <SettingsSection title="Tema" description="Escolhe entre tema claro, escuro ou de acordo com o sistema.">
         <div className="flex gap-3">
-          <button
-            onClick={() => setTheme("light")}
-            className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 text-sm font-medium transition-colors duration-150 ${
-              !isDark
-                ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
-                : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
-            }`}
-          >
-            <Sun size={20} /> Claro
-          </button>
-          <button
-            onClick={() => setTheme("dark")}
-            className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 text-sm font-medium transition-colors duration-150 ${
-              isDark
-                ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
-                : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
-            }`}
-          >
-            <Moon size={20} /> Escuro
-          </button>
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 text-sm font-medium transition-colors duration-150 ${
+                theme === value
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+              }`}
+            >
+              <Icon size={20} /> {label}
+            </button>
+          ))}
         </div>
       </SettingsSection>
 

@@ -27,18 +27,16 @@ export async function POST(request: Request) {
     SOCIAL_PLATFORMS.map((p) => [p.key, (parsed.data as unknown as Record<SocialPlatformKey, string | null | undefined>)[p.key]?.trim() || null])
   );
 
-  if (username) {
-    const usernameTaken = await prisma.user.findFirst({ where: { username, id: { not: session.user.id } } });
-    if (usernameTaken) {
-      return NextResponse.json({ error: "Esse username já está em uso" }, { status: 409 });
-    }
+  const usernameTaken = await prisma.user.findFirst({ where: { username, id: { not: session.user.id } } });
+  if (usernameTaken) {
+    return NextResponse.json({ error: "Esse username já está em uso" }, { status: 409 });
   }
 
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
       role: "INSTRUCTOR",
-      ...(username ? { username } : {}),
+      username,
       termsAcceptedAt: new Date(),
       bio: bio.trim(),
       expertise: expertise.trim(),

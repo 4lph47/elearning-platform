@@ -109,7 +109,7 @@ function CompleteForm() {
     const res = await fetch("/api/account/complete-registration", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.trim() || undefined, acceptedTerms }),
+      body: JSON.stringify({ username, acceptedTerms }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -170,7 +170,7 @@ function CompleteForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: username.trim() || undefined,
+        username,
         acceptedTerms,
         bio,
         expertise,
@@ -256,12 +256,13 @@ function CompleteForm() {
           <form onSubmit={handleStudentSubmit} className="mt-4 space-y-4">
             <div>
               <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-                Username <span className="font-normal text-slate-400">(podes mudar mais tarde)</span>
+                Username
               </label>
               <div className="relative">
                 <AtSign size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   id="username"
+                  required
                   pattern="[a-z][a-z0-9_]{2,19}"
                   title="3-20 caracteres: letras minúsculas, números e _, a começar por letra"
                   placeholder="ex: joao_silva"
@@ -300,12 +301,13 @@ function CompleteForm() {
         <form onSubmit={handleInstructorSubmit} className="mt-4 space-y-4">
           <div>
             <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
-              Username <span className="font-normal text-slate-400">(podes mudar mais tarde)</span>
+              Username
             </label>
             <div className="relative max-w-xs">
               <AtSign size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 id="username"
+                required
                 pattern="[a-z][a-z0-9_]{2,19}"
                 title="3-20 caracteres: letras minúsculas, números e _, a começar por letra"
                 placeholder="ex: joao_silva"

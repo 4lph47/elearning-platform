@@ -113,7 +113,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 // /register/complete — sem nome/email/password (já vêm da conta Google).
 export const becomeInstructorSchema = z
   .object({
-    username: usernameSchema.optional(),
+    username: usernameSchema,
     acceptedTerms: z.literal(true, { message: "Tens de aceitar os Termos e Serviços" }),
     bio: z.string().min(50, "Conta-nos a tua experiência com pelo menos 50 caracteres").max(600, "Bio deve ter no máximo 600 caracteres"),
     expertise: z.string().min(2, "Indica a tua área de especialização").max(120, "Área de especialização deve ter no máximo 120 caracteres"),
@@ -138,7 +138,7 @@ export type BecomeInstructorInput = z.infer<typeof becomeInstructorSchema>;
 // Completar registo de aluno vindo de Google/link mágico em /register/complete
 // — só falta o username (nome/email já vêm da conta, termos aceites aqui).
 export const completeStudentSchema = z.object({
-  username: usernameSchema.optional(),
+  username: usernameSchema,
   acceptedTerms: z.literal(true, { message: "Tens de aceitar os Termos e Serviços" }),
 });
 export type CompleteStudentInput = z.infer<typeof completeStudentSchema>;

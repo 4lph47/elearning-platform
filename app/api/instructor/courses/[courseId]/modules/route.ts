@@ -20,8 +20,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cou
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
+  // Ignora o `order` do cliente (calculado como contagem de módulos, que
+  // colide com um order já existente se algum módulo tiver sido apagado) —
+  // usa sempre o maior order existente + 1.
+  const maxModuleOrder = await prisma.module.aggregate({ where: { courseId }, _max: { order: true } });
+  const order = (maxModuleOrder._max.order ?? -1) + 1;
+
   const courseModule = await prisma.module.create({
-    data: { ...parsed.data, courseId },
+    data: { ...parsed.data, order, courseId },
   });
   revalidateTag("courses");
 

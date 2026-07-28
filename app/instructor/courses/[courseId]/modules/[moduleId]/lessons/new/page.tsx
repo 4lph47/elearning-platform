@@ -22,9 +22,9 @@ export default async function NewLessonPage({
   const courseModule = await getOwnedModule(moduleId, session);
   if (!courseModule || courseModule.courseId !== courseId) notFound();
 
-  const [lessonCount, quizCount, course] = await Promise.all([
-    prisma.lesson.count({ where: { moduleId } }),
-    prisma.quiz.count({ where: { moduleId } }),
+  const [maxLessonOrder, maxQuizOrder, course] = await Promise.all([
+    prisma.lesson.aggregate({ where: { moduleId }, _max: { order: true } }),
+    prisma.quiz.aggregate({ where: { moduleId }, _max: { order: true } }),
     prisma.course.findUnique({
       where: { id: courseId },
       select: {
@@ -35,12 +35,17 @@ export default async function NewLessonPage({
   ]);
   if (!course) notFound();
 
+  // Próxima posição livre no espaço partilhado (aulas + quizzes) — usar o
+  // maior `order` existente + 1, não a contagem, porque aulas/quizzes
+  // apagados deixam buracos e a contagem colidiria com um order já em uso.
+  const nextOrder = Math.max(maxLessonOrder._max.order ?? -1, maxQuizOrder._max.order ?? -1) + 1;
+
   return (
     <LessonEditScreen
       courseId={courseId}
       moduleId={moduleId}
       initialType={type === "TEXT" ? "TEXT" : "VIDEO"}
-      nextOrder={lessonCount + quizCount}
+      nextOrder={nextOrder}
       courseAuthors={[course.instructor, ...course.collaborators]}
     />
   );

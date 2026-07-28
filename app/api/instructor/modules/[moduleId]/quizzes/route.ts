@@ -23,12 +23,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
 
   // Posição no fim da lista combinada (aulas + quizzes) deste módulo — a
   // reordenação por drag-and-drop é quem move o quiz para outra posição.
-  const [lessonCount, quizCount] = await Promise.all([
-    prisma.lesson.count({ where: { moduleId } }),
-    prisma.quiz.count({ where: { moduleId } }),
+  // Usa o maior `order` existente + 1 (não a contagem): aulas/quizzes
+  // apagados deixam buracos e a contagem colidiria com um order já em uso.
+  const [maxLessonOrder, maxQuizOrder] = await Promise.all([
+    prisma.lesson.aggregate({ where: { moduleId }, _max: { order: true } }),
+    prisma.quiz.aggregate({ where: { moduleId }, _max: { order: true } }),
   ]);
+  const nextOrder = Math.max(maxLessonOrder._max.order ?? -1, maxQuizOrder._max.order ?? -1) + 1;
 
-  const result = await createModuleQuiz(moduleId, lessonCount + quizCount, parsed.data);
+  const result = await createModuleQuiz(moduleId, nextOrder, parsed.data);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   revalidateTag("courses");

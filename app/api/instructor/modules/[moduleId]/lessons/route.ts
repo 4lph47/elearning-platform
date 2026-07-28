@@ -35,9 +35,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ mod
     ? body.contributorIds.filter((id: unknown): id is string => typeof id === "string" && authorIds.has(id))
     : [];
 
+  // Ignora o `order` do cliente (calculado como contagem de aulas+quizzes,
+  // que colide com um order já existente se algum tiver sido apagado) — usa
+  // sempre o maior order existente do módulo + 1.
+  const [maxLessonOrder, maxQuizOrder] = await Promise.all([
+    prisma.lesson.aggregate({ where: { moduleId }, _max: { order: true } }),
+    prisma.quiz.aggregate({ where: { moduleId }, _max: { order: true } }),
+  ]);
+  const order = Math.max(maxLessonOrder._max.order ?? -1, maxQuizOrder._max.order ?? -1) + 1;
+
   const lesson = await prisma.lesson.create({
     data: {
       ...parsed.data,
+      order,
       hlsMasterUrl: isProcessedHlsUrl(parsed.data.contentUrl) ? parsed.data.contentUrl : null,
       moduleId,
       contributors: contributorIds.length > 0 ? { connect: contributorIds.map((id) => ({ id })) } : undefined,

@@ -54,13 +54,27 @@ export const MentionInput = forwardRef<
   const [suggestions, setSuggestions] = useState<MentionUser[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [triggerStart, setTriggerStart] = useState<number | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mentionQueueRef = useRef<{ tag: string; id: string }[]>(seedMentions ? [...seedMentions] : []);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeqRef = useRef(0);
 
   useEffect(() => {
     if (value === "") mentionQueueRef.current = [];
   }, [value]);
+
+  useEffect(() => {
+    if (suggestions.length === 0) return;
+    function onClickOutside(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setSuggestions([]);
+        setTriggerStart(null);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [suggestions.length]);
 
   useImperativeHandle(ref, () => ({
     encode() {
@@ -80,14 +94,15 @@ export const MentionInput = forwardRef<
 
   function scheduleSearch(query: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const seq = ++searchSeqRef.current;
     debounceRef.current = setTimeout(async () => {
       const res = await fetch(`${mentionUrl}?q=${encodeURIComponent(query)}`);
-      if (res.ok) {
+      if (res.ok && seq === searchSeqRef.current) {
         const data = await res.json();
         setSuggestions(data.users);
         setActiveIndex(0);
       }
-    }, 150);
+    }, 50);
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -147,7 +162,7 @@ export const MentionInput = forwardRef<
   }
 
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <input
         ref={inputRef}
         value={value}

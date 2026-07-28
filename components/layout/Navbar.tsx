@@ -89,6 +89,11 @@ export function Navbar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const bestDealsLoaded = useRef(false);
 
+  // Google/link mágico deixa `status` "authenticated" já antes de aceitar
+  // os termos (ver /register/complete) — sem este gate extra a navbar dava
+  // acesso a carrinho/definições/etc. a uma conta ainda por confirmar.
+  const registered = status === "authenticated" && Boolean(session?.user.registered);
+
   const hasHero = HERO_PATH.test(pathname);
   const transparent = hasHero && !scrolled;
   // Mobile abre/fecha a barra inteira via mobileSearchOpen; no desktop a
@@ -130,7 +135,7 @@ export function Navbar() {
   }, [q, dropdownOpen]);
 
   useEffect(() => {
-    if (status !== "authenticated") {
+    if (!registered) {
       setCartCount(0);
       return;
     }
@@ -138,7 +143,7 @@ export function Navbar() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setCartCount(data.count))
       .catch(() => {});
-  }, [status, pathname]);
+  }, [registered, pathname]);
 
   useEffect(() => {
     if (!hasHero) {
@@ -545,7 +550,7 @@ export function Navbar() {
         </div>
 
         <nav className="flex items-center justify-end gap-3 text-sm">
-          {status === "authenticated" && (
+          {registered && (
             <FadeLink
               href="/dashboard"
               prefetch
@@ -557,7 +562,7 @@ export function Navbar() {
               <BookOpen size={15} /> A minha aprendizagem
             </FadeLink>
           )}
-          {status === "authenticated" && (
+          {registered && (
             <FadeLink
               href="/cart"
               aria-label="Carrinho"
@@ -593,7 +598,7 @@ export function Navbar() {
                 : "max-w-[220px] overflow-visible opacity-100 sm:max-w-none"
             }`}
           >
-          {mounted && status !== "authenticated" && (
+          {mounted && !registered && (
             <button
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               aria-label="Alternar tema claro/escuro"
@@ -605,13 +610,13 @@ export function Navbar() {
             </button>
           )}
 
-          {status === "authenticated" && (
+          {registered && (
             <div className="hidden sm:block">
               <NotificationBell />
             </div>
           )}
 
-          {status === "authenticated" ? (
+          {registered ? (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((v) => !v)}

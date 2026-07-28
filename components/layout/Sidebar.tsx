@@ -70,13 +70,17 @@ export function Sidebar() {
     if (window.innerWidth < 768) close();
   }
 
-  const isInstructor = status === "authenticated" && session.user.role !== "STUDENT";
+  // Google/link mágico deixa `status` "authenticated" já antes de aceitar
+  // os termos (ver /register/complete) — sem este gate extra a sidebar dava
+  // acesso a definições/carrinho/etc. a uma conta ainda por confirmar.
+  const registered = status === "authenticated" && Boolean(session?.user.registered);
+  const isInstructor = registered && session.user.role !== "STUDENT";
 
   const items: NavItem[] = [
     { href: "/", label: "Início", icon: Home },
     { href: "/courses", label: "Catálogo", icon: LayoutGrid },
     { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
-    ...(status === "authenticated" && session.user.role === "STUDENT"
+    ...(registered && session.user.role === "STUDENT"
       ? [
           {
             id: "student",
@@ -91,19 +95,19 @@ export function Sidebar() {
           } as GroupItem,
         ]
       : []),
-    ...(status === "authenticated" && session.user.role !== "STUDENT"
+    ...(registered && session.user.role !== "STUDENT"
       ? [{ href: "/dashboard", label: "A minha aprendizagem", icon: BookOpen } as LeafItem]
       : []),
-    ...(status === "authenticated"
+    ...(registered
       ? [{ href: "/communities", label: "Comunidades", icon: Users } as LeafItem]
       : []),
-    ...(status === "authenticated"
+    ...(registered
       ? [{ href: "/notifications", label: "Notificações", icon: Bell } as LeafItem]
       : []),
-    ...(status === "authenticated"
+    ...(registered
       ? [{ href: "/cart", label: "Carrinho", icon: ShoppingCart } as LeafItem]
       : []),
-    ...(status === "authenticated"
+    ...(registered
       ? [{ href: "/settings", label: "Definições", icon: Settings } as LeafItem]
       : []),
     ...(isInstructor

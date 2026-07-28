@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
-import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer, type VideoRendition } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
@@ -214,19 +214,43 @@ export function LessonBody({
     )}
     {showSwipeHint && (
       <div
-        className="fixed inset-0 z-[999] flex items-center justify-center bg-black/45 backdrop-blur-[2px] lg:hidden"
+        className="fixed inset-0 z-[999] flex animate-[lessonSwipeHintFade_.25s_ease-out] items-center justify-center bg-black/60 backdrop-blur-sm lg:hidden"
         onClick={dismissSwipeHint}
         onTouchStart={handleHintTouchStart}
         onTouchEnd={handleHintTouchEnd}
       >
-        <div className="flex items-center gap-6 px-10 text-center text-white">
-          <ArrowLeft size={26} className="shrink-0 opacity-90" />
-          <p className="text-sm font-medium leading-snug">
-            Deslize para a esquerda ou direita
-            <br />
-            para mudar de aula
-          </p>
-          <ArrowRight size={26} className="shrink-0 opacity-90" />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              @keyframes lessonSwipeHintFade { from { opacity: 0; } to { opacity: 1; } }
+              @keyframes lessonSwipeHintL { 0%, 100% { transform: translateX(0); opacity: .55; } 50% { transform: translateX(-8px); opacity: 1; } }
+              @keyframes lessonSwipeHintR { 0%, 100% { transform: translateX(0); opacity: .55; } 50% { transform: translateX(8px); opacity: 1; } }
+            `,
+          }}
+        />
+        <div className="mx-10 flex flex-col items-center gap-5 rounded-2xl border border-white/10 bg-white/[0.07] px-7 py-8 text-center shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-2">
+            <ChevronLeft size={28} strokeWidth={2.5} className="text-white/70" style={{ animation: "lessonSwipeHintL 1.6s ease-in-out infinite" }} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+              <div className="h-2 w-2 rounded-full bg-white" />
+            </div>
+            <ChevronRight size={28} strokeWidth={2.5} className="text-white/70" style={{ animation: "lessonSwipeHintR 1.6s ease-in-out infinite" }} />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white">Deslize para navegar</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-white/60">
+              Arraste para a esquerda ou direita
+              <br />
+              para mudar de aula
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={dismissSwipeHint}
+            className="rounded-full bg-white px-6 py-2 text-sm font-medium text-black transition-opacity active:opacity-80"
+          >
+            Entendi
+          </button>
         </div>
       </div>
     )}
@@ -273,7 +297,7 @@ export function LessonBody({
           )}
           <div
             ref={playerBoxRef}
-            className={`-mx-4 lg:mx-0 ${sideBySide ? "player-container-resize w-full lg:relative" : "relative"}`}
+            className={`-mx-4 lg:mx-0 ${sideBySide ? "player-container-resize lg:w-full lg:relative" : "relative"}`}
           >
             <LessonPlayer
               lessonId={lessonId}

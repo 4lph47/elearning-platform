@@ -270,6 +270,50 @@ export function CardTransitionOverlay() {
         )}
       </div>
 
+      {/* Traço a percorrer a margem do clone — só enquanto se espera a página
+          seguinte carregar (depois do zoom assentar, antes do voo começar).
+          Fora do wrapper com overflow-hidden do vídeo (aqui em cima, para o
+          traço poder sair pela borda sem ser cortado). Opacity própria
+          (não a mesma transição "all" da caixa) para entrar/sair com fade
+          independente do zoom/voo da posição. viewBox em pixels REAIS
+          (videoBox.width/height, já medidos) — não uma grelha 0-320
+          normalizada — pra rx="8" corresponder exatamente aos 8px do
+          rounded-lg do card verdadeiro, seja qual for o tamanho do card
+          (uma grelha normalizada escalava o raio junto com o resto, ficando
+          mais apertado que o canto real em cards mais pequenos). */}
+      {!isProfile && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute rounded-lg"
+          style={{
+            ...boxStyle(videoBox),
+            opacity: !zoomed ? 0 : animate ? 0 : 1,
+            transition: `all ${transitionMs}ms ease-out, transform 0s linear, opacity 250ms ease-out`,
+          }}
+        >
+          <svg
+            className="absolute inset-0 overflow-visible"
+            viewBox={`0 0 ${videoBox.width} ${videoBox.height}`}
+            preserveAspectRatio="none"
+            fill="none"
+          >
+            <rect
+              x="1.5"
+              y="1.5"
+              width={Math.max(videoBox.width - 3, 0)}
+              height={Math.max(videoBox.height - 3, 0)}
+              rx="8"
+              pathLength="100"
+              stroke="#60a5fa"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray="11 89"
+              className="animate-trailer-trace"
+            />
+          </svg>
+        </div>
+      )}
+
       {titleBox && (
         <div
           // Antes do voo (!animate) ainda no card de origem — peso tem de

@@ -223,7 +223,6 @@ export function CourseTile({
       onMouseLeave={handleLeave}
       onClick={handleClick}
     >
-      <div className="relative">
       <div
         ref={videoBoxRef}
         className="relative aspect-video overflow-hidden rounded-lg bg-slate-800 ring-1 ring-white/10 transition-all duration-200 group-hover:ring-slate-400 group-hover:shadow-lg group-hover:shadow-black/40 dark:group-hover:ring-white/40"
@@ -286,36 +285,6 @@ export function CourseTile({
             <div className="h-full bg-blue-500" style={{ width: `${progressPercent}%` }} />
           </div>
         )}
-      </div>
-      {showTrailer && (
-        // Traço fino colado à borda a andar ao longo do perímetro (stroke-
-        // dashoffset), não um gradiente cónico a rodar em torno do centro —
-        // esse dava sensação de disco a girar, não de linha a percorrer a
-        // margem. SVG do MESMO tamanho da caixa de vídeo (sem outset em
-        // px fixos) — um outset fixo desalinhava o rácio 16:9 real (a
-        // largura do card varia, os px fixos não escalam com ela), o que
-        // distorcia a escala e desalinhava o traço da margem real.
-        <svg
-          aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-visible"
-          viewBox="0 0 320 180"
-          preserveAspectRatio="none"
-          fill="none"
-        >
-          <rect
-            x="1.5"
-            y="1.5"
-            width="317"
-            height="177"
-            rx="8"
-            stroke="#60a5fa"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="110 864"
-            className="animate-trailer-trace"
-          />
-        </svg>
-      )}
       </div>
 
       <div className="mt-2.5">

@@ -48,11 +48,12 @@ const config: Config = {
         // longo do rect, não rotação em torno do centro) — com rotação
         // (conic-gradient a girar) a velocidade angular era constante mas a
         // projetada no retângulo largo (aspect-video) não, dava sensação de
-        // "disco a girar" em vez de linha a andar. Valor final do offset é
-        // o perímetro do rect 317x177 rx8 (924 lados retos + ~50.3 dos 4
-        // cantos) com sinal negativo pra andar no sentido horário.
+        // "disco a girar" em vez de linha a andar. pathLength="100" no rect
+        // (CardTransitionOverlay.tsx) normaliza o comprimento do traçado pra
+        // 100 unidades sempre, por isso -100 (uma volta completa) serve
+        // qualquer tamanho de card, sem precisar calcular o perímetro real.
         "trailer-trace": {
-          to: { strokeDashoffset: "-974" },
+          to: { strokeDashoffset: "-100" },
         },
         "like-pop": {
           "0%": {

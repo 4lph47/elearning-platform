@@ -652,10 +652,17 @@ export function LessonPlayer({
   async function handleEnded() {
     setPlaying(false);
     setVideoEnded(true);
+    // Ecrã de fim entra visível e conta como "atividade" — sem isto ficava
+    // sempre visível (nunca escondia com o resto dos controlos) e, se o
+    // rato já estivesse parado há um tempo quando o vídeo terminou, podia
+    // nascer já escondido.
+    handleControlsActivity();
     await sendProgress({ completed: true });
     onComplete();
 
-    if (autoplayNext && hasNext && onGoNext) {
+    // Reprodução automática desligada nas definições — nem avança sozinho
+    // pra próxima aula/quiz, fica só à espera de um clique manual.
+    if (autoplayNext && autoplayOn && hasNext && onGoNext) {
       setAutoAdvanceIn(5);
     }
   }
@@ -1589,7 +1596,11 @@ export function LessonPlayer({
                   setas minimalistas pros lados pra trocar de aula — só aparecem se
                   houver mesmo aula anterior/seguinte. */}
               {videoEnded && (
-                <div className="absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6">
+                <div
+                  className={`absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6 transition-opacity duration-150 ${
+                    controlsShown ? "opacity-100" : "pointer-events-none opacity-0"
+                  }`}
+                >
                   {hasPrevious ? (
                     <button type="button"
                       onClick={() => {

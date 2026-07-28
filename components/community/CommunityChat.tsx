@@ -21,6 +21,8 @@ import { useFadeNav } from "@/components/course/FadeNavContext";
 import { LinkPreviewCard } from "@/components/community/LinkPreviewCard";
 import { AudioRecorder } from "@/components/community/AudioRecorder";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { MentionInput, type MentionInputHandle } from "@/components/course/MentionInput";
+import { splitMentionContent, decodeMentionContent } from "@/lib/mentions";
 
 type CommunityRole = "OWNER" | "ADMIN" | "MEMBER";
 
@@ -47,9 +49,6 @@ interface Message {
 
 const POLL_MS = 4000;
 
-// Menu de anexo estilo WhatsApp — escolhe o tipo primeiro (filtra o picker
-// nativo do dispositivo via "accept"), em vez de abrir logo um seletor
-// genérico de ficheiros.
 const ATTACH_OPTIONS = [
   { label: "Fotos e vídeos", icon: ImageIcon, accept: "image/*,video/*" },
   { label: "Documento", icon: FileText, accept: "" },
@@ -62,20 +61,18 @@ function timeLabel(iso: string) {
 
 function snippetOf(m: { content: string | null; attachmentName: string | null; deleted: boolean }) {
   if (m.deleted) return "Mensagem apagada";
-  return m.content || m.attachmentName || "Anexo";
+  if (m.content) return decodeMentionContent(m.content).display;
+  return m.attachmentName || "Anexo";
 }
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
-// Reconhece links (cursos, comunidades, ou qualquer site) dentro do texto e
-// torna-os clicáveis — o preview em baixo (LinkPreviewCard) é que mostra a
-// pré-visualização em si, isto só linka o texto.
-function renderContentWithLinks(content: string) {
-  const parts = content.split(URL_REGEX);
+function renderTextWithLinks(text: string, keyPrefix: string) {
+  const parts = text.split(URL_REGEX);
   return parts.map((part, i) =>
     /^https?:\/\//.test(part) ? (
       <a
-        key={i}
+        key={`${keyPrefix}-${i}`}
         href={part}
         target="_blank"
         rel="noopener noreferrer"
@@ -84,7 +81,23 @@ function renderContentWithLinks(content: string) {
         {part}
       </a>
     ) : (
-      <span key={i}>{part}</span>
+      <span key={`${keyPrefix}-${i}`}>{part}</span>
+    )
+  );
+}
+
+function renderMessageContent(content: string) {
+  return splitMentionContent(content).map((p, i) =>
+    p.type === "mention" ? (
+      <FadeLink
+        key={i}
+        href={`/u/${p.userId}`}
+        className="font-medium underline underline-offset-2"
+      >
+        @{p.name}
+      </FadeLink>
+    ) : (
+      <span key={i}>{renderTextWithLinks(p.text, String(i))}</span>
     )
   );
 }
@@ -164,6 +177,8 @@ export function CommunityChat({
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragStartXRef = useRef(0);
+  const textMentionRef = useRef<MentionInputHandle>(null);
+  const captionMentionRef = useRef<MentionInputHandle>(null);
   const messagesRef = useRef<Message[]>([]);
   useEffect(() => {
     messagesRef.current = messages;
@@ -220,10 +235,6 @@ export function CommunityChat({
     };
   }
 
-  // Carrega só a página mais recente ao abrir — nunca o histórico todo de
-  // uma vez. Scroll para cima ("carregar mais") busca mais antigas por
-  // cursor; o poll só pede o que é mais novo que a última mensagem que já
-  // temos, nunca refaz a lista toda (ver route.ts: before/after).
   async function fetchInitial() {
     const res = await fetch(`/api/communities/${communityId}/messages`);
     if (res.ok) {
@@ -265,8 +276,6 @@ export function CommunityChat({
       const older: Message[] = data.messages ?? [];
       setMessages((prev) => [...older, ...prev]);
       setHasMore(Boolean(data.hasMore));
-      // Preserva a posição do scroll — sem isto, prepender mensagens em
-      // cima empurrava a vista inteira e dava um salto brusco.
       requestAnimationFrame(() => {
         if (container) container.scrollTop = container.scrollHeight - prevScrollHeight;
       });
@@ -281,8 +290,6 @@ export function CommunityChat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [communityId]);
 
-  // Só carrega mensagens antigas quando a sentinela no topo da lista
-  // entra em vista (scroll para cima) — nunca a lista toda de uma vez.
   useEffect(() => {
     const el = topSentinelRef.current;
     const root = listRef.current;
@@ -303,7 +310,7 @@ export function CommunityChat({
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    const content = text.trim();
+    const content = (textMentionRef.current?.encode() ?? text).trim();
     if (!content || sending) return;
     setSending(true);
     setText("");
@@ -322,9 +329,6 @@ export function CommunityChat({
     }
   }
 
-  // Escolher o ficheiro só o põe em espera (com preview) — o envio real
-  // (upload + mensagem) só acontece quando se confirma, para dar espaço a
-  // escrever uma legenda antes, tal como o WhatsApp.
   function selectFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -346,7 +350,7 @@ export function CommunityChat({
   async function confirmSendAttachment() {
     if (!pendingFile) return;
     const file = pendingFile;
-    const content = caption.trim();
+    const content = (captionMentionRef.current?.encode() ?? caption).trim();
     setError(null);
     setUploading(true);
     const replyToId = replyingTo?.id;
@@ -406,9 +410,8 @@ export function CommunityChat({
     setIsRecordingAudio(false);
     
     try {
-      // Criar um nome para o ficheiro de áudio
       const fileName = `audio-${Date.now()}.${audioBlob.type.includes("webm") ? "webm" : "mp4"}`;
-      
+
       const signRes = await fetch("/api/upload/community-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -471,10 +474,6 @@ export function CommunityChat({
           <ArrowLeft size={18} />
         </FadeLink>
 
-        {/* Clicar na parte de cima (avatar+nome) abre a página de info da
-            comunidade — banner, descrição, regras e a lista de membros logo
-            abaixo do título, tal como o ecrã de info de um grupo no
-            WhatsApp/Telegram. */}
         <button
           type="button"
           onClick={() => fadeNavigate(`/communities/${communityId}/info`)}
@@ -538,10 +537,6 @@ export function CommunityChat({
             const highlighted = highlightId === m.id;
             const isDragging = dragMessageId === m.id;
 
-            // Ações (responder/apagar) — só visíveis ao passar o rato, no
-            // lado de dentro da bolha (perto do centro do ecrã): à esquerda
-            // das tuas mensagens (alinhadas à direita), à direita das dos
-            // outros (alinhadas à esquerda).
             const actions = (
               <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                 {!m.deleted && (
@@ -569,8 +564,6 @@ export function CommunityChat({
 
             const bubbleColumn = (
               <div className="relative flex max-w-[80%] flex-col">
-                {/* Ícone de responder revelado ao arrastar a mensagem para a
-                    direita (drag-to-reply, igual ao WhatsApp/Telegram). */}
                 <div
                   className="pointer-events-none absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 pr-2 text-blue-500 transition-opacity"
                   style={{ opacity: isDragging ? Math.min(dragX / SWIPE_THRESHOLD, 1) : 0 }}
@@ -622,7 +615,7 @@ export function CommunityChat({
                       "Mensagem apagada"
                     ) : (
                       <>
-                        {m.content && renderContentWithLinks(m.content)}
+                        {m.content && renderMessageContent(m.content)}
                         {m.attachmentUrl && (
                           <AttachmentPreview url={m.attachmentUrl} type={m.attachmentType} name={m.attachmentName} />
                         )}
@@ -680,8 +673,6 @@ export function CommunityChat({
         </div>
       )}
 
-      {/* Menu de anexo — escolhe o tipo primeiro, tal como o WhatsApp, antes
-          de abrir o seletor de ficheiros nativo do dispositivo. */}
       {attachMenuOpen && (
         <div
           ref={attachMenuRef}
@@ -708,9 +699,6 @@ export function CommunityChat({
 
       <input ref={fileInputRef} type="file" onChange={selectFile} className="hidden" />
 
-      {/* Ficheiro escolhido fica em espera com preview + legenda antes de
-          enviar de verdade (upload só acontece ao confirmar) — dá espaço a
-          escrever um comentário sobre o anexo, tal como o WhatsApp. */}
       {pendingFile ? (
         <div className="border-t border-slate-200 p-3 dark:border-white/10">
           <div className="mb-2 flex items-start gap-2">
@@ -740,13 +728,16 @@ export function CommunityChat({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Adiciona uma legenda (opcional)..."
-              disabled={uploading}
-              className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-            />
+            <div className="min-w-0 flex-1">
+              <MentionInput
+                ref={captionMentionRef}
+                mentionUrl={`/api/communities/${communityId}/mentionable`}
+                value={caption}
+                onChange={setCaption}
+                placeholder="Adiciona uma legenda (opcional)..."
+                className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+              />
+            </div>
             <button
               type="button"
               onClick={confirmSendAttachment}
@@ -760,7 +751,6 @@ export function CommunityChat({
         </div>
       ) : (
         <form onSubmit={send} className="border-t border-slate-200 dark:border-white/10">
-          {/* Gravador de áudio */}
           {isRecordingAudio ? (
             <div className="p-3">
               <AudioRecorder
@@ -770,8 +760,6 @@ export function CommunityChat({
             </div>
           ) : (
             <>
-              {/* Reconhece um link enquanto se escreve — mostra a pré-visualização
-                  já aqui, sem impedir continuar a escrever o resto da mensagem. */}
               {text.trim() && firstUrlIn(text) && (
                 <div className="px-3 pt-2">
                   <LinkPreviewCard url={firstUrlIn(text)!} />
@@ -789,12 +777,16 @@ export function CommunityChat({
                 >
                   {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
                 </button>
-                <input
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Escreve uma mensagem..."
-                  className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
-                />
+                <div className="min-w-0 flex-1">
+                  <MentionInput
+                    ref={textMentionRef}
+                    mentionUrl={`/api/communities/${communityId}/mentionable`}
+                    value={text}
+                    onChange={setText}
+                    placeholder="Escreve uma mensagem..."
+                    className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
+                  />
+                </div>
                 {text.trim() ? (
                   <button
                     type="submit"

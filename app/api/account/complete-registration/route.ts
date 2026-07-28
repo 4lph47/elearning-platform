@@ -20,16 +20,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const usernameTaken = await prisma.user.findFirst({
-    where: { username: parsed.data.username, id: { not: session.user.id } },
-  });
-  if (usernameTaken) {
-    return NextResponse.json({ error: "Esse username já está em uso" }, { status: 409 });
+  if (parsed.data.username) {
+    const usernameTaken = await prisma.user.findFirst({
+      where: { username: parsed.data.username, id: { not: session.user.id } },
+    });
+    if (usernameTaken) {
+      return NextResponse.json({ error: "Esse username já está em uso" }, { status: 409 });
+    }
   }
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { username: parsed.data.username, termsAcceptedAt: new Date() },
+    data: {
+      ...(parsed.data.username ? { username: parsed.data.username } : {}),
+      termsAcceptedAt: new Date(),
+    },
   });
 
   return NextResponse.json({ ok: true });

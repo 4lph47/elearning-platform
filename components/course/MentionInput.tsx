@@ -3,9 +3,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 export interface MentionInputHandle {
-  // Devolve o texto visível ("@username ") já convertido para o formato
-  // guardado em BD ("@[username](id)") — só chamado no submit, o
-  // utilizador nunca vê a marcação em si enquanto escreve.
   encode: () => string;
   focus: () => void;
 }
@@ -32,33 +29,26 @@ function detectTrigger(text: string, caret: number): { start: number; query: str
   const upto = text.slice(0, caret);
   const at = upto.lastIndexOf("@");
   if (at === -1) return null;
-  if (at > 0 && !/\s/.test(upto[at - 1])) return null; // "@" tem de vir a seguir a espaço ou início do texto
+  if (at > 0 && !/\s/.test(upto[at - 1])) return null;
   const query = upto.slice(at + 1);
-  if (/\s/.test(query)) return null; // já saímos do token (espaço depois do @)
+  if (/\s/.test(query)) return null;
   return { start: at, query };
 }
 
-// Input de linha única com autocomplete de @menção — usado na caixa de
-// comentário, resposta e edição do LessonComments. Mantém o valor visível
-// controlado pelo pai (mesmo padrão dos inputs que substitui); só o
-// mapeamento nome→id fica cá dentro, exposto via ref.encode() no submit.
 export const MentionInput = forwardRef<
   MentionInputHandle,
   {
-    lessonId: string;
+    mentionUrl: string;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     className: string;
     autoFocus?: boolean;
-    // Menções já existentes ao abrir a caixa em modo de edição — re-semeia o
-    // mapeamento tag→id para o encode() converter de volta corretamente,
-    // mesmo sem o utilizador ter tocado no dropdown desta vez.
     seedMentions?: { tag: string; id: string }[];
     onKeyDownCapture?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   }
 >(function MentionInput(
-  { lessonId, value, onChange, placeholder, className, autoFocus, seedMentions, onKeyDownCapture },
+  { mentionUrl, value, onChange, placeholder, className, autoFocus, seedMentions, onKeyDownCapture },
   ref
 ) {
   const [suggestions, setSuggestions] = useState<MentionUser[]>([]);
@@ -91,7 +81,7 @@ export const MentionInput = forwardRef<
   function scheduleSearch(query: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/lessons/${lessonId}/mentionable?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${mentionUrl}?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
         setSuggestions(data.users);

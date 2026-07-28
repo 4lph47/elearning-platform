@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { loginSchema } from "@/lib/validations";
 import { isRateLimited } from "@/lib/rateLimit";
+import { generateUniqueUsername } from "@/lib/generateUsername";
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;
@@ -47,6 +48,7 @@ export const authOptions: AuthOptions = {
           role: user.role,
           termsAcceptedAt: user.termsAcceptedAt,
           emailVerified: user.emailVerified,
+          username: user.username,
           // Nunca a hash em si no objeto de sessão — só esta flag, o jwt()
           // reduz logo a seguir a um boolean antes de ir para o token.
           hasPassword: true,
@@ -62,6 +64,16 @@ export const authOptions: AuthOptions = {
       from: process.env.EMAIL_FROM,
     }),
   ],
+  events: {
+    // PrismaAdapter cria a conta (Google/link mágico) sem username — dá-lhe
+    // logo um default único, para nunca ficar por preencher só por a pessoa
+    // ter entrado sem passar pelo formulário de registo por password.
+    async createUser({ user }) {
+      const seed = user.name || user.email?.split("@")[0] || "user";
+      const username = await generateUniqueUsername(seed);
+      await prisma.user.update({ where: { id: user.id }, data: { username } });
+    },
+  },
   callbacks: {
     async jwt({ token, user, trigger }) {
       if (user) {
@@ -84,19 +96,26 @@ export const authOptions: AuthOptions = {
         // confirmar o código por email — Google/link mágico já provam
         // dono do email só por completarem o respetivo fluxo.
         token.registered = Boolean(raw.termsAcceptedAt) && (hasPassword ? Boolean(raw.emailVerified) : true);
+        // Busca sempre à BD em vez de confiar no `user` do adapter — no
+        // primeiro login OAuth/link mágico o events.createUser (que atribui
+        // o username automático) corre à parte, e o objeto aqui pode não o
+        // refletir ainda.
+        const freshUser = await prisma.user.findUnique({ where: { id: user.id }, select: { username: true } });
+        token.username = freshUser?.username ?? null;
       } else if (trigger === "update" && token.id) {
         // Sessão já aberta (ex.: acabou de aceitar termos, verificar o
         // email, ou virar instrutor) — o JWT só refaz este pedido à BD
         // quando o cliente chama update() explicitamente.
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, termsAcceptedAt: true, emailVerified: true, passwordHash: true },
+          select: { role: true, termsAcceptedAt: true, emailVerified: true, passwordHash: true, username: true },
         });
         if (dbUser) {
           const hasPassword = Boolean(dbUser.passwordHash);
           token.role = dbUser.role;
           token.hasPassword = hasPassword;
           token.registered = Boolean(dbUser.termsAcceptedAt) && (hasPassword ? Boolean(dbUser.emailVerified) : true);
+          token.username = dbUser.username;
         }
       }
       return token;
@@ -107,6 +126,7 @@ export const authOptions: AuthOptions = {
         session.user.role = token.role as string;
         session.user.registered = Boolean(token.registered);
         session.user.hasPassword = Boolean(token.hasPassword);
+        session.user.username = (token.username as string | null) ?? null;
       }
       return session;
     },

@@ -15,6 +15,24 @@ export function canModerate(role: "OWNER" | "ADMIN" | "MEMBER" | undefined | nul
   return role === "OWNER" || role === "ADMIN";
 }
 
+export interface MentionableUser {
+  id: string;
+  name: string;
+  username: string;
+  image: string | null;
+}
+
+export async function getMentionableUsers(communityId: string): Promise<MentionableUser[]> {
+  const members = await prisma.communityMember.findMany({
+    where: { communityId },
+    select: { user: { select: { id: true, name: true, username: true, image: true } } },
+  });
+  return members
+    .map((m) => m.user)
+    .filter((u): u is MentionableUser => Boolean(u.username))
+    .map((u) => ({ id: u.id, name: u.name, username: u.username as string, image: u.image }));
+}
+
 export interface RequirementCheck {
   id: string;
   type: string;

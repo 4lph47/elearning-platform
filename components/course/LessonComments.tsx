@@ -241,7 +241,7 @@ function CommentRow({
           <div className="mt-1.5">
             <MentionInput
               ref={editMentionRef}
-              lessonId={lessonId}
+              mentionUrl={`/api/lessons/${lessonId}/mentionable`}
               value={editText}
               onChange={setEditText}
               autoFocus
@@ -328,7 +328,7 @@ function CommentRow({
             <div className="flex-1">
               <MentionInput
                 ref={replyMentionRef}
-                lessonId={lessonId}
+                mentionUrl={`/api/lessons/${lessonId}/mentionable`}
                 value={replyText}
                 onChange={setReplyText}
                 placeholder="Escreve uma resposta..."
@@ -595,7 +595,7 @@ export function LessonComments({
           <div className="flex-1">
             <MentionInput
               ref={commentMentionRef}
-              lessonId={lessonId}
+              mentionUrl={`/api/lessons/${lessonId}/mentionable`}
               value={text}
               onChange={setText}
               placeholder="Adiciona um comentário..."

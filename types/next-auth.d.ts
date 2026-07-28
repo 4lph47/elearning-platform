@@ -7,6 +7,7 @@ declare module "next-auth" {
       role: string;
       registered: boolean;
       hasPassword: boolean;
+      username: string | null;
     } & DefaultSession["user"];
   }
 
@@ -15,6 +16,7 @@ declare module "next-auth" {
     termsAcceptedAt?: Date | null;
     emailVerified?: Date | null;
     hasPassword?: boolean;
+    username?: string | null;
   }
 }
 
@@ -24,5 +26,6 @@ declare module "next-auth/jwt" {
     role: string;
     registered: boolean;
     hasPassword: boolean;
+    username?: string | null;
   }
 }

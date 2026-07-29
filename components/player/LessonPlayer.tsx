@@ -1648,6 +1648,7 @@ export function LessonPlayer({
                   setas minimalistas pros lados pra trocar de aula — só aparecem se
                   houver mesmo aula anterior/seguinte. */}
               {videoEnded && (
+                <>
                 <div className="absolute inset-0 z-40 flex items-center justify-between bg-black/60 px-2 sm:px-6">
                   {hasPrevious ? (
                     <button type="button"
@@ -1679,31 +1680,30 @@ export function LessonPlayer({
                   </button>
 
                   {hasNext ? (
-                    <div className="flex shrink-0 flex-col items-center gap-1.5">
-                      <button type="button"
-                        onClick={() => {
-                          cancelAutoAdvance();
-                          onGoNext?.();
-                        }}
-                        aria-label="Próxima aula"
-                        className="flex h-12 w-12 items-center justify-center text-white/70 transition-colors hover:text-white"
-                      >
-                        <ChevronRight size={36} strokeWidth={1.25} />
-                      </button>
-                      {autoAdvanceIn !== null && (
-                        <button
-                          type="button"
-                          onClick={cancelAutoAdvance}
-                          className="whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] text-white/80 hover:text-white"
-                        >
-                          Próxima em {autoAdvanceIn}s · cancelar
-                        </button>
-                      )}
-                    </div>
+                    <button type="button"
+                      onClick={() => {
+                        cancelAutoAdvance();
+                        onGoNext?.();
+                      }}
+                      aria-label="Próxima aula"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center text-white/70 transition-colors hover:text-white"
+                    >
+                      <ChevronRight size={36} strokeWidth={1.25} />
+                    </button>
                   ) : (
                     <div className="h-12 w-12 shrink-0" />
                   )}
                 </div>
+                {autoAdvanceIn !== null && (
+                  <button
+                    type="button"
+                    onClick={cancelAutoAdvance}
+                    className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] text-white/80 hover:text-white"
+                  >
+                    Próxima em {autoAdvanceIn}s · cancelar
+                  </button>
+                )}
+                </>
               )}
 
               <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-6 transition-opacity duration-150 ${controlsShown ? "opacity-100" : "opacity-0"}`}>

@@ -52,6 +52,59 @@ class SupabaseStorage implements Storage {
 
 export const storage: Storage = new SupabaseStorage();
 
+// "key" no path do worker (video-renditions/{key}/..., video-captions/{key}/...,
+// ver worker/index.js:uploadRenditionDir) — o assetId do upload direto, ou o
+// lessonId na fila assíncrona antiga. Extraído do hlsMasterUrl porque é o
+// único sítio onde sobrevive depois de guardado (não fica campo à parte na BD).
+export function extractVideoAssetKey(hlsMasterUrl: string | null | undefined): string | null {
+  if (!hlsMasterUrl) return null;
+  const marker = "/video-renditions/";
+  const idx = hlsMasterUrl.indexOf(marker);
+  if (idx === -1) return null;
+  const key = hlsMasterUrl.slice(idx + marker.length).split("/")[0];
+  return key || null;
+}
+
+// Storage.list() não é recursivo — cada rendition tem os seus próprios
+// segmentos .ts + index.m3u8 dentro de video-renditions/{key}/{label}/, por
+// isso é preciso descer pasta a pasta. Entradas sem id são pastas (convenção
+// do Supabase Storage), o resto são ficheiros.
+async function listAllObjectPaths(bucketName: string, prefix: string): Promise<string[]> {
+  const { data, error } = await getClient().storage.from(bucketName).list(prefix, { limit: 1000 });
+  if (error || !data) return [];
+  const paths: string[] = [];
+  for (const entry of data) {
+    const fullPath = `${prefix}/${entry.name}`;
+    if (entry.id === null) {
+      paths.push(...(await listAllObjectPaths(bucketName, fullPath)));
+    } else {
+      paths.push(fullPath);
+    }
+  }
+  return paths;
+}
+
+// Apaga TODOS os ficheiros de um vídeo processado (todas as renditions HLS +
+// legendas) — chamado quando uma aula deixa de apontar pra este vídeo (foi
+// substituído por outro upload, ou a aula/curso foi eliminado), pra não
+// deixar o Storage a acumular vídeos órfãos pra sempre. Nunca lança — falhar
+// a limpar não pode impedir a operação (troca de vídeo, eliminação de aula)
+// que a chamou.
+export async function deleteVideoAssetsByKey(key: string): Promise<void> {
+  try {
+    const [renditionPaths, captionPaths] = await Promise.all([
+      listAllObjectPaths(bucket, `video-renditions/${key}`),
+      listAllObjectPaths(bucket, `video-captions/${key}`),
+    ]);
+    const allPaths = [...renditionPaths, ...captionPaths];
+    if (allPaths.length === 0) return;
+    const { error } = await getClient().storage.from(bucket).remove(allPaths);
+    if (error) throw error;
+  } catch (err) {
+    console.error(`Falha ao apagar assets de vídeo órfãos (key=${key}):`, err);
+  }
+}
+
 export interface SignedUpload {
   signedUrl: string;
   token: string;

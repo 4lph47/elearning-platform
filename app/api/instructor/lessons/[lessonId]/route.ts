@@ -8,6 +8,7 @@ import { getOwnedLesson } from "@/lib/instructor-guard";
 import { deleteQuiz } from "@/lib/quiz";
 import { syncCourseThumbnail } from "@/lib/courseThumbnail";
 import { needsTranscode, requeueTranscode, isProcessedHlsUrl } from "@/lib/videoTranscode";
+import { deleteVideoAssetsByKey, extractVideoAssetKey } from "@/lib/storage";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getServerSession(authOptions);
@@ -51,6 +52,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ le
   if (contentChanged && needsTranscode(updated.type, updated.contentUrl)) {
     await requeueTranscode(updated.id, updated.contentUrl);
   }
+  // Vídeo antigo desta aula deixou de estar associado a ela — o URL só era
+  // guardado aqui (nenhuma outra tabela referencia estes ficheiros), por
+  // isso apaga-se do Storage já, senão ficava órfão pra sempre.
+  if (contentChanged && isProcessedHlsUrl(lesson.contentUrl)) {
+    const oldKey = extractVideoAssetKey(lesson.contentUrl);
+    if (oldKey) await deleteVideoAssetsByKey(oldKey);
+  }
 
   if ("contributorIds" in body) {
     const authorIds = new Set([
@@ -84,6 +92,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!lesson) return NextResponse.json({ error: "Aula não encontrada" }, { status: 404 });
 
   await prisma.lesson.delete({ where: { id: lessonId } });
+  if (isProcessedHlsUrl(lesson.contentUrl)) {
+    const oldKey = extractVideoAssetKey(lesson.contentUrl);
+    if (oldKey) await deleteVideoAssetsByKey(oldKey);
+  }
   await syncCourseThumbnail(lesson.module.course.id);
   revalidateTag("courses");
   return NextResponse.json({ ok: true });

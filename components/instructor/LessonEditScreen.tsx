@@ -112,7 +112,6 @@ export function LessonEditScreen({
   // pelo servidor, igual a "compressing". Só serve pro stepper de 3 etapas
   // acima do input, não guarda mais nenhuma lógica própria.
   const [videoStage, setVideoStage] = useState<"uploading" | "compressing" | "transcribing" | null>(null);
-  const [videoStagePercent, setVideoStagePercent] = useState<number | null>(null);
   const [pendingVideoUpload, setPendingVideoUpload] = useState<ResumableFinalize | null>(
     draft?.value.pendingVideoUpload ?? null
   );
@@ -191,7 +190,16 @@ export function LessonEditScreen({
       if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
     };
   }, []);
+  // Snapshot do vídeo (contentUrl/contentName/captionsUrl) tirado no
+  // instante em que se escolhe um ficheiro novo — se este envio for
+  // cancelado a meio (ver onCancelled no FileUploadInput), repõe-se este
+  // estado em vez de deixar o campo preso num preview/HLS parcial de um
+  // envio que nunca vai chamar onUploaded.
+  const preUploadContentRef = useRef<{ contentUrl: string | null; contentName: string | null; captionsUrl: string | null } | null>(
+    null
+  );
   function handleVideoFileSelected(file: File) {
+    preUploadContentRef.current = { contentUrl, contentName, captionsUrl };
     if (localPreviewUrlRef.current) URL.revokeObjectURL(localPreviewUrlRef.current);
     const url = URL.createObjectURL(file);
     localPreviewUrlRef.current = url;
@@ -472,7 +480,6 @@ export function LessonEditScreen({
                             }
                           >
                             {stepNumber}. {stepLabel}
-                            {isCurrentStep && stepNumber !== 1 && videoStagePercent !== null && ` (${videoStagePercent}%)`}
                           </span>
                         </div>
                       );
@@ -483,10 +490,7 @@ export function LessonEditScreen({
                   kind="VIDEO"
                   currentUrl={contentUrl}
                   currentName={contentName}
-                  onStageChange={(stage, percent) => {
-                    setVideoStage(stage);
-                    setVideoStagePercent(percent);
-                  }}
+                  onStageChange={(stage) => setVideoStage(stage)}
                   onUploaded={(r) => {
                     if (localPreviewUrlRef.current) {
                       URL.revokeObjectURL(localPreviewUrlRef.current);

@@ -173,9 +173,11 @@ async function probeDuration(filePath) {
 // meio. stderr fica ao critério do "-loglevel error" (só erros reais,
 // nada de verboso) — guarda-se pra compor a mensagem de erro se o
 // processo sair com falha.
-function runFfmpeg(args, durationSeconds, onProgress) {
+function runFfmpeg(args, durationSeconds, onProgress, jobControl) {
+  if (jobControl && jobControl.cancelled) return Promise.reject(new CancelledError());
   return new Promise((resolve, reject) => {
     const proc = spawn("ffmpeg", args);
+    if (jobControl) jobControl.proc = proc;
     const stderrChunks = [];
     let stdoutBuffer = "";
     proc.stdout.on("data", (chunk) => {
@@ -193,8 +195,16 @@ function runFfmpeg(args, durationSeconds, onProgress) {
     proc.stderr.on("data", (chunk) => stderrChunks.push(chunk));
     proc.on("error", reject);
     proc.on("close", (code, signal) => {
+      if (jobControl && jobControl.proc === proc) jobControl.proc = null;
       if (code === 0) {
         resolve();
+        return;
+      }
+      // cancelJob() mata o processo com SIGKILL — reporta como cancelamento
+      // limpo, não como falha de ffmpeg (senão o job acabava marcado
+      // "error" logo a seguir a ter sido cancelado, ver startFinalizeJob).
+      if (jobControl && jobControl.cancelled) {
+        reject(new CancelledError());
         return;
       }
       const stderr = Buffer.concat(stderrChunks).toString().trim();
@@ -210,7 +220,7 @@ function runFfmpeg(args, durationSeconds, onProgress) {
 // do original). CRF mais baixo (20, quase sem perda visível) no rung de
 // topo, CRF 23 (ainda alta qualidade) nos restantes — troca CPU extra no
 // upload por espaço a sério poupado no Storage, mesmo na melhor qualidade.
-async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf, durationSeconds, onProgress) {
+async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf, durationSeconds, onProgress, jobControl) {
   await fs.mkdir(outDir, { recursive: true });
   const playlistPath = path.join(outDir, "index.m3u8");
   const segmentPattern = path.join(outDir, "seg%03d.ts");
@@ -281,12 +291,14 @@ async function transcodeRenditionHls(sourcePath, outDir, targetHeight, crf, dura
             playlistPath,
           ],
           durationSeconds,
-          onProgress
+          onProgress,
+          jobControl
         ),
       2,
       `ffmpeg ${path.basename(outDir)}`
     );
   } catch (err) {
+    if (err instanceof CancelledError) throw err;
     // err.message do execFile não inclui o sinal que matou o processo —
     // "SIGKILL" sem mais nada no stderr é a assinatura clássica de OOM-kill
     // (o kernel mata o processo sem lhe dar hipótese de reportar erro
@@ -375,6 +387,7 @@ function scaledEvenWidth(sourceWidth, sourceHeight, targetHeight) {
 async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
   const resume = options && options.resume;
   const persistProgress = Boolean(options && options.persistProgress);
+  const jobControl = options && options.jobControl;
 
   const { width: sourceWidth, height: sourceHeight } = await probeDimensions(sourcePath);
   const durationSeconds = await probeDuration(sourcePath);
@@ -392,6 +405,7 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
   let masterPlaylistUrl = (resume && resume.masterPlaylistUrl) || null;
 
   for (let i = 0; i < rungs.length; i++) {
+    if (jobControl && jobControl.cancelled) throw new CancelledError();
     const rung = rungs[i];
     if (doneLabels.has(rung.label)) {
       console.log(`  -> ${rung.label} já estava pronto (retomado de uma tentativa anterior), a saltar`);
@@ -403,12 +417,20 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
     const isTopRung = i === rungs.length - 1;
     const crf = isTopRung ? 20 : 23;
 
-    await transcodeRenditionHls(sourcePath, outDir, rung.height, crf, durationSeconds, (fraction) => {
-      // i rungs já concluídos (saltados ou processados nesta run) antes
-      // deste + fração já codificada deste — dá granularidade de 1% em vez
-      // de só "mais um rung inteiro pronto".
-      if (options && options.onRungProgress) options.onRungProgress(i + fraction);
-    });
+    await transcodeRenditionHls(
+      sourcePath,
+      outDir,
+      rung.height,
+      crf,
+      durationSeconds,
+      (fraction) => {
+        // i rungs já concluídos (saltados ou processados nesta run) antes
+        // deste + fração já codificada deste — dá granularidade de 1% em vez
+        // de só "mais um rung inteiro pronto".
+        if (options && options.onRungProgress) options.onRungProgress(i + fraction);
+      },
+      jobControl
+    );
 
     const width = scaledEvenWidth(sourceWidth, sourceHeight, rung.height);
     const height = rung.height;
@@ -498,8 +520,12 @@ function chunksToVtt(chunks) {
 // PCM cru (f32le, mono, 16kHz) — exatamente o formato que o Whisper espera,
 // não precisa de parser de WAV nenhum, só ler os bytes direto pra
 // Float32Array.
-async function extractAudioPcm(sourcePath, pcmPath) {
-  await execFileAsync("ffmpeg", [
+async function extractAudioPcm(sourcePath, pcmPath, jobControl) {
+  if (jobControl && jobControl.cancelled) throw new CancelledError();
+  // util.promisify(execFile) expõe o child process em .child — é o que
+  // permite ao cancelJob matar isto a meio, tal como faz com o runFfmpeg da
+  // compressão (ver jobControl.proc).
+  const promise = execFileAsync("ffmpeg", [
     "-y",
     "-loglevel",
     "error",
@@ -514,6 +540,15 @@ async function extractAudioPcm(sourcePath, pcmPath) {
     "f32le",
     pcmPath,
   ]);
+  if (jobControl) jobControl.proc = promise.child;
+  try {
+    await promise;
+  } catch (err) {
+    if (jobControl && jobControl.cancelled) throw new CancelledError();
+    throw err;
+  } finally {
+    if (jobControl && jobControl.proc === promise.child) jobControl.proc = null;
+  }
 }
 
 async function uploadCaptionsVtt(key, vttText) {
@@ -536,9 +571,11 @@ async function uploadCaptionsVtt(key, vttText) {
 // callback interno da lib. Troca: perde-se o stride_length_s de 5s
 // (overlap entre chunks que ajudava a não cortar palavras na fronteira) —
 // aceitável pela granularidade de progresso ganha.
-async function transcribeToVtt(key, sourcePath, workDir, onProgress) {
+async function transcribeToVtt(key, sourcePath, workDir, onProgress, jobControl) {
+  if (jobControl && jobControl.cancelled) throw new CancelledError();
   const pcmPath = path.join(workDir, "audio.f32");
-  await extractAudioPcm(sourcePath, pcmPath);
+  await extractAudioPcm(sourcePath, pcmPath, jobControl);
+  if (jobControl && jobControl.cancelled) throw new CancelledError();
   const raw = await fs.readFile(pcmPath);
   await fs.rm(pcmPath, { force: true }).catch(() => {});
 
@@ -554,8 +591,10 @@ async function transcribeToVtt(key, sourcePath, workDir, onProgress) {
 
   const transcriber = await getTranscriber();
   try {
+    if (jobControl && jobControl.cancelled) throw new CancelledError();
     const allChunks = [];
     for (let i = 0; i < totalChunks; i++) {
+      if (jobControl && jobControl.cancelled) throw new CancelledError();
       const slice = samples.subarray(i * chunkLenSamples, (i + 1) * chunkLenSamples);
       const output = await transcriber(slice, { language: "portuguese", task: "transcribe", return_timestamps: true });
       const result = Array.isArray(output) ? output[0] : output;
@@ -761,8 +800,36 @@ async function handleUploadChunkRequest(req, res) {
 // cliente desistir por engano.
 const finalizeJobs = new Map();
 
+// Cancelamento real (não só o cliente desistir de fazer poll) — sem isto,
+// cancelar no browser só parava de acompanhar, mas o ffmpeg/whisper deste
+// job continuavam a comer RAM até acabarem sozinhos; se entretanto se
+// tentasse outro vídeo, dois jobs a disputar os mesmos 2GB é receita pra
+// OOM (ver comentário em transcodeRenditionHls, já aconteceu antes).
+// proc guarda o child process ffmpeg ATUALMENTE em curso (só um de cada vez,
+// os rungs são sequenciais) — cancelJob mata-o já; cancelled é checado nos
+// pontos de retoma (entre rungs, entre chunks de legendas) pra parar mesmo
+// entre processos, sem esperar o próximo spawn.
+const jobControls = new Map();
+
+class CancelledError extends Error {}
+
+function cancelJob(assetId) {
+  const jc = jobControls.get(assetId);
+  if (jc) {
+    jc.cancelled = true;
+    if (jc.proc) jc.proc.kill("SIGKILL");
+  }
+  finalizeJobs.delete(assetId);
+}
+
 function startFinalizeJob(assetId, workDir, sourcePath) {
   finalizeJobs.set(assetId, { state: "processing", phase: "compressing", completed: 0, total: null });
+  // Sempre um objeto novo (nunca reaproveita um antigo já cancelado) — um
+  // retry do MESMO ficheiro (mesmo assetId, ver fingerprintAssetId no
+  // cliente) depois de cancelar tem de conseguir arrancar limpo, não ficar
+  // preso num jobControl.cancelled=true de uma tentativa anterior.
+  const jobControl = { cancelled: false, proc: null };
+  jobControls.set(assetId, jobControl);
   (async () => {
     try {
       const progress = await loadTranscodeProgress(workDir);
@@ -788,6 +855,7 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
         {
           resume: progress,
           persistProgress: true,
+          jobControl,
           onPlan: (total) => {
             const job = finalizeJobs.get(assetId);
             if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, total });
@@ -803,6 +871,7 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
         }
       );
       if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
+      if (jobControl.cancelled) throw new CancelledError();
       console.log(`Upload direto ${assetId}: vídeo comprimido (${renditions.length} rendition(s)), a gerar legendas`);
 
       // hlsMasterUrl/renditions já vão aqui (não só no "done" final) — o
@@ -819,11 +888,18 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
       });
       let captionsUrl = null;
       try {
-        captionsUrl = await transcribeToVtt(assetId, sourcePath, workDir, (completed, total) => {
-          const job = finalizeJobs.get(assetId);
-          if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed, total });
-        });
+        captionsUrl = await transcribeToVtt(
+          assetId,
+          sourcePath,
+          workDir,
+          (completed, total) => {
+            const job = finalizeJobs.get(assetId);
+            if (job && job.state === "processing") finalizeJobs.set(assetId, { ...job, completed, total });
+          },
+          jobControl
+        );
       } catch (err) {
+        if (err instanceof CancelledError) throw err;
         // Nunca derruba o upload por isto — vídeo já está comprimido e
         // pronto, a aula só fica sem legendas.
         console.error(`Legendas do upload ${assetId} falharam (aula fica sem legendas):`, err);
@@ -837,6 +913,15 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
       // fica pra um retry poder recomeçar a comprimir sem reenviar nada.
       await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
     } catch (err) {
+      if (err instanceof CancelledError) {
+        // cancelJob() já limpou finalizeJobs — não voltar a escrever lá
+        // (senão "ressuscitava" um job que o cliente já desistiu de seguir).
+        // Limpa o resto do que sobrar (RAM já foi liberta pelo SIGKILL/
+        // transcriber.dispose, isto é só disco).
+        console.log(`Upload direto ${assetId} cancelado, a limpar.`);
+        await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+        return;
+      }
       console.error(`Finalização do upload ${assetId} falhou:`, err);
       finalizeJobs.set(assetId, { state: "error", error: err && err.message ? err.message : "Falha ao comprimir vídeo" });
     }
@@ -945,6 +1030,25 @@ async function handleUploadFinalizeStatusRequest(req, res) {
   );
 }
 
+// POST /upload-cancel — cancelamento explícito (botão "Cancelar" no
+// FileUploadInput). Mata já o ffmpeg/whisper em curso deste assetId (ver
+// cancelJob) em vez de deixá-los terminar sozinhos em fundo a comer RAM;
+// responde 200 sempre que o token é válido, mesmo que já não houvesse
+// nenhum job em curso (idempotente — cancelar duas vezes ou cancelar um
+// job que já tinha acabado não é erro nenhum).
+async function handleUploadCancelRequest(req, res) {
+  const assetId = authenticateRequest(req);
+  if (!assetId) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Token de upload inválido ou expirado" }));
+    return;
+  }
+  cancelJob(assetId);
+  await fs.rm(uploadWorkDir(assetId), { recursive: true, force: true }).catch(() => {});
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ state: "cancelled" }));
+}
+
 const server = http.createServer((req, res) => {
   console.log(`[http] ${req.method} ${req.url} — origin=${req.headers["origin"] || "?"}`);
   if (req.method === "OPTIONS") {
@@ -957,6 +1061,17 @@ const server = http.createServer((req, res) => {
     setCorsHeaders(res);
     handleUploadChunkRequest(req, res).catch((err) => {
       console.error("Erro não tratado no /upload-chunk:", err);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Erro interno" }));
+      }
+    });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/upload-cancel") {
+    setCorsHeaders(res);
+    handleUploadCancelRequest(req, res).catch((err) => {
+      console.error("Erro não tratado no /upload-cancel:", err);
       if (!res.headersSent) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Erro interno" }));

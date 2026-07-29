@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { Button } from "@/components/ui/Button";
 
 type Kind = "VIDEO" | "TRAILER" | "DOCUMENT" | "IMAGE";
 
@@ -155,6 +156,21 @@ async function authorizeWorkerUpload(file: File): Promise<WorkerAuth> {
   const auth = await authRes.json().catch(() => ({}));
   if (!authRes.ok) throw new UploadError(auth.error ?? "Erro ao preparar envio", authRes.status >= 500);
   return auth;
+}
+
+// Best-effort: avisa o worker pra matar já o ffmpeg/whisper deste assetId
+// (ver /upload-cancel em worker/index.js) em vez de deixá-los terminar
+// sozinhos em fundo a comer RAM. keepalive garante que o pedido sai mesmo
+// que o componente desmonte logo a seguir (troca de página, etc.); nunca
+// bloqueia nem falha visivelmente a UI — se isto não chegar ao worker, o
+// pior caso é o job antigo terminar sozinho mais tarde, igual a antes desta
+// funcionalidade existir.
+function requestWorkerCancel(auth: { uploadUrl: string; token: string }) {
+  fetch(`${auth.uploadUrl}/upload-cancel`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${auth.token}` },
+    keepalive: true,
+  }).catch(() => {});
 }
 
 // Pergunta ao worker quantos bytes já tem deste upload — chamado antes de
@@ -392,9 +408,11 @@ async function uploadToWorker(
   isCurrent: () => boolean,
   onServerProgress: (phase: ServerPhase, completed: number, total: number | null) => void,
   onFinalizePending: (resume: ResumableFinalize | null) => void,
-  onHlsReady: (hlsMasterUrl: string) => void
+  onHlsReady: (hlsMasterUrl: string) => void,
+  onAuth: (auth: WorkerAuth) => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
+  onAuth(auth);
   const noop = () => {};
 
   let offset = 0;
@@ -496,6 +514,7 @@ export function FileUploadInput({
   onFinalizePending,
   onStageChange,
   onEarlyReady,
+  onCancelled,
 }: {
   kind: Kind;
   // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
@@ -534,6 +553,11 @@ export function FileUploadInput({
   // toda. onUploaded continua a ser o sinal de "tudo terminado" (com
   // captionsUrl já resolvido). Só faz sentido pra kind="VIDEO".
   onEarlyReady?: (hlsMasterUrl: string) => void;
+  // Chamado depois de um cancelamento confirmado — o pai deve repor
+  // qualquer preview/estado que tenha adiantado a partir de onFileSelected/
+  // onEarlyReady (ver LessonEditScreen.tsx), já que este envio nunca vai
+  // chamar onUploaded.
+  onCancelled?: () => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -548,6 +572,12 @@ export function FileUploadInput({
   // — dá o "decorrido" a partir do relógio real, não de contagem de ticks
   // (sobrevive a abas em fundo, onde setInterval atrasa).
   const startTimeRef = useRef<number | null>(null);
+  // uploadUrl/token do worker pra este envio — só existe pra kind="VIDEO"
+  // (DIRECT_TO_WORKER_KINDS). Guardado assim que se conhece (authorizeWorkerUpload
+  // ou o resumeUpload recebido por prop) pra cancelUpload conseguir avisar o
+  // worker (ver requestWorkerCancel) mesmo estando já na fase de compressão/
+  // legendas, bem depois do pedido que o obteve ter terminado.
+  const workerAuthRef = useRef<{ uploadUrl: string; token: string } | null>(null);
   // Cada handleChange ganha o próximo número — um resultado (sucesso, erro,
   // progresso) só mexe no estado se ainda for da tentativa mais recente.
   // Sem isto, escolher um ficheiro novo a meio doutro envio podia deixar a
@@ -576,6 +606,40 @@ export function FileUploadInput({
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [uploading]);
+
+  // Mesmo mecanismo de "abandonar o envio em curso" que já existia pra
+  // quando se escolhe um ficheiro novo a meio (ver handleChange) — só que
+  // sem escolher nenhum ficheiro. Bump ao generationRef invalida qualquer
+  // promise em curso (o catch de handleChange já ignora isCurrent()===false
+  // e UploadAbortedError silenciosamente). Também avisa o worker (ver
+  // requestWorkerCancel/worker/index.js:/upload-cancel) pra matar já o
+  // ffmpeg/whisper deste job em vez de deixá-lo terminar sozinho em fundo a
+  // ocupar RAM — importante no plano gratuito do Railway, onde já
+  // aconteceram OOMs com dois jobs pesados ao mesmo tempo.
+  function cancelUpload() {
+    xhrRef.current?.abort();
+    xhrRef.current = null;
+    generationRef.current++;
+    if (workerAuthRef.current) {
+      requestWorkerCancel(workerAuthRef.current);
+      workerAuthRef.current = null;
+    }
+    setUploading(false);
+    setProgress(0);
+    setIndeterminate(false);
+    setServerPhase(null);
+    setServerPhasePercent(null);
+    setError(null);
+    setUploadedName(null);
+    setElapsedSeconds(0);
+    startTimeRef.current = null;
+    onFinalizePending?.(null);
+    onCancelled?.();
+  }
+
+  function handleCancelClick() {
+    if (window.confirm("Cancelar este envio? O progresso atual perde-se.")) cancelUpload();
+  }
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -638,9 +702,14 @@ export function FileUploadInput({
           (hlsMasterUrl) => {
             if (!isCurrent()) return;
             onEarlyReady?.(hlsMasterUrl);
+          },
+          (auth) => {
+            if (!isCurrent()) return;
+            workerAuthRef.current = { uploadUrl: auth.uploadUrl, token: auth.token };
           }
         );
         if (!isCurrent()) return;
+        workerAuthRef.current = null;
         setUploading(false);
         setServerPhase(null);
         setUploadedName(data.name);
@@ -705,6 +774,7 @@ export function FileUploadInput({
     setServerPhase("compressing");
     setServerPhasePercent(null);
     setError(null);
+    workerAuthRef.current = { uploadUrl: resumeUpload.uploadUrl, token: resumeUpload.token };
 
     resumeWorkerFinalize(
       resumeUpload,
@@ -729,6 +799,7 @@ export function FileUploadInput({
     )
       .then((data) => {
         if (!isCurrent()) return;
+        workerAuthRef.current = null;
         setUploading(false);
         setServerPhase(null);
         setUploadedName(data.name);
@@ -748,14 +819,21 @@ export function FileUploadInput({
 
   return (
     <div>
-      <input
-        type="file"
-        accept={ACCEPT[kind]}
-        onChange={handleChange}
-        className={`block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15 ${
-          compactMobile ? "max-w-[132px] overflow-hidden sm:max-w-none sm:overflow-visible" : ""
-        }`}
-      />
+      <div className="flex items-center justify-between gap-2">
+        <input
+          type="file"
+          accept={ACCEPT[kind]}
+          onChange={handleChange}
+          className={`block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-white/10 dark:file:text-slate-200 dark:hover:file:bg-white/15 ${
+            compactMobile ? "max-w-[132px] overflow-hidden sm:max-w-none sm:overflow-visible" : ""
+          }`}
+        />
+        {uploading && (
+          <Button type="button" variant="danger" onClick={handleCancelClick} className="shrink-0">
+            Cancelar
+          </Button>
+        )}
+      </div>
       {uploading && (
         <div className="mt-2">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
@@ -772,13 +850,15 @@ export function FileUploadInput({
             <p className="text-slate-500 dark:text-slate-400">
               {kind === "VIDEO"
                 ? // Etapa (enviar/comprimir/legendas) já vem no stepper por
-                  // cima (ver LessonEditScreen) — aqui só a percentagem.
+                  // cima (ver LessonEditScreen) — aqui só a percentagem, ou
+                  // "A preparar..." enquanto ainda não há nenhuma (extração
+                  // de áudio/carregamento do modelo, início do envio, etc.).
                   serverPhase
                   ? serverPhasePercent !== null
                     ? `${serverPhasePercent}%`
-                    : ""
+                    : "A preparar..."
                   : indeterminate
-                    ? ""
+                    ? "A preparar..."
                     : `${progress}%`
                 : indeterminate
                   ? "A enviar"

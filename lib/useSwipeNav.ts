@@ -49,6 +49,9 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
   // swipe e pelos botões "aula anterior"/"próxima aula" clicados — ambos
   // passam por aqui, nunca navegação simples sem transição.
   function goDirection(direction: "left" | "right", href: string) {
+    // eslint-disable-next-line no-console
+    console.warn("[player-debug] goDirection chamado", { direction, href });
+    console.trace("[player-debug] stack");
     pauseAllVideos();
     setSwipeExit(direction);
     sessionStorage.setItem(STORAGE_KEY, direction);

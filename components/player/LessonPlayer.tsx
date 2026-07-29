@@ -648,11 +648,24 @@ export function LessonPlayer({
     lastSentRef.current = now;
 
     const isNearEnd = video.duration > 0 && now / video.duration >= 0.95;
+    if (isNearEnd) {
+      // eslint-disable-next-line no-console
+      console.warn("[player-debug] isNearEnd true", { lessonId, now, duration: video.duration });
+    }
     sendProgress({ watchedSeconds: now, completed: isNearEnd || undefined });
     if (isNearEnd) onComplete();
   }
 
   async function handleEnded() {
+    // eslint-disable-next-line no-console
+    console.warn("[player-debug] handleEnded disparado", {
+      lessonId,
+      currentTime: videoRef.current?.currentTime,
+      duration: videoRef.current?.duration,
+      autoplayNext,
+      autoplayOn,
+      hasNext,
+    });
     setPlaying(false);
     setVideoEnded(true);
     // Ecrã de fim entra visível e conta como "atividade" — sem isto ficava

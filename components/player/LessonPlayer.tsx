@@ -298,11 +298,15 @@ export function LessonPlayer({
   // fora do setState (nunca dentro do updater, que corre durante o commit).
   const [autoAdvanceIn, setAutoAdvanceIn] = useState<number | null>(null);
   function cancelAutoAdvance() {
+    // eslint-disable-next-line no-console
+    console.warn("[player-debug] cancelAutoAdvance chamado", { lessonId, autoAdvanceIn });
     setAutoAdvanceIn(null);
   }
   useEffect(() => {
     if (autoAdvanceIn === null) return;
     if (autoAdvanceIn <= 0) {
+      // eslint-disable-next-line no-console
+      console.warn("[player-debug] autoAdvanceIn chegou a 0, chamando onGoNext", { lessonId, currentTime: videoRef.current?.currentTime });
       setAutoAdvanceIn(null);
       onGoNext?.();
       return;

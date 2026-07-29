@@ -248,7 +248,11 @@ function postChunk(
   });
 }
 
-type ServerPhase = "compressing" | "transcribing";
+// "queued" — job aceite mas ainda à espera de um slot livre no worker (ver
+// acquireJobSlot/MAX_CONCURRENT_JOBS em worker/index.js: concorrência
+// elástica derivada da RAM do serviço, não um número de uploads simultâneos
+// à mão). Sem percentagem nenhuma associada, só "à espera".
+type ServerPhase = "queued" | "compressing" | "transcribing";
 
 type FinalizeStatus =
   // hlsMasterUrl aparece já na fase "transcribing" (ver worker/index.js) —
@@ -855,9 +859,11 @@ export function FileUploadInput({
                   // "A preparar..." enquanto ainda não há nenhuma (extração
                   // de áudio/carregamento do modelo, início do envio, etc.).
                   serverPhase
-                  ? serverPhasePercent !== null
-                    ? `${serverPhasePercent}%`
-                    : "A preparar..."
+                  ? serverPhase === "queued"
+                    ? "Na fila..."
+                    : serverPhasePercent !== null
+                      ? `${serverPhasePercent}%`
+                      : "A preparar..."
                   : indeterminate
                     ? "A preparar..."
                     : `${progress}%`

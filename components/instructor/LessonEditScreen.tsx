@@ -111,7 +111,7 @@ export function LessonEditScreen({
   // não no browser, por isso "transcribing" é só mais um valor reportado
   // pelo servidor, igual a "compressing". Só serve pro stepper de 3 etapas
   // acima do input, não guarda mais nenhuma lógica própria.
-  const [videoStage, setVideoStage] = useState<"uploading" | "compressing" | "transcribing" | null>(null);
+  const [videoStage, setVideoStage] = useState<"uploading" | "queued" | "compressing" | "transcribing" | null>(null);
   const [pendingVideoUpload, setPendingVideoUpload] = useState<ResumableFinalize | null>(
     draft?.value.pendingVideoUpload ?? null
   );
@@ -244,7 +244,11 @@ export function LessonEditScreen({
   // enquanto alguma das 3 etapas está mesmo a decorrer, nada antes do
   // upload arrancar nem depois de "transcribing" acabar (videoStage volta
   // a null).
-  const videoPipelineStep = videoStage === "uploading" ? 1 : videoStage === "compressing" ? 2 : videoStage === "transcribing" ? 3 : null;
+  // "queued" (worker à espera de um slot livre — ver MAX_CONCURRENT_JOBS em
+  // worker/index.js) conta como parte da etapa 2: já não está a enviar,
+  // ainda não terminou de comprimir, só ainda não começou de facto.
+  const videoPipelineStep =
+    videoStage === "uploading" ? 1 : videoStage === "queued" || videoStage === "compressing" ? 2 : videoStage === "transcribing" ? 3 : null;
   const VIDEO_PIPELINE_STEPS = ["Enviar vídeo", "Comprimir vídeo", "Gerar legendas"];
 
   async function handleSubmit(e: React.FormEvent) {

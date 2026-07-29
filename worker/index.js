@@ -52,6 +52,51 @@ const HLS_SEGMENT_SECONDS = 6;
 // verdade, não só a retries dentro da mesma vida do processo.
 const UPLOAD_WORK_DIR = process.env.UPLOAD_WORK_DIR || os.tmpdir();
 
+// Concorrência elástica, não um número fixo hardcoded: derivada da RAM do
+// serviço a dividir pelo custo estimado de UM job pesado (ffmpeg 1080p OU
+// Whisper — nunca os dois ao mesmo tempo dentro do MESMO job, ver
+// transcribeToVtt). Sobe a RAM do serviço no Railway (WORKER_TOTAL_MEMORY_MB)
+// e o nº de jobs em paralelo sobe sozinho, sem tocar em código nenhum. Vale
+// pros dois caminhos (upload direto E fila assíncrona, ver acquireJobSlot) —
+// é o mesmo container, a mesma RAM pros dois.
+//
+// WORKER_JOB_MEMORY_MB por omissão é conservador de propósito: o teto de
+// 1080p já mostrou ser o ponto onde um ÚNICO job sozinho quase rebentava
+// 2GB (ver QUALITY_LADDER); 700MB por slot é uma margem seguro, não uma
+// medição exata (não há profiling real dos picos de RSS). Ajusta via env se
+// tiveres números melhores dos logs do Railway.
+const WORKER_TOTAL_MEMORY_MB = Number(process.env.WORKER_TOTAL_MEMORY_MB) || 2048;
+const WORKER_JOB_MEMORY_MB = Number(process.env.WORKER_JOB_MEMORY_MB) || 700;
+const MAX_CONCURRENT_JOBS = Math.max(1, Math.floor(WORKER_TOTAL_MEMORY_MB / WORKER_JOB_MEMORY_MB));
+
+let activeJobSlots = 0;
+const jobSlotWaiters = [];
+
+// Semáforo simples — nenhum job (compressão OU legendas, dos dois
+// caminhos) começa de verdade sem primeiro ter um slot. Um job cancelado
+// enquanto ainda espera na fila só desperdiça a espera de um turno (ver
+// jobControl.cancelled logo a seguir a acquireJobSlot em startFinalizeJob)
+// — não vale a pena complicar isto com remoção da fila de espera, o
+// desperdício é mínimo.
+function acquireJobSlot() {
+  if (activeJobSlots < MAX_CONCURRENT_JOBS) {
+    activeJobSlots++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => jobSlotWaiters.push(resolve));
+}
+
+// Entrega o slot diretamente ao próximo à espera (em vez de decrementar e
+// deixar o próximo correr acquireJobSlot outra vez) — evita uma janela onde
+// dois jobs quaisquer, nenhum dos dois em espera, pudessem ambos ver
+// "activeJobSlots < MAX" ao mesmo tempo e passar os dois, se algum dia
+// acquireJobSlot for chamado de mais que um sítio em paralelo.
+function releaseJobSlot() {
+  const next = jobSlotWaiters.shift();
+  if (next) next();
+  else activeJobSlots--;
+}
+
 function requireEnv(name) {
   const v = process.env[name];
   if (!v) {
@@ -469,22 +514,30 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
 // Antes corria no browser do instrutor (transformers.js + WASM, ver git log
 // de lib/captions.ts) — de propósito, pra não tocar no worker (já sujeito a
 // OOM a 1080p, ver QUALITY_LADDER acima). Passou pra cá a pedido: o modelo
-// (~232MB) deixa de ser descarregado do CDN em CADA upload (um por
-// instrutor, por sessão de browser) — corre 1x por vídeo aqui, com os
-// pesos em cache local em disco (transformers.js/onnxruntime-node já
-// cacheiam por omissão em Node, ao contrário do browser), só o 1º vídeo
-// desde que o container arrancou paga o download do CDN.
+// deixa de ser descarregado do CDN em CADA upload (um por instrutor, por
+// sessão de browser) — corre 1x por vídeo aqui, com os pesos em cache local
+// em disco (transformers.js/onnxruntime-node já cacheiam por omissão em
+// Node, ao contrário do browser), só o 1º vídeo desde que o container
+// arrancou paga o download do CDN.
 //
 // Corre DEPOIS de transcodeToHls terminar (nunca em paralelo com o
 // ffmpeg) — de propósito: o worker só tem 2GB de RAM, já apertado só com o
 // ffmpeg a 1080p (ver comentário no QUALITY_LADDER). getTranscriber() NÃO
 // fica cacheado entre vídeos (ao contrário do padrão "singleton" óbvio) —
 // carrega-se e descarta-se (transcriber.dispose()) a cada vídeo, pra não
-// ocupar ~300-400MB de RAM PERMANENTEMENTE e reduzir a margem que o
-// PRÓXIMO vídeo tem pra comprimir. Falha aqui nunca derruba o upload —
-// vídeo/compressão já são o caminho crítico, a aula só fica sem legendas
-// (ver catch em startFinalizeJob).
-const WHISPER_MODEL_ID = "Xenova/whisper-base";
+// ocupar RAM PERMANENTEMENTE e reduzir a margem que o PRÓXIMO vídeo tem pra
+// comprimir. Falha aqui nunca derruba o upload — vídeo/compressão já são o
+// caminho crítico, a aula só fica sem legendas (ver catch em
+// startFinalizeJob).
+//
+// "tiny" em vez de "base" — OOM confirmado nesta fase mesmo com o resto do
+// pipeline já sequencial (nunca a par do ffmpeg) e sem jobs órfãos (ver
+// cancelJob). "base" (~74M parâmetros) empurrava o container pro limite dos
+// 2GB só com o próprio modelo + onnxruntime-node; "tiny" (~39M) é a troca
+// direta RAM-por-qualidade — legendas piores, mas o upload deixa de
+// rebentar. Se a RAM do serviço subir no Railway, vale a pena voltar a
+// "base".
+const WHISPER_MODEL_ID = "Xenova/whisper-tiny";
 const CAPTION_CHUNK_SECONDS = 30;
 const CAPTION_SAMPLE_RATE = 16000;
 
@@ -617,7 +670,7 @@ async function transcribeToVtt(key, sourcePath, workDir, onProgress, jobControl)
     }
     return await uploadCaptionsVtt(key, chunksToVtt(allChunks));
   } finally {
-    // Liberta os ~300-400MB do modelo já — não fica à espera do GC
+    // Liberta a RAM do modelo já — não fica à espera do GC
     // (onnxruntime-node é um addon nativo, memória fora do heap do V8 que
     // o GC do JS não sabe reclamar sozinho).
     if (typeof transcriber.dispose === "function") await transcriber.dispose().catch(() => {});
@@ -832,7 +885,10 @@ function cancelJob(assetId) {
 }
 
 function startFinalizeJob(assetId, workDir, sourcePath) {
-  finalizeJobs.set(assetId, { state: "processing", phase: "compressing", completed: 0, total: null });
+  // "queued" até conseguir um slot (ver acquireJobSlot) — pode não ser já,
+  // se já houver MAX_CONCURRENT_JOBS a decorrer (dos dois caminhos, upload
+  // direto e fila assíncrona, o slot é partilhado).
+  finalizeJobs.set(assetId, { state: "processing", phase: "queued", completed: 0, total: null });
   // Sempre um objeto novo (nunca reaproveita um antigo já cancelado) — um
   // retry do MESMO ficheiro (mesmo assetId, ver fingerprintAssetId no
   // cliente) depois de cancelar tem de conseguir arrancar limpo, não ficar
@@ -840,7 +896,13 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
   const jobControl = { cancelled: false, proc: null };
   jobControls.set(assetId, jobControl);
   (async () => {
+    await acquireJobSlot();
     try {
+      // Cancelado enquanto ainda estava na fila, nunca chegou a arrancar —
+      // nada pra limpar além do slot (ver finally), o workDir já foi (ou
+      // vai ser) tratado por handleUploadCancelRequest.
+      if (jobControl.cancelled) return;
+      finalizeJobs.set(assetId, { state: "processing", phase: "compressing", completed: 0, total: null });
       const progress = await loadTranscodeProgress(workDir);
       const alreadyDone = progress.renditions.length;
       finalizeJobs.set(assetId, { state: "processing", phase: "compressing", completed: alreadyDone, total: null });
@@ -933,6 +995,8 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
       }
       console.error(`Finalização do upload ${assetId} falhou:`, err);
       finalizeJobs.set(assetId, { state: "error", error: err && err.message ? err.message : "Falha ao comprimir vídeo" });
+    } finally {
+      releaseJobSlot();
     }
   })();
 }
@@ -1133,6 +1197,11 @@ const server = http.createServer((req, res) => {
 // --- Caminho 2: fila assíncrona (poll a /api/worker/jobs/next) ---------
 
 async function processJob(job) {
+  // Mesmo semáforo do upload direto (ver acquireJobSlot) — os dois caminhos
+  // correm ffmpeg no MESMO container, com a MESMA RAM; sem isto, um job
+  // desta fila a par de vários uploads diretos passava direto por cima do
+  // limite de concorrência.
+  await acquireJobSlot();
   console.log(`A processar job ${job.id} (aula ${job.lessonId})`);
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "transcode-"));
   const sourcePath = path.join(workDir, "source");
@@ -1148,6 +1217,7 @@ async function processJob(job) {
     await failJob(job.id, err && err.message ? err.message : err);
   } finally {
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    releaseJobSlot();
   }
 }
 

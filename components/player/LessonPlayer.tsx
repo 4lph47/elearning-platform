@@ -262,7 +262,17 @@ export function LessonPlayer({
       setHlsLevels(hls.levels.map((l, index) => ({ index, height: l.height, bitrate: l.bitrate })));
     });
     hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
+      // eslint-disable-next-line no-console
+      console.warn("[player-debug] hls level switched", { lessonId, level: data.level, height: hls.levels[data.level]?.height, duration: hls.levels[data.level]?.details?.totalduration });
       setHlsCurrentLevel(data.level);
+    });
+    hls.on(Hls.Events.ERROR, (_evt, data) => {
+      // eslint-disable-next-line no-console
+      console.warn("[player-debug] hls error", { lessonId, type: data.type, details: data.details, fatal: data.fatal, level: (data as { level?: number }).level, currentTime: video.currentTime });
+    });
+    hls.on(Hls.Events.BUFFER_EOS, () => {
+      // eslint-disable-next-line no-console
+      console.warn("[player-debug] hls buffer eos", { lessonId, currentTime: video.currentTime, level: hls.currentLevel });
     });
 
     return () => {

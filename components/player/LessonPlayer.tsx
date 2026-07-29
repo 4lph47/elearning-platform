@@ -262,17 +262,7 @@ export function LessonPlayer({
       setHlsLevels(hls.levels.map((l, index) => ({ index, height: l.height, bitrate: l.bitrate })));
     });
     hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
-      // eslint-disable-next-line no-console
-      console.warn("[player-debug] hls level switched", { lessonId, level: data.level, height: hls.levels[data.level]?.height, duration: hls.levels[data.level]?.details?.totalduration });
       setHlsCurrentLevel(data.level);
-    });
-    hls.on(Hls.Events.ERROR, (_evt, data) => {
-      // eslint-disable-next-line no-console
-      console.warn("[player-debug] hls error", { lessonId, type: data.type, details: data.details, fatal: data.fatal, level: (data as { level?: number }).level, currentTime: video.currentTime });
-    });
-    hls.on(Hls.Events.BUFFER_EOS, () => {
-      // eslint-disable-next-line no-console
-      console.warn("[player-debug] hls buffer eos", { lessonId, currentTime: video.currentTime, level: hls.currentLevel });
     });
 
     return () => {
@@ -298,17 +288,11 @@ export function LessonPlayer({
   // fora do setState (nunca dentro do updater, que corre durante o commit).
   const [autoAdvanceIn, setAutoAdvanceIn] = useState<number | null>(null);
   function cancelAutoAdvance() {
-    // eslint-disable-next-line no-console
-    console.warn("[player-debug] cancelAutoAdvance chamado", { lessonId, autoAdvanceIn, t: Date.now(), currentTime: videoRef.current?.currentTime });
     setAutoAdvanceIn(null);
   }
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.warn("[player-debug] autoAdvanceIn efeito correu", { lessonId, autoAdvanceIn, t: Date.now(), currentTime: videoRef.current?.currentTime });
     if (autoAdvanceIn === null) return;
     if (autoAdvanceIn <= 0) {
-      // eslint-disable-next-line no-console
-      console.warn("[player-debug] autoAdvanceIn chegou a 0, chamando onGoNext", { lessonId, currentTime: videoRef.current?.currentTime, t: Date.now() });
       setAutoAdvanceIn(null);
       onGoNext?.();
       return;
@@ -664,25 +648,11 @@ export function LessonPlayer({
     lastSentRef.current = now;
 
     const isNearEnd = video.duration > 0 && now / video.duration >= 0.95;
-    if (isNearEnd) {
-      // eslint-disable-next-line no-console
-      console.warn("[player-debug] isNearEnd true", { lessonId, now, duration: video.duration });
-    }
     sendProgress({ watchedSeconds: now, completed: isNearEnd || undefined });
     if (isNearEnd) onComplete();
   }
 
   async function handleEnded() {
-    // eslint-disable-next-line no-console
-    console.warn("[player-debug] handleEnded disparado", {
-      lessonId,
-      currentTime: videoRef.current?.currentTime,
-      duration: videoRef.current?.duration,
-      autoplayNext,
-      autoplayOn,
-      hasNext,
-      t: Date.now(),
-    });
     setPlaying(false);
     setVideoEnded(true);
     // Ecrã de fim entra visível e conta como "atividade" — sem isto ficava
@@ -702,6 +672,12 @@ export function LessonPlayer({
       completed: true,
     });
     onComplete();
+
+    // O await acima (POST de progresso) pode demorar — se entretanto o
+    // utilizador já clicou "Repetir vídeo", o vídeo está de novo a tocar
+    // (ended volta a false) e armar aqui o countdown ia disparar o
+    // avanço automático a meio do replay, sem ter nada a ver com ele.
+    if (!videoRef.current?.ended) return;
 
     // Reprodução automática desligada nas definições — nem avança sozinho
     // pra próxima aula/quiz, fica só à espera de um clique manual.

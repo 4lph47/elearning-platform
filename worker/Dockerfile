@@ -22,7 +22,7 @@ WORKDIR /build
 # add_subdirectory/add_executable pedem pro alvo whisper-cli), não é palpite.
 RUN git clone --depth 1 --branch v1.7.4 --filter=blob:none --no-checkout https://github.com/ggerganov/whisper.cpp.git . \
   && git sparse-checkout init --cone \
-  && git sparse-checkout set cmake ggml src include examples/cli examples/bench examples/server examples/quantize examples/deprecation-warning models \
+  && git sparse-checkout set cmake ggml src include bindings/javascript examples/cli examples/bench examples/server examples/quantize examples/deprecation-warning models \
   && git checkout v1.7.4
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
   && cmake --build build --config Release -j"$(nproc)" --target whisper-cli

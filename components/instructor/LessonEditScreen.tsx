@@ -516,34 +516,29 @@ export function LessonEditScreen({
                     setContentUrl(hlsMasterUrl);
                   }}
                 />
-                {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
-                    mesmo LessonPlayer usado na aula a sério (gestos, seletor
-                    de qualidade, tudo igual), só que a largura fica fluida
-                    (fluidWidth) em vez das larguras fixas da página da aula,
-                    que não cabiam nesta card mais estreita. */}
-                {contentUrl ? (
+                {/* Preview do conteúdo assim que há QUALQUER coisa pra
+                    mostrar — mesmo ficheiro bruto recém-escolhido, antes de
+                    sequer começar o envio — já usa o mesmo LessonPlayer da
+                    aula a sério (gestos, seletor de qualidade, tudo igual),
+                    só que a largura fica fluida (fluidWidth) em vez das
+                    larguras fixas da página da aula, que não cabiam nesta
+                    card mais estreita. Envio/compressão/legendas podem
+                    demorar ou engasgar por rede — nunca vale a pena esconder
+                    o preview enquanto isso corre, se já há um ficheiro (bruto
+                    ou já comprimido) capaz de tocar. */}
+                {(contentUrl ?? localPreviewUrl) && (
                   <div className="mt-2 overflow-hidden rounded-md bg-black">
                     <LessonPlayer
                       lessonId={lesson?.id ?? "preview"}
                       type="VIDEO"
-                      contentUrl={contentUrl}
-                      hlsMasterUrl={previewHlsMasterUrl}
-                      captionsUrl={captionsUrl}
+                      contentUrl={contentUrl ?? localPreviewUrl}
+                      hlsMasterUrl={contentUrl ? previewHlsMasterUrl : null}
+                      captionsUrl={contentUrl ? captionsUrl : null}
                       initialWatchedSeconds={0}
                       onComplete={() => {}}
                       fluidWidth
                     />
                   </div>
-                ) : (
-                  localPreviewUrl && (
-                    // Vídeo comprimido ainda não está pronto — toca o
-                    // ficheiro local diretamente (sem hls.js, é o
-                    // ficheiro bruto tal como escolhido) em vez de
-                    // deixar o preview em branco até o worker acabar.
-                    <div className="mt-2 overflow-hidden rounded-md bg-black">
-                      <video src={localPreviewUrl} controls className="aspect-video w-full" />
-                    </div>
-                  )
                 )}
               </div>
             ) : (

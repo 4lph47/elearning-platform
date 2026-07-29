@@ -770,17 +770,19 @@ export function FileUploadInput({
           </div>
           <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
             <p className="text-slate-500 dark:text-slate-400">
-              {serverPhase === "compressing"
-                ? serverPhasePercent !== null
-                  ? `A comprimir vídeo (${serverPhasePercent}%)...`
-                  : "A comprimir vídeo..."
-                : serverPhase === "transcribing"
+              {kind === "VIDEO"
+                ? // Etapa (enviar/comprimir/legendas) já vem no stepper por
+                  // cima (ver LessonEditScreen) — aqui só a percentagem.
+                  serverPhase
                   ? serverPhasePercent !== null
-                    ? `A gerar legendas (${serverPhasePercent}%)...`
-                    : "A gerar legendas..."
+                    ? `${serverPhasePercent}%`
+                    : ""
                   : indeterminate
-                    ? "A enviar..."
-                    : `A enviar (${progress}%)`}
+                    ? ""
+                    : `${progress}%`
+                : indeterminate
+                  ? "A enviar"
+                  : `A enviar (${progress}%)`}
             </p>
             <p className="shrink-0 text-slate-400 dark:text-slate-500">
               {(() => {
@@ -789,7 +791,7 @@ export function FileUploadInput({
                   activePercent !== null && activePercent > 0
                     ? Math.round((elapsedSeconds * (100 - activePercent)) / activePercent)
                     : null;
-                return `${formatDuration(elapsedSeconds)}${eta !== null ? ` · ~${formatDuration(eta)} restante` : ""}`;
+                return `${formatDuration(elapsedSeconds)}${eta !== null ? ` · ${formatDuration(eta)} restante` : ""}`;
               })()}
             </p>
           </div>

@@ -42,6 +42,15 @@ const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "course-media";
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) || 8000;
 const UPLOAD_PORT = Number(process.env.PORT) || 8080;
 const HLS_SEGMENT_SECONDS = 6;
+// Sem isto (default os.tmpdir()), um restart do container perde ficheiro
+// fonte + progress.json + tudo o que já se tinha comprimido/transcrito —
+// os.tmpdir() vive no filesystem efémero do container, apagado a cada
+// restart. Aponta pra dentro de um volume persistente do Railway (Settings
+// do serviço → Volumes, ver worker/README.md) e todo o mecanismo de resume
+// que já existia (progress.json por rung, doneLabels em transcodeToHls,
+// getReceivedBytes pros blocos) passa a sobreviver a crashes/OOM de
+// verdade, não só a retries dentro da mesma vida do processo.
+const UPLOAD_WORK_DIR = process.env.UPLOAD_WORK_DIR || os.tmpdir();
 
 function requireEnv(name) {
   const v = process.env[name];
@@ -664,7 +673,7 @@ function verifyUploadToken(token) {
 // permite a um retry encontrar e continuar o mesmo ficheiro parcial de uma
 // tentativa anterior, em vez de começar sempre do zero.
 function uploadWorkDir(assetId) {
-  return path.join(os.tmpdir(), `direct-upload-${assetId}`);
+  return path.join(UPLOAD_WORK_DIR, `direct-upload-${assetId}`);
 }
 
 async function getReceivedBytes(assetId) {

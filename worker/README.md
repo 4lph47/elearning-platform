@@ -92,6 +92,9 @@ antes deste pipeline.
    - `SUPABASE_SECRET_KEY` — igual ao da app
    - `SUPABASE_STORAGE_BUCKET` — igual ao da app (default `course-media`)
    - `POLL_INTERVAL_MS` — opcional, default `8000`
+   - `UPLOAD_WORK_DIR` — opcional, default `os.tmpdir()` (efémero). Define
+     como um caminho dentro do volume persistente (ver passo 7) pra resumir
+     uploads/compressão/legendas depois de um crash/restart.
    - `PORT` — o Railway injeta isto automaticamente, não precisas de definir
 4. Deploy. **Agora expõe porta** (endpoint de upload direto) — marca o
    serviço como **web** (não "worker/background" como antes), Railway faz
@@ -102,6 +105,21 @@ antes deste pipeline.
 6. Gerar o `WORKER_API_SECRET` uma vez: `openssl rand -hex 32` (ou
    qualquer string aleatória longa) — mete o mesmo valor no Vercel
    (`WORKER_API_SECRET`) e no Railway.
+7. **Volume persistente (para resumir de verdade após um crash/restart)**:
+   sem isto, um restart do serviço (OOM, deploy, etc.) perde o ficheiro
+   fonte e o checkpoint de compressão de qualquer upload em curso — o
+   cliente teria de reenviar o vídeo do zero.
+   - Settings do serviço → **Volumes** → **New Volume**, mount path por
+     exemplo `/data`.
+   - Adiciona a env var `UPLOAD_WORK_DIR=/data/uploads`.
+   - Com isto, `progress.json` (por rendition já comprimida) e o ficheiro
+     fonte sobrevivem ao restart — ao retomar, o worker salta direto pras
+     renditions já feitas e, se já estava na fase de legendas, só volta a
+     correr a transcrição (mais barata que recomprimir), em vez de
+     recomeçar tudo. `worker/railway.json` já tem
+     `restartPolicyType: ON_FAILURE`, por isso o Railway reinicia sozinho
+     depois de um OOM — com o volume, esse restart deixa de perder
+     trabalho.
 
 ## Deploy no Render
 

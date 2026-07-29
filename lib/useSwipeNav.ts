@@ -49,9 +49,12 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
   // swipe e pelos botões "aula anterior"/"próxima aula" clicados — ambos
   // passam por aqui, nunca navegação simples sem transição.
   function goDirection(direction: "left" | "right", href: string) {
-    // eslint-disable-next-line no-console
-    console.warn("[player-debug] goDirection chamado", { direction, href });
-    console.trace("[player-debug] stack");
+    // Sem isto, qualquer disparo repetido (ex.: auto-avanço a re-executar
+    // por o "ended" do vídeo voltar a disparar, ou o clique em "próxima
+    // aula" a repetir-se) empilhava várias transições/pushes em paralelo
+    // para o mesmo destino — cada uma a pausar/desvanecer o vídeo outra vez,
+    // dando a sensação de a aula cortar a meio mesmo sem ter chegado ao fim.
+    if (swipeExit !== null) return;
     pauseAllVideos();
     setSwipeExit(direction);
     sessionStorage.setItem(STORAGE_KEY, direction);

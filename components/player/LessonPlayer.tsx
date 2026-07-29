@@ -391,6 +391,10 @@ export function LessonPlayer({
   const DOUBLE_CLICK_MS = 220;
   const lastClickRef = useRef<number | null>(null);
   const clickTimerRef = useRef<number | null>(null);
+  // O clique que fecha o menu de definições (fora dele) cai em cima do
+  // próprio vídeo — sem isto, o mesmo toque que só devia dispensar o menu
+  // também dava play/pause ou escondia/mostrava os controlos.
+  const suppressNextVideoClickRef = useRef(false);
   const gestureIdRef = useRef(0);
   const [likeBurst, setLikeBurst] = useState<{ x: number; y: number; id: number } | null>(null);
   const [seekFlash, setSeekFlash] = useState<{ dir: "back" | "fwd"; id: number } | null>(null);
@@ -417,6 +421,7 @@ export function LessonPlayer({
         setMenuOpen(false);
         setSpeedOpen(false);
         setQualityOpen(false);
+        suppressNextVideoClickRef.current = true;
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -761,6 +766,13 @@ export function LessonPlayer({
   }
 
   function handleVideoClick(e: React.MouseEvent<HTMLVideoElement>) {
+    if (suppressNextVideoClickRef.current) {
+      // Este clique só serviu para dispensar o menu de definições (o
+      // listener de clique-fora já tratou disso) — não deve também mexer
+      // no vídeo por baixo.
+      suppressNextVideoClickRef.current = false;
+      return;
+    }
     const rect = containerRef.current?.getBoundingClientRect();
     if (clickTimerRef.current) {
       window.clearTimeout(clickTimerRef.current);
@@ -781,6 +793,21 @@ export function LessonPlayer({
     }
     lastClickRef.current = now;
     clickTimerRef.current = window.setTimeout(() => {
+      // Mobile (sem rato — a mesma zona só tem toque): um toque simples
+      // fora de qualquer botão só deve mostrar/esconder os controlos, como
+      // no YouTube/qualquer player mobile — dar play/pause sem mostrar nada
+      // deixa o utilizador sem forma de saber o que aconteceu nem de
+      // reverter. Desktop mantém o clique = play/pause de sempre.
+      if (window.innerWidth < 1024) {
+        if (controlsShown) {
+          handleControlsMouseLeave();
+        } else {
+          handleControlsActivity();
+        }
+        lastClickRef.current = null;
+        clickTimerRef.current = null;
+        return;
+      }
       togglePlay();
       // video.paused já reflete o estado NOVO aqui (play()/pause() aplicam-no
       // sincronamente, mesmo antes da reprodução em si começar/parar de

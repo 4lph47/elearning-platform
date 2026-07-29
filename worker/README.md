@@ -53,11 +53,11 @@ um poller em fundo.
    `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila nenhuma.
 5. Ainda dentro do mesmo `/upload-finalize-status` (fase `transcribing`,
    depois de `compressing`): o worker extrai o áudio com `ffmpeg`, corre
-   Whisper local (`@huggingface/transformers`, modelo `Xenova/whisper-tiny`
-   — trocado de `whisper-base` por OOM confirmado nesta fase mesmo com 2GB
-   de RAM; ver comentário em `WHISPER_MODEL_ID` no `index.js`) em blocos de
-   30s e sobe o `.vtt` resultante pro Storage — ver `transcribeToVtt` em
-   `index.js`. Corre sempre DEPOIS da compressão (nunca em paralelo com o
+   Whisper local (`@huggingface/transformers`, modelo `Xenova/whisper-base`)
+   em blocos de 30s, lidos do ficheiro aos poucos (nunca o áudio inteiro de
+   uma vez — pico de memória fixo, não cresce com a duração do vídeo, ver
+   `transcribeToVtt` no `index.js`), e sobe o `.vtt` resultante pro Storage.
+   Corre sempre DEPOIS da compressão (nunca em paralelo com o
    `ffmpeg`, RAM já é curta) e nunca falha o upload: se a transcrição
    rebentar, a aula fica só sem legendas. O modelo é descarregado do CDN do
    Hugging Face uma vez (fica em cache local em disco); o processo não o

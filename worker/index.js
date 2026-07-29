@@ -62,11 +62,13 @@ const UPLOAD_WORK_DIR = process.env.UPLOAD_WORK_DIR || os.tmpdir();
 //
 // WORKER_JOB_MEMORY_MB por omissão é conservador de propósito: o teto de
 // 1080p já mostrou ser o ponto onde um ÚNICO job sozinho quase rebentava
-// 2GB (ver QUALITY_LADDER); 700MB por slot é uma margem seguro, não uma
-// medição exata (não há profiling real dos picos de RSS). Ajusta via env se
-// tiveres números melhores dos logs do Railway.
+// 2GB (ver QUALITY_LADDER); 800MB por slot é uma margem segura, não uma
+// medição exata (não há profiling real dos picos de RSS) — cobre tanto o
+// ffmpeg 1080p como o Whisper "base" (ver WHISPER_MODEL_ID), o maior dos
+// dois manda no valor, já que nunca correm em paralelo dentro do MESMO job.
+// Ajusta via env se tiveres números melhores dos logs do Railway.
 const WORKER_TOTAL_MEMORY_MB = Number(process.env.WORKER_TOTAL_MEMORY_MB) || 2048;
-const WORKER_JOB_MEMORY_MB = Number(process.env.WORKER_JOB_MEMORY_MB) || 700;
+const WORKER_JOB_MEMORY_MB = Number(process.env.WORKER_JOB_MEMORY_MB) || 800;
 const MAX_CONCURRENT_JOBS = Math.max(1, Math.floor(WORKER_TOTAL_MEMORY_MB / WORKER_JOB_MEMORY_MB));
 
 let activeJobSlots = 0;
@@ -530,14 +532,14 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
 // caminho crítico, a aula só fica sem legendas (ver catch em
 // startFinalizeJob).
 //
-// "tiny" em vez de "base" — OOM confirmado nesta fase mesmo com o resto do
-// pipeline já sequencial (nunca a par do ffmpeg) e sem jobs órfãos (ver
-// cancelJob). "base" (~74M parâmetros) empurrava o container pro limite dos
-// 2GB só com o próprio modelo + onnxruntime-node; "tiny" (~39M) é a troca
-// direta RAM-por-qualidade — legendas piores, mas o upload deixa de
-// rebentar. Se a RAM do serviço subir no Railway, vale a pena voltar a
-// "base".
-const WHISPER_MODEL_ID = "Xenova/whisper-tiny";
+// Passou por "tiny" a meio (OOM confirmado nesta fase) — a causa real era
+// transcribeToVtt a carregar o ÁUDIO INTEIRO pra RAM de uma vez (crescia com
+// a duração do vídeo, não com o modelo, ver comentário em transcribeToVtt),
+// já corrigido (lê aos blocos de 1 chunk agora). "base" (~74M parâmetros) é
+// o valor original, restaurado com esse bug fora do caminho — WORKER_JOB_MEMORY_MB
+// abaixo já reflete o custo maior deste modelo face ao "tiny" (concorrência
+// elástica ajusta-se sozinha).
+const WHISPER_MODEL_ID = "Xenova/whisper-base";
 const CAPTION_CHUNK_SECONDS = 30;
 const CAPTION_SAMPLE_RATE = 16000;
 
@@ -638,26 +640,42 @@ async function transcribeToVtt(key, sourcePath, workDir, onProgress, jobControl)
   const pcmPath = path.join(workDir, "audio.f32");
   await extractAudioPcm(sourcePath, pcmPath, jobControl);
   if (jobControl && jobControl.cancelled) throw new CancelledError();
-  const raw = await fs.readFile(pcmPath);
-  await fs.rm(pcmPath, { force: true }).catch(() => {});
 
-  // .slice() no ArrayBuffer copia pra um novo buffer com byteOffset 0 — o
-  // Buffer devolvido por fs.readFile pode não estar alinhado a 4 bytes
-  // (exigido pelo Float32Array), não dá pra ler o .buffer dele direto.
-  const arrayBuffer = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.length);
-  const samples = new Float32Array(arrayBuffer);
-  if (samples.length === 0) throw new Error("Áudio vazio (vídeo sem faixa de áudio?)");
+  const { size: totalBytes } = await fs.stat(pcmPath);
+  if (totalBytes === 0) {
+    await fs.rm(pcmPath, { force: true }).catch(() => {});
+    throw new Error("Áudio vazio (vídeo sem faixa de áudio?)");
+  }
 
+  const BYTES_PER_SAMPLE = 4; // f32le
   const chunkLenSamples = CAPTION_CHUNK_SECONDS * CAPTION_SAMPLE_RATE;
-  const totalChunks = Math.max(1, Math.ceil(samples.length / chunkLenSamples));
+  const chunkBytes = chunkLenSamples * BYTES_PER_SAMPLE;
+  const totalChunks = Math.max(1, Math.ceil(totalBytes / chunkBytes));
 
+  // Lê o PCM por blocos de EXATAMENTE 1 chunk (via file handle, offset
+  // explícito) em vez de carregar o áudio inteiro pra RAM de uma vez (como
+  // era antes) — o pico de memória passa a ser ~chunkBytes (uns 2MB),
+  // sempre o mesmo INDEPENDENTEMENTE da duração do vídeo, em vez de crescer
+  // com ela. Um vídeo de 1-2h chegava a algumas centenas de MB só nesta
+  // parte (o array todo + a cópia do .slice() do ArrayBuffer, em duplicado)
+  // — provável causa real dos OOMs nas legendas mesmo depois de trocar pro
+  // modelo mais pequeno (whisper-tiny), que só reduz o custo FIXO do
+  // modelo, não este custo VARIÁVEL com a duração.
+  const fileHandle = await fs.open(pcmPath, "r");
+  const readBuffer = Buffer.alloc(chunkBytes);
   const transcriber = await getTranscriber();
   try {
     if (jobControl && jobControl.cancelled) throw new CancelledError();
     const allChunks = [];
     for (let i = 0; i < totalChunks; i++) {
       if (jobControl && jobControl.cancelled) throw new CancelledError();
-      const slice = samples.subarray(i * chunkLenSamples, (i + 1) * chunkLenSamples);
+      const { bytesRead } = await fileHandle.read(readBuffer, 0, chunkBytes, i * chunkBytes);
+      if (bytesRead === 0) break;
+      // .slice() no ArrayBuffer copia pra um novo buffer com byteOffset 0 —
+      // readBuffer é reaproveitado a cada volta, não dá pra ler o .buffer
+      // dele direto (exigido pelo Float32Array, alinhado a 4 bytes).
+      const arrayBuffer = readBuffer.buffer.slice(readBuffer.byteOffset, readBuffer.byteOffset + bytesRead);
+      const slice = new Float32Array(arrayBuffer);
       const output = await transcriber(slice, { language: "portuguese", task: "transcribe", return_timestamps: true });
       const result = Array.isArray(output) ? output[0] : output;
       const resultChunks = (result && result.chunks) || [];
@@ -670,6 +688,8 @@ async function transcribeToVtt(key, sourcePath, workDir, onProgress, jobControl)
     }
     return await uploadCaptionsVtt(key, chunksToVtt(allChunks));
   } finally {
+    await fileHandle.close().catch(() => {});
+    await fs.rm(pcmPath, { force: true }).catch(() => {});
     // Liberta a RAM do modelo já — não fica à espera do GC
     // (onnxruntime-node é um addon nativo, memória fora do heap do V8 que
     // o GC do JS não sabe reclamar sozinho).

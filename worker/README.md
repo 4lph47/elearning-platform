@@ -52,17 +52,25 @@ um poller em fundo.
    a aula, a app já regista isto como `hlsMasterUrl` diretamente (ver
    `lib/videoTranscode.ts:isProcessedHlsUrl`), sem fila nenhuma.
 5. Ainda dentro do mesmo `/upload-finalize-status` (fase `transcribing`,
-   depois de `compressing`): o worker extrai o áudio com `ffmpeg`, corre
-   Whisper local (`@huggingface/transformers`, modelo `Xenova/whisper-base`)
-   em blocos de 30s, lidos do ficheiro aos poucos (nunca o áudio inteiro de
-   uma vez — pico de memória fixo, não cresce com a duração do vídeo, ver
-   `transcribeToVtt` no `index.js`), e sobe o `.vtt` resultante pro Storage.
-   Corre sempre DEPOIS da compressão (nunca em paralelo com o
+   depois de `compressing`): o worker gera legendas com **whisper.cpp**
+   (binário nativo, compilado no `Dockerfile`, modelo GGML multilingue
+   quantizado `base-q5_1` EMBUTIDO na imagem — nunca precisa de rede em
+   runtime). Um chunk de 30s de cada vez: extrai esse pedaço do vídeo com
+   `ffmpeg` (nunca o áudio inteiro de uma vez — pico de memória fixo, não
+   cresce com a duração do vídeo), corre `whisper-cli` sobre ele (processo
+   próprio, ver `runWhisperCppChunk`/`transcribeToVtt` no `index.js`), e
+   junta o `.vtt` resultante aos anteriores antes de subir tudo pro Storage
+   no fim. Corre sempre DEPOIS da compressão (nunca em paralelo com o
    `ffmpeg`, RAM já é curta) e nunca falha o upload: se a transcrição
-   rebentar, a aula fica só sem legendas. O modelo é descarregado do CDN do
-   Hugging Face uma vez (fica em cache local em disco); o processo não o
-   mantém residente em RAM entre vídeos, pra não reduzir a margem que o
-   PRÓXIMO vídeo tem pra comprimir.
+   rebentar, a aula fica só sem legendas.
+   > **Não testado em produção.** Flags CLI, nome do alvo CMake
+   > (`whisper-cli`), nome do modelo (`base-q5_1`) e formato do `.vtt`
+   > foram confirmados a olhar pro código-fonte real do whisper.cpp
+   > (tag `v1.7.4`), não são suposição às cegas — mas não foi possível
+   > compilar a imagem nem correr o binário neste ambiente (sem Docker
+   > disponível) pra confirmar o comportamento em runtime. Se o build do
+   > Docker ou a 1ª transcrição falharem no Railway, os logs do serviço
+   > mostram o erro.
 
 **Caminho de recurso — fila assíncrona** (só entra em jogo se alguém colar
 um URL de vídeo à mão em vez de fazer upload):
@@ -97,6 +105,11 @@ antes deste pipeline.
    - `UPLOAD_WORK_DIR` — opcional, default `os.tmpdir()` (efémero). Define
      como um caminho dentro do volume persistente (ver passo 7) pra resumir
      uploads/compressão/legendas depois de um crash/restart.
+   - `WHISPER_CPP_BIN` / `WHISPER_CPP_MODEL` — opcionais, defaults
+     `/usr/local/bin/whisper-cli` e `/app/models/ggml-base-q5_1.bin`
+     (ambos embutidos na imagem pelo `Dockerfile`). Só precisas de mexer
+     nisto se mudares o modelo/binário no build.
+   - `WHISPER_LANGUAGE` — opcional, default `pt`.
    - `PORT` — o Railway injeta isto automaticamente, não precisas de definir
 4. Deploy. **Agora expõe porta** (endpoint de upload direto) — marca o
    serviço como **web** (não "worker/background" como antes), Railway faz
@@ -157,6 +170,9 @@ também precisa de:
 cd worker
 npm install
 # precisa de ffmpeg/ffprobe instalados na máquina (brew install ffmpeg / apt install ffmpeg)
+# a compressão funciona só com isto; legendas precisam também de whisper-cli
+# + modelo (ver Dockerfile) — sem isso, a fase "transcribing" falha e a aula
+# fica só sem legendas (nunca derruba o upload, ver transcribeToVtt).
 APP_URL=http://localhost:3000 \
 WORKER_API_SECRET=dev-secret \
 SUPABASE_URL=... \

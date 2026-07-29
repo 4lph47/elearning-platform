@@ -6,7 +6,6 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.2.0",
     "@supabase/supabase-js": "^2.45.0"
   }
 }

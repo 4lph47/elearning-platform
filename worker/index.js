@@ -63,10 +63,11 @@ const UPLOAD_WORK_DIR = process.env.UPLOAD_WORK_DIR || os.tmpdir();
 // WORKER_JOB_MEMORY_MB por omissão é conservador de propósito: o teto de
 // 1080p já mostrou ser o ponto onde um ÚNICO job sozinho quase rebentava
 // 2GB (ver QUALITY_LADDER); 800MB por slot é uma margem segura, não uma
-// medição exata (não há profiling real dos picos de RSS) — cobre tanto o
-// ffmpeg 1080p como o Whisper "base" (ver WHISPER_MODEL_ID), o maior dos
-// dois manda no valor, já que nunca correm em paralelo dentro do MESMO job.
-// Ajusta via env se tiveres números melhores dos logs do Railway.
+// medição exata (não há profiling real dos picos de RSS). O ffmpeg 1080p é
+// quem manda neste valor agora — o whisper.cpp quantizado (ver
+// WHISPER_CPP_MODEL) é bem mais leve que o ffmpeg a 1080p, por isso não é o
+// fator limitante. Ajusta via env se tiveres números melhores dos logs do
+// Railway.
 const WORKER_TOTAL_MEMORY_MB = Number(process.env.WORKER_TOTAL_MEMORY_MB) || 2048;
 const WORKER_JOB_MEMORY_MB = Number(process.env.WORKER_JOB_MEMORY_MB) || 800;
 const MAX_CONCURRENT_JOBS = Math.max(1, Math.floor(WORKER_TOTAL_MEMORY_MB / WORKER_JOB_MEMORY_MB));
@@ -511,50 +512,98 @@ async function transcodeToHls(key, sourcePath, workDir, onRendition, options) {
   return { renditions, masterPlaylistUrl };
 }
 
-// --- Legendas automáticas (Whisper, corre AQUI no worker) --------------
+// --- Legendas automáticas (whisper.cpp, corre AQUI no worker) ----------
 //
-// Antes corria no browser do instrutor (transformers.js + WASM, ver git log
-// de lib/captions.ts) — de propósito, pra não tocar no worker (já sujeito a
-// OOM a 1080p, ver QUALITY_LADDER acima). Passou pra cá a pedido: o modelo
-// deixa de ser descarregado do CDN em CADA upload (um por instrutor, por
-// sessão de browser) — corre 1x por vídeo aqui, com os pesos em cache local
-// em disco (transformers.js/onnxruntime-node já cacheiam por omissão em
-// Node, ao contrário do browser), só o 1º vídeo desde que o container
-// arrancou paga o download do CDN.
+// Antes corria em processo, via transformers.js + onnxruntime-node
+// (histórico: browser do instrutor primeiro, depois este worker — ver git
+// log). Trocado por whisper.cpp (binário nativo C++, compilado no Dockerfile
+// — ver whisper-build stage) com modelo GGML quantizado (q5_1): a stack
+// PyTorch/onnxruntime-node sozinha já custava várias centenas de MB só de
+// overhead de runtime, ANTES de processar um único sample — whisper.cpp não
+// tem esse custo fixo. Modelo fica EMBUTIDO na imagem (ver Dockerfile),
+// nunca precisa de rede pra arrancar (ao contrário do CDN da Hugging Face
+// de antes) — resolve também o "1º vídeo de cada restart é mais lento".
 //
-// Corre DEPOIS de transcodeToHls terminar (nunca em paralelo com o
-// ffmpeg) — de propósito: o worker só tem 2GB de RAM, já apertado só com o
-// ffmpeg a 1080p (ver comentário no QUALITY_LADDER). getTranscriber() NÃO
-// fica cacheado entre vídeos (ao contrário do padrão "singleton" óbvio) —
-// carrega-se e descarta-se (transcriber.dispose()) a cada vídeo, pra não
-// ocupar RAM PERMANENTEMENTE e reduzir a margem que o PRÓXIMO vídeo tem pra
-// comprimir. Falha aqui nunca derruba o upload — vídeo/compressão já são o
-// caminho crítico, a aula só fica sem legendas (ver catch em
-// startFinalizeJob).
+// Corre DEPOIS de transcodeToHls terminar (nunca em paralelo com o ffmpeg)
+// — de propósito, RAM ainda é curta com 2GB (ver QUALITY_LADDER). Um
+// processo novo do whisper-cli por CHUNK (não um processo só pro vídeo
+// inteiro) — mantém a mesma granularidade de progresso que já existia
+// (chunk a chunk) e o mesmo ponto de cancelamento (ver jobControl.proc em
+// runWhisperCppChunk), ao custo de reabrir o modelo a cada chunk; aceitável
+// porque o modelo agora é pequeno (~60MB quantizado) e mmap'd pelo próprio
+// whisper.cpp, não uma carga pesada em RAM gerida por nós.
 //
-// Passou por "tiny" a meio (OOM confirmado nesta fase) — a causa real era
-// transcribeToVtt a carregar o ÁUDIO INTEIRO pra RAM de uma vez (crescia com
-// a duração do vídeo, não com o modelo, ver comentário em transcribeToVtt),
-// já corrigido (lê aos blocos de 1 chunk agora). "base" (~74M parâmetros) é
-// o valor original, restaurado com esse bug fora do caminho — WORKER_JOB_MEMORY_MB
-// abaixo já reflete o custo maior deste modelo face ao "tiny" (concorrência
-// elástica ajusta-se sozinha).
-const WHISPER_MODEL_ID = "Xenova/whisper-base";
+// Flags/alvo CMake/nome do modelo/formato de timestamp do VTT (tudo isto:
+// -m/-f/-l/-of/-ovtt, target "whisper-cli", "base-q5_1" como único nome
+// válido pra base quantizado, "pt" na tabela de idiomas, HH:MM:SS.mmm)
+// CONFIRMADOS a olhar pra dentro do código-fonte real da tag v1.7.4 (não é
+// suposição às cegas). O que NÃO foi possível: compilar e correr o binário
+// de verdade neste ambiente (sem Docker daemon disponível) pra confirmar
+// comportamento em runtime — 1ª transcrição no Railway é o teste real.
+const WHISPER_CPP_BIN = process.env.WHISPER_CPP_BIN || "/usr/local/bin/whisper-cli";
+const WHISPER_CPP_MODEL = process.env.WHISPER_CPP_MODEL || "/app/models/ggml-base-q5_1.bin";
+const WHISPER_LANGUAGE = process.env.WHISPER_LANGUAGE || "pt";
 const CAPTION_CHUNK_SECONDS = 30;
 const CAPTION_SAMPLE_RATE = 16000;
 
-async function getTranscriber() {
-  const { pipeline } = await import("@huggingface/transformers");
-  // Mesma config de dtype usada no browser (encoder q8, decoder fp32) — é o
-  // que evita o bug conhecido do runtime v4 do onnxruntime (MatMulNBits a
-  // exigir um scale tensor que os ficheiros quantizados do decoder deste
-  // modelo não têm, ver huggingface/transformers.js#1707). Não confirmado
-  // se o mesmo bug existe no onnxruntime-node (motor diferente do
-  // onnxruntime-web), mas é a config já comprovada a carregar sem falhar
-  // para este modelo exato, por isso reutiliza-se.
-  return pipeline("automatic-speech-recognition", WHISPER_MODEL_ID, {
-    dtype: { encoder_model: "q8", decoder_model_merged: "fp32" },
+// Mesmo padrão do runFfmpeg (ver acima): jobControl.proc guarda o processo
+// atual, cancelJob() mata-o com SIGKILL, o "close" reconhece isso e rejeita
+// com CancelledError em vez de erro genérico.
+function runWhisperCppChunk(args, jobControl) {
+  if (jobControl && jobControl.cancelled) return Promise.reject(new CancelledError());
+  return new Promise((resolve, reject) => {
+    const proc = spawn(WHISPER_CPP_BIN, args);
+    if (jobControl) jobControl.proc = proc;
+    const stderrChunks = [];
+    proc.stderr.on("data", (chunk) => stderrChunks.push(chunk));
+    proc.on("error", reject);
+    proc.on("close", (code, signal) => {
+      if (jobControl && jobControl.proc === proc) jobControl.proc = null;
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      if (jobControl && jobControl.cancelled) {
+        reject(new CancelledError());
+        return;
+      }
+      const stderr = Buffer.concat(stderrChunks).toString().trim();
+      const err = new Error(stderr || `whisper-cli saiu com código ${code}`);
+      err.signal = signal;
+      reject(err);
+    });
   });
+}
+
+// Parser mínimo de VTT — só o suficiente pro que o whisper-cli produz
+// (WEBVTT + blocos "HH:MM:SS.mmm --> HH:MM:SS.mmm" + linha(s) de texto).
+function parseVttTimestamp(ts) {
+  const m = ts.match(/(\d+):(\d+):(\d+)[.,](\d+)/);
+  if (!m) return 0;
+  return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) + Number(m[4]) / 1000;
+}
+
+function parseVttCues(vttText) {
+  const lines = vttText.split(/\r?\n/);
+  const cues = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (lines[i].includes("-->")) {
+      const [startRaw, endRaw] = lines[i].split("-->").map((s) => s.trim().split(" ")[0]);
+      const start = parseVttTimestamp(startRaw);
+      const end = parseVttTimestamp(endRaw);
+      i++;
+      const textLines = [];
+      while (i < lines.length && lines[i].trim() !== "") {
+        textLines.push(lines[i].trim());
+        i++;
+      }
+      const text = textLines.join(" ").trim();
+      if (text) cues.push({ text, timestamp: [start, end] });
+    }
+    i++;
+  }
+  return cues;
 }
 
 function formatVttTimestamp(totalSeconds) {
@@ -581,40 +630,6 @@ function chunksToVtt(chunks) {
   return lines.join("\n");
 }
 
-// PCM cru (f32le, mono, 16kHz) — exatamente o formato que o Whisper espera,
-// não precisa de parser de WAV nenhum, só ler os bytes direto pra
-// Float32Array.
-async function extractAudioPcm(sourcePath, pcmPath, jobControl) {
-  if (jobControl && jobControl.cancelled) throw new CancelledError();
-  // util.promisify(execFile) expõe o child process em .child — é o que
-  // permite ao cancelJob matar isto a meio, tal como faz com o runFfmpeg da
-  // compressão (ver jobControl.proc).
-  const promise = execFileAsync("ffmpeg", [
-    "-y",
-    "-loglevel",
-    "error",
-    "-i",
-    sourcePath,
-    "-vn",
-    "-ac",
-    "1",
-    "-ar",
-    String(CAPTION_SAMPLE_RATE),
-    "-f",
-    "f32le",
-    pcmPath,
-  ]);
-  if (jobControl) jobControl.proc = promise.child;
-  try {
-    await promise;
-  } catch (err) {
-    if (jobControl && jobControl.cancelled) throw new CancelledError();
-    throw err;
-  } finally {
-    if (jobControl && jobControl.proc === promise.child) jobControl.proc = null;
-  }
-}
-
 async function uploadCaptionsVtt(key, vttText) {
   const objectPath = `video-captions/${key}/legendas.vtt`;
   await withRetries(async () => {
@@ -628,73 +643,64 @@ async function uploadCaptionsVtt(key, vttText) {
   return data.publicUrl;
 }
 
-// Faz a mesma cadência de 30s que o pipeline usava internamente
-// (chunk_length_s: 30) no browser, só que à mão — cada volta do loop chama
-// o transcriber com <=30s de áudio (dentro da janela nativa do Whisper),
-// dá pra reportar progresso real (chunk a chunk) sem depender de nenhum
-// callback interno da lib. Troca: perde-se o stride_length_s de 5s
-// (overlap entre chunks que ajudava a não cortar palavras na fronteira) —
-// aceitável pela granularidade de progresso ganha.
+// Um whisper-cli por chunk de 30s, extraído DIRETO da fonte (não de um
+// ficheiro de áudio inteiro em disco) — nunca materializa mais que ~30s de
+// áudio de cada vez, nem sequer no passo de extração. Mesma cadência de
+// 30s que o pipeline anterior usava (chunk_length_s: 30, janela nativa do
+// Whisper), só que agora cada chunk é mesmo um processo isolado, o que
+// também dá o ponto de cancelamento pro meio de um chunk (ver
+// runWhisperCppChunk/jobControl.proc), não só entre chunks.
 async function transcribeToVtt(key, sourcePath, workDir, onProgress, jobControl) {
   if (jobControl && jobControl.cancelled) throw new CancelledError();
-  const pcmPath = path.join(workDir, "audio.f32");
-  await extractAudioPcm(sourcePath, pcmPath, jobControl);
-  if (jobControl && jobControl.cancelled) throw new CancelledError();
+  const durationSeconds = await probeDuration(sourcePath);
+  if (durationSeconds <= 0) throw new Error("Não foi possível determinar a duração do vídeo (ou vídeo sem áudio)");
 
-  const { size: totalBytes } = await fs.stat(pcmPath);
-  if (totalBytes === 0) {
-    await fs.rm(pcmPath, { force: true }).catch(() => {});
-    throw new Error("Áudio vazio (vídeo sem faixa de áudio?)");
-  }
+  const totalChunks = Math.max(1, Math.ceil(durationSeconds / CAPTION_CHUNK_SECONDS));
+  const allChunks = [];
 
-  const BYTES_PER_SAMPLE = 4; // f32le
-  const chunkLenSamples = CAPTION_CHUNK_SECONDS * CAPTION_SAMPLE_RATE;
-  const chunkBytes = chunkLenSamples * BYTES_PER_SAMPLE;
-  const totalChunks = Math.max(1, Math.ceil(totalBytes / chunkBytes));
-
-  // Lê o PCM por blocos de EXATAMENTE 1 chunk (via file handle, offset
-  // explícito) em vez de carregar o áudio inteiro pra RAM de uma vez (como
-  // era antes) — o pico de memória passa a ser ~chunkBytes (uns 2MB),
-  // sempre o mesmo INDEPENDENTEMENTE da duração do vídeo, em vez de crescer
-  // com ela. Um vídeo de 1-2h chegava a algumas centenas de MB só nesta
-  // parte (o array todo + a cópia do .slice() do ArrayBuffer, em duplicado)
-  // — provável causa real dos OOMs nas legendas mesmo depois de trocar pro
-  // modelo mais pequeno (whisper-tiny), que só reduz o custo FIXO do
-  // modelo, não este custo VARIÁVEL com a duração.
-  const fileHandle = await fs.open(pcmPath, "r");
-  const readBuffer = Buffer.alloc(chunkBytes);
-  const transcriber = await getTranscriber();
-  try {
+  for (let i = 0; i < totalChunks; i++) {
     if (jobControl && jobControl.cancelled) throw new CancelledError();
-    const allChunks = [];
-    for (let i = 0; i < totalChunks; i++) {
+    const offsetSeconds = i * CAPTION_CHUNK_SECONDS;
+    const chunkWavPath = path.join(workDir, `caption-chunk-${i}.wav`);
+    const chunkOutPrefix = path.join(workDir, `caption-chunk-${i}`);
+    const chunkVttPath = `${chunkOutPrefix}.vtt`;
+
+    try {
+      await execFileAsync("ffmpeg", [
+        "-y",
+        "-loglevel",
+        "error",
+        "-ss",
+        String(offsetSeconds),
+        "-t",
+        String(CAPTION_CHUNK_SECONDS),
+        "-i",
+        sourcePath,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        String(CAPTION_SAMPLE_RATE),
+        "-f",
+        "wav",
+        chunkWavPath,
+      ]);
       if (jobControl && jobControl.cancelled) throw new CancelledError();
-      const { bytesRead } = await fileHandle.read(readBuffer, 0, chunkBytes, i * chunkBytes);
-      if (bytesRead === 0) break;
-      // .slice() no ArrayBuffer copia pra um novo buffer com byteOffset 0 —
-      // readBuffer é reaproveitado a cada volta, não dá pra ler o .buffer
-      // dele direto (exigido pelo Float32Array, alinhado a 4 bytes).
-      const arrayBuffer = readBuffer.buffer.slice(readBuffer.byteOffset, readBuffer.byteOffset + bytesRead);
-      const slice = new Float32Array(arrayBuffer);
-      const output = await transcriber(slice, { language: "portuguese", task: "transcribe", return_timestamps: true });
-      const result = Array.isArray(output) ? output[0] : output;
-      const resultChunks = (result && result.chunks) || [];
-      const offsetSeconds = i * CAPTION_CHUNK_SECONDS;
-      for (const c of resultChunks) {
-        const [start, endRaw] = c.timestamp;
-        allChunks.push({ text: c.text, timestamp: [start + offsetSeconds, endRaw == null ? null : endRaw + offsetSeconds] });
+
+      await runWhisperCppChunk(["-m", WHISPER_CPP_MODEL, "-f", chunkWavPath, "-l", WHISPER_LANGUAGE, "-of", chunkOutPrefix, "-ovtt"], jobControl);
+
+      const vttText = await fs.readFile(chunkVttPath, "utf8");
+      for (const cue of parseVttCues(vttText)) {
+        allChunks.push({ text: cue.text, timestamp: [cue.timestamp[0] + offsetSeconds, cue.timestamp[1] + offsetSeconds] });
       }
-      onProgress(i + 1, totalChunks);
+    } finally {
+      await fs.rm(chunkWavPath, { force: true }).catch(() => {});
+      await fs.rm(chunkVttPath, { force: true }).catch(() => {});
     }
-    return await uploadCaptionsVtt(key, chunksToVtt(allChunks));
-  } finally {
-    await fileHandle.close().catch(() => {});
-    await fs.rm(pcmPath, { force: true }).catch(() => {});
-    // Liberta a RAM do modelo já — não fica à espera do GC
-    // (onnxruntime-node é um addon nativo, memória fora do heap do V8 que
-    // o GC do JS não sabe reclamar sozinho).
-    if (typeof transcriber.dispose === "function") await transcriber.dispose().catch(() => {});
+    onProgress(i + 1, totalChunks);
   }
+
+  return await uploadCaptionsVtt(key, chunksToVtt(allChunks));
 }
 
 // --- Caminho 1: upload direto (POST /upload) ---------------------------

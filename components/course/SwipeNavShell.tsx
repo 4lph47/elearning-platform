@@ -28,7 +28,14 @@ export function SwipeNavShell({
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-white/15 dark:border-t-white/70" />
         </div>
       )}
-      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        // -mx-4 px-4 + min-h-[100dvh] (mobile): mesma correção do LessonBody —
+        // estende a zona de swipe até às margens do ecrã e garante altura
+        // mínima de um ecrã, senão só reagia por cima dos próprios elementos.
+        className={`-mx-4 min-h-[100dvh] px-4 lg:mx-0 lg:min-h-0 lg:px-0 ${swipeClassName}`}
+      >
         <div className="mb-4 hidden items-center justify-between lg:flex">
           {previousHref && (
             <button

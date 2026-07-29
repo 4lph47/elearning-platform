@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, cloneElement, type ReactElement } from "react";
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Maximize2, Minimize2, Check, CircleCheck } from "lucide-react";
 import { useSwipeNav } from "@/lib/useSwipeNav";
 import { LessonPlayer, type VideoRendition } from "@/components/player/LessonPlayer";
 import { LessonTabs, type LessonResourceData, type VideoMeta } from "@/components/course/LessonTabs";
@@ -223,18 +223,24 @@ export function LessonBody({
           dangerouslySetInnerHTML={{
             __html: `
               @keyframes lessonSwipeHintFade { from { opacity: 0; } to { opacity: 1; } }
-              @keyframes lessonSwipeHintL { 0%, 100% { transform: translateX(0); opacity: .55; } 50% { transform: translateX(-8px); opacity: 1; } }
-              @keyframes lessonSwipeHintR { 0%, 100% { transform: translateX(0); opacity: .55; } 50% { transform: translateX(8px); opacity: 1; } }
+              @keyframes lessonSwipeHintDot { 0%, 100% { transform: translateX(-52px); } 50% { transform: translateX(52px); } }
             `,
           }}
         />
-        <div className="mx-10 flex flex-col items-center gap-5 rounded-2xl border border-white/10 bg-white/[0.07] px-7 py-8 text-center shadow-2xl backdrop-blur-xl">
-          <div className="flex items-center gap-2">
-            <ChevronLeft size={28} strokeWidth={2.5} className="text-white/70" style={{ animation: "lessonSwipeHintL 1.6s ease-in-out infinite" }} />
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
-              <div className="h-2 w-2 rounded-full bg-white" />
+        <div className="mx-10 flex flex-col items-center gap-6 rounded-2xl border border-white/10 bg-white/[0.07] px-7 py-8 text-center shadow-2xl backdrop-blur-xl">
+          {/* Track com um ponto a deslizar de um lado ao outro — mostra o
+              próprio gesto (arrastar o dedo) em vez de setas estáticas, que
+              liam mais a "expandir" do que a "deslizar". */}
+          <div className="relative flex h-9 w-36 items-center">
+            <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/15" />
+            <div className="absolute left-0 h-1.5 w-1.5 rounded-full bg-white/25" />
+            <div className="absolute right-0 h-1.5 w-1.5 rounded-full bg-white/25" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="h-5 w-5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.5)]"
+                style={{ animation: "lessonSwipeHintDot 1.8s ease-in-out infinite" }}
+              />
             </div>
-            <ChevronRight size={28} strokeWidth={2.5} className="text-white/70" style={{ animation: "lessonSwipeHintR 1.6s ease-in-out infinite" }} />
           </div>
           <div>
             <p className="text-base font-semibold text-white">Deslize para navegar</p>
@@ -254,7 +260,18 @@ export function LessonBody({
         </div>
       </div>
     )}
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={swipeClassName}>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      // -mx-4 px-4 (mobile): estende a zona de swipe até às margens do ecrã,
+      // não só à largura do conteúdo — o gesto tem de funcionar em qualquer
+      // ponto da tela, incluindo as calhas laterais deixadas pelo padding do
+      // layout pai. min-h-[100dvh] (mobile): garante que a zona de toque
+      // cobre sempre o ecrã todo mesmo quando o conteúdo da aula é mais
+      // baixo que o viewport, senão o espaço vazio por baixo não reagia ao
+      // swipe.
+      className={`-mx-4 min-h-[100dvh] px-4 lg:mx-0 lg:min-h-0 lg:px-0 ${swipeClassName}`}
+    >
       <div className="hidden items-center justify-between lg:flex">
         {previousHref && (
           <button

@@ -441,6 +441,13 @@ async function resumeWorkerFinalize(
   return { url: hlsMasterUrl, sizeBytes: resume.totalBytes, name: resume.fileName, mimeType: "video/mp4", captionsUrl };
 }
 
+function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m === 0 ? `${sec}s` : `${m}m ${String(sec).padStart(2, "0")}s`;
+}
+
 const KIND_LABEL: Record<Kind, string> = {
   VIDEO: "Vídeo",
   TRAILER: "Trailer",
@@ -498,7 +505,12 @@ export function FileUploadInput({
   const [serverPhasePercent, setServerPhasePercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
+  // Marcado no início de cada tentativa (handleChange e o resume automático)
+  // — dá o "decorrido" a partir do relógio real, não de contagem de ticks
+  // (sobrevive a abas em fundo, onde setInterval atrasa).
+  const startTimeRef = useRef<number | null>(null);
   // Cada handleChange ganha o próximo número — um resultado (sucesso, erro,
   // progresso) só mexe no estado se ainda for da tentativa mais recente.
   // Sem isto, escolher um ficheiro novo a meio doutro envio podia deixar a
@@ -514,6 +526,19 @@ export function FileUploadInput({
     if (!uploading) onStageChange?.(null, null);
     else onStageChange?.(serverPhase ?? "uploading", serverPhase ? serverPhasePercent : null);
   }, [uploading, serverPhase, serverPhasePercent]);
+
+  // Contador de "decorrido" — lê startTimeRef (marcado no arranque da
+  // tentativa) em vez de somar 1s por tick, pra não desviar em abas
+  // suspensas pelo browser.
+  useEffect(() => {
+    if (!uploading) return;
+    const tick = () => {
+      if (startTimeRef.current) setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [uploading]);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -534,6 +559,8 @@ export function FileUploadInput({
     const isCurrent = () => generationRef.current === myGeneration;
     onFileSelected?.(file);
 
+    startTimeRef.current = Date.now();
+    setElapsedSeconds(0);
     setUploading(true);
     setProgress(0);
     setServerPhase(null);
@@ -631,6 +658,8 @@ export function FileUploadInput({
     const myGeneration = ++generationRef.current;
     const isCurrent = () => generationRef.current === myGeneration;
 
+    startTimeRef.current = Date.now();
+    setElapsedSeconds(0);
     setUploading(true);
     setServerPhase("compressing");
     setServerPhasePercent(null);
@@ -706,6 +735,16 @@ export function FileUploadInput({
                 : indeterminate
                   ? "A enviar..."
                   : `A enviar (${progress}%)`}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+            {(() => {
+              const activePercent = serverPhase ? serverPhasePercent : indeterminate ? null : progress;
+              const eta =
+                activePercent !== null && activePercent > 0
+                  ? Math.round((elapsedSeconds * (100 - activePercent)) / activePercent)
+                  : null;
+              return `Decorrido: ${formatDuration(elapsedSeconds)}${eta !== null ? ` · Falta: ~${formatDuration(eta)}` : ""}`;
+            })()}
           </p>
         </div>
       )}

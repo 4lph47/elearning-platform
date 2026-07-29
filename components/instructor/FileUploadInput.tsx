@@ -784,14 +784,24 @@ export function FileUploadInput({
                   ? "A enviar"
                   : `A enviar (${progress}%)`}
             </p>
-            <p className="shrink-0 text-slate-400 dark:text-slate-500">
+            <p className="flex shrink-0 items-baseline gap-1.5 text-slate-400 dark:text-slate-500">
               {(() => {
                 const activePercent = serverPhase ? serverPhasePercent : indeterminate ? null : progress;
                 const eta =
                   activePercent !== null && activePercent > 0
                     ? Math.round((elapsedSeconds * (100 - activePercent)) / activePercent)
                     : null;
-                return `${formatDuration(elapsedSeconds)}${eta !== null ? ` · ${formatDuration(eta)} restante` : ""}`;
+                return (
+                  <>
+                    <span>{formatDuration(elapsedSeconds)}</span>
+                    {eta !== null && (
+                      <>
+                        <span className="h-3 w-px bg-slate-300 dark:bg-white/15" />
+                        <span>{formatDuration(eta)} restante</span>
+                      </>
+                    )}
+                  </>
+                );
               })()}
             </p>
           </div>

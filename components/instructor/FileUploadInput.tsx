@@ -165,7 +165,7 @@ async function authorizeWorkerUpload(file: File): Promise<WorkerAuth> {
 // bloqueia nem falha visivelmente a UI — se isto não chegar ao worker, o
 // pior caso é o job antigo terminar sozinho mais tarde, igual a antes desta
 // funcionalidade existir.
-function requestWorkerCancel(auth: { uploadUrl: string; token: string }) {
+export function requestWorkerCancel(auth: { uploadUrl: string; token: string }) {
   fetch(`${auth.uploadUrl}/upload-cancel`, {
     method: "POST",
     headers: { Authorization: `Bearer ${auth.token}` },

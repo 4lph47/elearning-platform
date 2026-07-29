@@ -16,7 +16,7 @@ import {
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { Toggle } from "@/components/ui/Toggle";
 import { Input, Label, Textarea } from "@/components/ui/Input";
-import { FileUploadInput, type ResumableFinalize } from "@/components/instructor/FileUploadInput";
+import { FileUploadInput, requestWorkerCancel, type ResumableFinalize } from "@/components/instructor/FileUploadInput";
 import { LessonPlayer } from "@/components/player/LessonPlayer";
 import { QuizEditor } from "@/components/instructor/QuizEditor";
 import { LessonResourcesCard } from "@/components/instructor/LessonResourcesCard";
@@ -258,6 +258,18 @@ export function LessonEditScreen({
     if (type === "TEXT" && !textContent.trim()) {
       setSaveIssues([{ message: "Escreve o conteúdo desta aula antes de guardar", field: "textContent" }]);
       return;
+    }
+
+    // Só é possível chegar aqui com pendingVideoUpload ainda preenchido se o
+    // vídeo já comprimiu (contentUrl obrigatório acima) mas as legendas
+    // ainda estão a gerar-se em fundo (ver onEarlyReady no FileUploadInput)
+    // — a partir do momento em que se guarda, mais ninguém vai ler esse
+    // captionsUrl (a página vai navegar pra longe daqui), por isso não vale
+    // a pena deixar o worker a gastar RAM a acabar uma transcrição que vai
+    // ser ignorada.
+    if (pendingVideoUpload) {
+      requestWorkerCancel({ uploadUrl: pendingVideoUpload.uploadUrl, token: pendingVideoUpload.token });
+      setPendingVideoUpload(null);
     }
 
     setSaving(true);

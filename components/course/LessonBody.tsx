@@ -323,6 +323,7 @@ export function LessonBody({
                 baixo do limite dele. */}
             <div ref={playerBoxRef}>
               <LessonPlayer
+                key={lessonId}
                 lessonId={lessonId}
                 type={type}
                 contentUrl={contentUrl}

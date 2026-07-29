@@ -637,9 +637,10 @@ export function FileUploadInput({
     onCancelled?.();
   }
 
-  function handleCancelClick() {
-    if (window.confirm("Cancelar este envio? O progresso atual perde-se.")) cancelUpload();
-  }
+  // Confirmação própria em vez de window.confirm() — caixa nativa do
+  // browser, sem nada a ver com o resto da UI da app (mesma razão do card
+  // de "Alterações por guardar" em FadeNavContext.tsx).
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -829,7 +830,7 @@ export function FileUploadInput({
           }`}
         />
         {uploading && (
-          <Button type="button" variant="danger" onClick={handleCancelClick} className="shrink-0">
+          <Button type="button" variant="danger" onClick={() => setConfirmingCancel(true)} className="shrink-0">
             Cancelar
           </Button>
         )}
@@ -896,6 +897,39 @@ export function FileUploadInput({
         </p>
       )}
       {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {confirmingCancel && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setConfirmingCancel(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-neutral-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Cancelar envio</h2>
+            <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300">
+              Tens a certeza? O progresso atual deste envio perde-se.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setConfirmingCancel(false)}>
+                Voltar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  setConfirmingCancel(false);
+                  cancelUpload();
+                }}
+              >
+                Cancelar envio
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

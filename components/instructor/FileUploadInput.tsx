@@ -235,7 +235,10 @@ function postChunk(
 type ServerPhase = "compressing" | "transcribing";
 
 type FinalizeStatus =
-  | { state: "processing"; phase: ServerPhase; completed: number; total: number | null }
+  // hlsMasterUrl aparece já na fase "transcribing" (ver worker/index.js) —
+  // vídeo comprimido e pronto, só as legendas (que podem demorar bastante)
+  // ainda a caminho.
+  | { state: "processing"; phase: ServerPhase; completed: number; total: number | null; hlsMasterUrl?: string }
   | { state: "done"; hlsMasterUrl: string; captionsUrl: string | null }
   | { state: "error"; error: string }
   | { state: "unknown" };
@@ -322,9 +325,14 @@ async function postFinalize(
   totalBytes: number,
   xhrRef: XhrRef,
   isCurrent: () => boolean,
-  onProgress: (phase: ServerPhase, completed: number, total: number | null) => void
+  onProgress: (phase: ServerPhase, completed: number, total: number | null) => void,
+  // Disparado uma única vez, assim que o worker reporta hlsMasterUrl (fase
+  // "transcribing") — deixa o preview trocar já pro player custom (HLS)
+  // mesmo com a transcrição (lenta) ainda em curso.
+  onHlsReady: (hlsMasterUrl: string) => void
 ): Promise<{ hlsMasterUrl: string; captionsUrl: string | null }> {
   await postFinalizeStart(auth, totalBytes, xhrRef);
+  let hlsReadyFired = false;
   for (;;) {
     await new Promise((r) => setTimeout(r, FINALIZE_POLL_MS));
     if (!isCurrent()) throw new UploadAbortedError();
@@ -332,7 +340,13 @@ async function postFinalize(
     if (status.state === "done") return { hlsMasterUrl: status.hlsMasterUrl, captionsUrl: status.captionsUrl };
     if (status.state === "error") throw new UploadError(status.error, true);
     if (status.state === "unknown") await postFinalizeStart(auth, totalBytes, xhrRef);
-    else onProgress(status.phase, status.completed, status.total);
+    else {
+      if (!hlsReadyFired && status.hlsMasterUrl) {
+        hlsReadyFired = true;
+        onHlsReady(status.hlsMasterUrl);
+      }
+      onProgress(status.phase, status.completed, status.total);
+    }
   }
 }
 
@@ -377,7 +391,8 @@ async function uploadToWorker(
   onPhaseChange: (phase: "uploading" | ServerPhase) => void,
   isCurrent: () => boolean,
   onServerProgress: (phase: ServerPhase, completed: number, total: number | null) => void,
-  onFinalizePending: (resume: ResumableFinalize | null) => void
+  onFinalizePending: (resume: ResumableFinalize | null) => void,
+  onHlsReady: (hlsMasterUrl: string) => void
 ): Promise<UploadResult> {
   const auth = await authorizeWorkerUpload(file);
   const noop = () => {};
@@ -407,10 +422,17 @@ async function uploadToWorker(
   });
   const { hlsMasterUrl, captionsUrl } = await withUploadRetries(
     () =>
-      postFinalize(auth, file.size, xhrRef, isCurrent, (phase, completed, total) => {
-        onPhaseChange(phase);
-        onServerProgress(phase, completed, total);
-      }),
+      postFinalize(
+        auth,
+        file.size,
+        xhrRef,
+        isCurrent,
+        (phase, completed, total) => {
+          onPhaseChange(phase);
+          onServerProgress(phase, completed, total);
+        },
+        onHlsReady
+      ),
     noop
   );
   return { url: hlsMasterUrl, sizeBytes: file.size, name: file.name, mimeType: file.type, captionsUrl };
@@ -426,16 +448,24 @@ async function resumeWorkerFinalize(
   xhrRef: XhrRef,
   isCurrent: () => boolean,
   onPhaseChange: (phase: ServerPhase) => void,
-  onServerProgress: (phase: ServerPhase, completed: number, total: number | null) => void
+  onServerProgress: (phase: ServerPhase, completed: number, total: number | null) => void,
+  onHlsReady: (hlsMasterUrl: string) => void
 ): Promise<UploadResult> {
   const auth: WorkerAuth = { uploadUrl: resume.uploadUrl, token: resume.token, assetId: resume.assetId };
   const noop = () => {};
   const { hlsMasterUrl, captionsUrl } = await withUploadRetries(
     () =>
-      postFinalize(auth, resume.totalBytes, xhrRef, isCurrent, (phase, completed, total) => {
-        onPhaseChange(phase);
-        onServerProgress(phase, completed, total);
-      }),
+      postFinalize(
+        auth,
+        resume.totalBytes,
+        xhrRef,
+        isCurrent,
+        (phase, completed, total) => {
+          onPhaseChange(phase);
+          onServerProgress(phase, completed, total);
+        },
+        onHlsReady
+      ),
     noop
   );
   return { url: hlsMasterUrl, sizeBytes: resume.totalBytes, name: resume.fileName, mimeType: "video/mp4", captionsUrl };
@@ -465,6 +495,7 @@ export function FileUploadInput({
   resumeUpload,
   onFinalizePending,
   onStageChange,
+  onEarlyReady,
 }: {
   kind: Kind;
   // Se o URL já existente não tiver nome (ex.: nunca foi guardado no
@@ -497,6 +528,12 @@ export function FileUploadInput({
   // Chamado assim que a compressão arranca (guardar no rascunho) e de novo
   // com null quando acaba/falha em definitivo (limpar do rascunho).
   onFinalizePending?: (resume: ResumableFinalize | null) => void;
+  // Chamado assim que o worker termina a compressão (vídeo já pronto em
+  // HLS), ANTES de as legendas (bem mais lentas) terminarem — deixa o
+  // preview trocar já pro player custom em vez de esperar a transcrição
+  // toda. onUploaded continua a ser o sinal de "tudo terminado" (com
+  // captionsUrl já resolvido). Só faz sentido pra kind="VIDEO".
+  onEarlyReady?: (hlsMasterUrl: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -597,7 +634,11 @@ export function FileUploadInput({
             const percent = total ? Math.round((completed / total) * 100) : null;
             setServerPhasePercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
           },
-          (resume) => onFinalizePending?.(resume)
+          (resume) => onFinalizePending?.(resume),
+          (hlsMasterUrl) => {
+            if (!isCurrent()) return;
+            onEarlyReady?.(hlsMasterUrl);
+          }
         );
         if (!isCurrent()) return;
         setUploading(false);
@@ -680,6 +721,10 @@ export function FileUploadInput({
         if (!isCurrent()) return;
         const percent = total ? Math.round((completed / total) * 100) : null;
         setServerPhasePercent((prev) => (percent === null ? prev : prev !== null ? Math.max(prev, percent) : percent));
+      },
+      (hlsMasterUrl) => {
+        if (!isCurrent()) return;
+        onEarlyReady?.(hlsMasterUrl);
       }
     )
       .then((data) => {
@@ -723,29 +768,31 @@ export function FileUploadInput({
               />
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {serverPhase === "compressing"
-              ? serverPhasePercent !== null
-                ? `A comprimir vídeo (${serverPhasePercent}%)...`
-                : "A comprimir vídeo..."
-              : serverPhase === "transcribing"
+          <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
+            <p className="text-slate-500 dark:text-slate-400">
+              {serverPhase === "compressing"
                 ? serverPhasePercent !== null
-                  ? `A gerar legendas (${serverPhasePercent}%)...`
-                  : "A gerar legendas..."
-                : indeterminate
-                  ? "A enviar..."
-                  : `A enviar (${progress}%)`}
-          </p>
-          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-            {(() => {
-              const activePercent = serverPhase ? serverPhasePercent : indeterminate ? null : progress;
-              const eta =
-                activePercent !== null && activePercent > 0
-                  ? Math.round((elapsedSeconds * (100 - activePercent)) / activePercent)
-                  : null;
-              return `Decorrido: ${formatDuration(elapsedSeconds)}${eta !== null ? ` · Falta: ~${formatDuration(eta)}` : ""}`;
-            })()}
-          </p>
+                  ? `A comprimir vídeo (${serverPhasePercent}%)...`
+                  : "A comprimir vídeo..."
+                : serverPhase === "transcribing"
+                  ? serverPhasePercent !== null
+                    ? `A gerar legendas (${serverPhasePercent}%)...`
+                    : "A gerar legendas..."
+                  : indeterminate
+                    ? "A enviar..."
+                    : `A enviar (${progress}%)`}
+            </p>
+            <p className="shrink-0 text-slate-400 dark:text-slate-500">
+              {(() => {
+                const activePercent = serverPhase ? serverPhasePercent : indeterminate ? null : progress;
+                const eta =
+                  activePercent !== null && activePercent > 0
+                    ? Math.round((elapsedSeconds * (100 - activePercent)) / activePercent)
+                    : null;
+                return `${formatDuration(elapsedSeconds)}${eta !== null ? ` · ~${formatDuration(eta)} restante` : ""}`;
+              })()}
+            </p>
+          </div>
         </div>
       )}
       {uploadedName && !uploading && (

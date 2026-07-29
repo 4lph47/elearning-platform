@@ -805,7 +805,18 @@ function startFinalizeJob(assetId, workDir, sourcePath) {
       if (renditions.length === 0 || !masterPlaylistUrl) throw new Error("Nenhuma rendition gerada");
       console.log(`Upload direto ${assetId}: vídeo comprimido (${renditions.length} rendition(s)), a gerar legendas`);
 
-      finalizeJobs.set(assetId, { state: "processing", phase: "transcribing", completed: 0, total: null });
+      // hlsMasterUrl/renditions já vão aqui (não só no "done" final) — o
+      // vídeo já está pronto pra tocar, só faltam legendas, que podem
+      // demorar bastante; o cliente usa isto pra trocar o preview pro
+      // player custom (HLS) já nesta fase, sem esperar a transcrição.
+      finalizeJobs.set(assetId, {
+        state: "processing",
+        phase: "transcribing",
+        completed: 0,
+        total: null,
+        hlsMasterUrl: masterPlaylistUrl,
+        renditions,
+      });
       let captionsUrl = null;
       try {
         captionsUrl = await transcribeToVtt(assetId, sourcePath, workDir, (completed, total) => {
@@ -920,7 +931,18 @@ async function handleUploadFinalizeStatusRequest(req, res) {
     return;
   }
   res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ state: "processing", phase: job.phase, completed: job.completed, total: job.total }));
+  res.end(
+    JSON.stringify({
+      state: "processing",
+      phase: job.phase,
+      completed: job.completed,
+      total: job.total,
+      // Só vem preenchido a partir da fase "transcribing" (ver
+      // startFinalizeJob) — vídeo já comprimido e pronto, mesmo com
+      // legendas ainda a caminho.
+      hlsMasterUrl: job.hlsMasterUrl ?? undefined,
+    })
+  );
 }
 
 const server = http.createServer((req, res) => {

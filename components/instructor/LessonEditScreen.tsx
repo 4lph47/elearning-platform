@@ -503,6 +503,18 @@ export function LessonEditScreen({
                   onFileSelected={handleVideoFileSelected}
                   resumeUpload={pendingVideoUpload}
                   onFinalizePending={setPendingVideoUpload}
+                  onEarlyReady={(hlsMasterUrl) => {
+                    // Compressão terminou (legendas ainda a caminho, ver
+                    // worker/index.js:startFinalizeJob) — troca já pro
+                    // player custom (HLS) em vez de continuar preso no
+                    // preview do ficheiro bruto até a transcrição acabar.
+                    if (localPreviewUrlRef.current) {
+                      URL.revokeObjectURL(localPreviewUrlRef.current);
+                      localPreviewUrlRef.current = null;
+                    }
+                    setLocalPreviewUrl(null);
+                    setContentUrl(hlsMasterUrl);
+                  }}
                 />
                 {/* Preview do conteúdo ANTES de clicar em mais lado nenhum —
                     mesmo LessonPlayer usado na aula a sério (gestos, seletor

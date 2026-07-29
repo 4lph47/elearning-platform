@@ -299,14 +299,16 @@ export function LessonPlayer({
   const [autoAdvanceIn, setAutoAdvanceIn] = useState<number | null>(null);
   function cancelAutoAdvance() {
     // eslint-disable-next-line no-console
-    console.warn("[player-debug] cancelAutoAdvance chamado", { lessonId, autoAdvanceIn });
+    console.warn("[player-debug] cancelAutoAdvance chamado", { lessonId, autoAdvanceIn, t: Date.now(), currentTime: videoRef.current?.currentTime });
     setAutoAdvanceIn(null);
   }
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.warn("[player-debug] autoAdvanceIn efeito correu", { lessonId, autoAdvanceIn, t: Date.now(), currentTime: videoRef.current?.currentTime });
     if (autoAdvanceIn === null) return;
     if (autoAdvanceIn <= 0) {
       // eslint-disable-next-line no-console
-      console.warn("[player-debug] autoAdvanceIn chegou a 0, chamando onGoNext", { lessonId, currentTime: videoRef.current?.currentTime });
+      console.warn("[player-debug] autoAdvanceIn chegou a 0, chamando onGoNext", { lessonId, currentTime: videoRef.current?.currentTime, t: Date.now() });
       setAutoAdvanceIn(null);
       onGoNext?.();
       return;
@@ -679,6 +681,7 @@ export function LessonPlayer({
       autoplayNext,
       autoplayOn,
       hasNext,
+      t: Date.now(),
     });
     setPlaying(false);
     setVideoEnded(true);

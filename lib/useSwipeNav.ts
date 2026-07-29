@@ -56,7 +56,7 @@ export function useSwipeNav(previousHref?: string | null, nextHref?: string | nu
     // dando a sensação de a aula cortar a meio mesmo sem ter chegado ao fim.
     if (swipeExit !== null) return;
     // eslint-disable-next-line no-console
-    console.warn("[player-debug] goDirection chamado", { direction, href });
+    console.warn("[player-debug] goDirection chamado", { direction, href, t: Date.now() });
     pauseAllVideos();
     setSwipeExit(direction);
     sessionStorage.setItem(STORAGE_KEY, direction);

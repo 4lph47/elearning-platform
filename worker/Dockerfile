@@ -24,7 +24,14 @@ RUN git clone --depth 1 --branch v1.7.4 --filter=blob:none --no-checkout https:/
   && git sparse-checkout init --cone \
   && git sparse-checkout set cmake ggml src include bindings/javascript examples/cli examples/bench examples/server examples/quantize examples/deprecation-warning models \
   && git checkout v1.7.4
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
+# BUILD_SHARED_LIBS=OFF — por omissão o CMake gera libwhisper.so/libggml.so
+# e o whisper-cli fica dinamicamente ligado a elas; confirmado num deploy
+# real no Railway (whisper-cli: error while loading shared libraries:
+# libwhisper.so.1: cannot open shared object file) porque só o binário era
+# copiado pra imagem final, não as .so. Estático evita ter de rastrear e
+# copiar cada biblioteca partilhada à mão — um único ficheiro, sem
+# dependências em runtime além da libc do sistema.
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
   && cmake --build build --config Release -j"$(nproc)" --target whisper-cli
 # Modelo multilingue (legendas em português — NUNCA usar variantes ".en",
 # essas só percebem inglês) quantizado q5_1 — o nível de quantização que o

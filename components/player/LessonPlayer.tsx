@@ -279,7 +279,6 @@ export function LessonPlayer({
     if (hlsRef.current) hlsRef.current.currentLevel = levelIndex;
     setHlsCurrentLevel(levelIndex);
     setQualityOpen(false);
-    setMenuOpen(false);
   }
 
   const [playing, setPlaying] = useState(false);
@@ -617,7 +616,6 @@ export function LessonPlayer({
     setSelectedQuality(quality);
     setStoredQuality(quality);
     setQualityOpen(false);
-    setMenuOpen(false);
 
     requestAnimationFrame(() => {
       const v = videoRef.current;
@@ -662,7 +660,17 @@ export function LessonPlayer({
     // rato já estivesse parado há um tempo quando o vídeo terminou, podia
     // nascer já escondido.
     handleControlsActivity();
-    await sendProgress({ completed: true });
+    // sendProgress do handleTimeUpdate só corre a cada 5s de currentTime —
+    // sem gravar aqui o watchedSeconds real do fim, ficava preso nesse
+    // último valor (ex.: 30 num vídeo de 32s, 94% < limiar de 95%). Reabrir
+    // a aula via initializeVideo só olha para esse número (não para
+    // completed), e via essa lacuna concluía "ainda a meio" e saltava de
+    // volta quase pro fim — mais visível ainda em vídeos curtos.
+    const finalDuration = videoRef.current?.duration;
+    await sendProgress({
+      watchedSeconds: Number.isFinite(finalDuration) ? Math.floor(finalDuration as number) : undefined,
+      completed: true,
+    });
     onComplete();
 
     // Reprodução automática desligada nas definições — nem avança sozinho
@@ -1198,7 +1206,6 @@ export function LessonPlayer({
     setPlaybackRate(rate);
     setStoredSpeed(rate);
     setSpeedOpen(false);
-    setMenuOpen(false);
   }
 
   async function togglePiP() {
@@ -1213,7 +1220,6 @@ export function LessonPlayer({
     } catch {
       // PiP indisponível neste browser/contexto — ignora
     }
-    setMenuOpen(false);
   }
 
   async function toggleFullscreen() {
@@ -1355,7 +1361,6 @@ export function LessonPlayer({
     a.href = contentUrl;
     a.download = "";
     a.click();
-    setMenuOpen(false);
   }
 
   function toggleLoop() {
@@ -1618,7 +1623,9 @@ export function LessonPlayer({
                   // (e clicar) mesmo que o vídeo tenha nascido em pausa (ex.:
                   // reprodução automática desligada, autoplay recusado pelo
                   // browser num refresh) sem ninguém ter mexido no ecrã ainda.
-                  controlsShown || !playing ? "opacity-100" : "pointer-events-none opacity-0"
+                  // videoEnded exclui aqui — senão fica ao lado do botão de
+                  // repetir do ecrã de fim (ambos "pausados" ao mesmo tempo).
+                  !videoEnded && (controlsShown || !playing) ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
                 {playing ? <Pause size={30} className="fill-white" /> : <Play size={30} className="fill-white" />}
@@ -1973,10 +1980,7 @@ export function LessonPlayer({
 
                         {captionsUrl && (
                           <button type="button"
-                            onClick={() => {
-                              toggleCaptions();
-                              setMenuOpen(false);
-                            }}
+                            onClick={toggleCaptions}
                             className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
                           >
                             <Captions size={16} />
@@ -1999,10 +2003,7 @@ export function LessonPlayer({
 
                         {onToggleCinemaMode && (
                           <button type="button"
-                            onClick={() => {
-                              onToggleCinemaMode();
-                              setMenuOpen(false);
-                            }}
+                            onClick={onToggleCinemaMode}
                             className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
                           >
                             <Sparkles size={16} />
@@ -2024,10 +2025,7 @@ export function LessonPlayer({
                         )}
 
                         <button type="button"
-                          onClick={() => {
-                            toggleAutoplay();
-                            setMenuOpen(false);
-                          }}
+                          onClick={toggleAutoplay}
                           className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-slate-200 hover:bg-white/10"
                         >
                           <Play size={16} />

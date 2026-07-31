@@ -2,78 +2,14 @@
 
 import { usePathname } from "next/navigation";
 import { FadeLink } from "@/components/course/FadeLink";
-import {
-  UserCog,
-  KeyRound,
-  Megaphone,
-  Eye,
-  Users,
-  Ban,
-  Bell,
-  Globe,
-  MoonStar,
-  Link2,
-  ShoppingBag,
-  Store,
-  CreditCard,
-  BookOpen,
-  type LucideIcon,
-} from "lucide-react";
-
-interface Item {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface Group {
-  title: string;
-  items: Item[];
-}
-
-const GROUPS: Group[] = [
-  {
-    title: "Central de Contas",
-    items: [
-      { href: "/settings/account", label: "Dados pessoais", icon: UserCog },
-      { href: "/settings/security", label: "Senha e segurança", icon: KeyRound },
-      { href: "/settings/ads", label: "Preferências de anúncios", icon: Megaphone },
-    ],
-  },
-  {
-    title: "Privacidade e Visibilidade",
-    items: [
-      { href: "/settings/privacy", label: "Ferramentas de privacidade", icon: Eye },
-      { href: "/settings/communities", label: "Comunidades", icon: Users },
-      { href: "/settings/blocked", label: "Bloqueio", icon: Ban },
-    ],
-  },
-  {
-    title: "Vendas e Compras",
-    items: [
-      { href: "/settings/sales", label: "Venda", icon: Store },
-      { href: "/settings/resale", label: "Revenda", icon: ShoppingBag },
-      { href: "/settings/payments", label: "Pagamentos", icon: CreditCard },
-    ],
-  },
-  {
-    title: "Preferências e Aplicativos",
-    items: [
-      { href: "/settings/courses", label: "Cursos", icon: BookOpen },
-      { href: "/settings/notifications", label: "Notificações", icon: Bell },
-      { href: "/settings/language", label: "Idioma e região", icon: Globe },
-      { href: "/settings/appearance", label: "Aparência", icon: MoonStar },
-      { href: "/settings/connections", label: "Aplicativos e sites", icon: Link2 },
-    ],
-  },
-];
+import { SETTINGS_NAV_GROUPS } from "@/components/settings/settingsNavGroups";
 
 export function SettingsSidebar() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex w-full shrink-0 flex-col gap-5 sm:w-56">
-      {GROUPS.map((group) => (
+    <nav className="hidden w-full shrink-0 flex-col gap-5 sm:flex sm:w-56">
+      {SETTINGS_NAV_GROUPS.map((group) => (
         <div key={group.title}>
           <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
             {group.title}

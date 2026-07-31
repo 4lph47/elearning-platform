@@ -738,6 +738,13 @@ export function Navbar() {
                 <Button variant="accent">Registar</Button>
               </FadeLink>
             </div>
+          ) : status === "authenticated" ? (
+            // Sessão criada (Google/link mágico) mas ainda sem termos aceites —
+            // sem isto a navbar ficava em branco, sem avatar nem "Entrar", dando
+            // a entender que o login tinha falhado silenciosamente.
+            <FadeLink href="/register/complete">
+              <Button variant={transparent ? "outline-dark" : "ghost"}>Completar registo</Button>
+            </FadeLink>
           ) : null}
           </div>
         </nav>

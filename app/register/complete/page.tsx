@@ -28,7 +28,13 @@ function CompleteForm() {
   const router = useRouter();
   const { data: session, status, update } = useSession();
   const searchParams = useSearchParams();
-  const wantsToTeach = searchParams.get("role") === "instrutor";
+  const roleParam = searchParams.get("role");
+  const wantsToTeach = roleParam === "instrutor";
+  // Sem role na query = veio do /login (Google/link mágico sem passar por
+  // /register) — só aí faz sentido completar sozinho. Vindo do /register
+  // com role=aluno explícito, a pessoa quer preencher o formulário (pelo
+  // menos o username), tal como o instrutor já fazia.
+  const isSilentAutoRegister = roleParam === null;
   const resyncedRef = useRef(false);
   const usernamePrefilledRef = useRef(false);
   const autoCompletedRef = useRef(false);
@@ -68,15 +74,16 @@ function CompleteForm() {
     }
   }, [status, session, router]);
 
-  // Google/link mágico sem intenção de ensinar: o botão já tem o aviso de
-  // termos por baixo (ver /login) e o username veio automático do
-  // events.createUser — pedir pra confirmar os dois outra vez só duplicava
-  // um clique que a pessoa já deu. Só o instrutor continua a passar por
-  // aqui de propósito, porque bio/especialização são dados reais, não uma
-  // confirmação.
+  // Google/link mágico vindo direto do /login (sem role na query): o botão
+  // já tem o aviso de termos por baixo (ver /login) e o username veio
+  // automático do events.createUser — pedir pra confirmar os dois outra vez
+  // só duplicava um clique que a pessoa já deu. Vindo do /register (role
+  // sempre presente), a pessoa escolheu ativamente preencher o formulário,
+  // por isso nunca entra aqui — aluno confirma username, instrutor continua
+  // a preencher bio/especialização como já fazia.
   useEffect(() => {
     if (status !== "authenticated") return;
-    if (session.user.registered || session.user.hasPassword || wantsToTeach) return;
+    if (session.user.registered || session.user.hasPassword || !isSilentAutoRegister) return;
     if (!session.user.username || autoCompletedRef.current) return;
     autoCompletedRef.current = true;
     (async () => {
@@ -236,10 +243,10 @@ function CompleteForm() {
     return null;
   }
 
-  // Google/link mágico sem intenção de ensinar fica só um instante aqui —
-  // o efeito acima já submeteu o registo em silêncio, nunca chega a
+  // Google/link mágico direto do /login fica só um instante aqui — o
+  // efeito acima já submeteu o registo em silêncio, nunca chega a
   // renderizar o formulário de username/termos.
-  if (!session.user.hasPassword && !wantsToTeach && !autoCompleteFailed) {
+  if (!session.user.hasPassword && isSilentAutoRegister && !autoCompleteFailed) {
     return null;
   }
 

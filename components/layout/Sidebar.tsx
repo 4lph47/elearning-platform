@@ -233,8 +233,19 @@ export function Sidebar() {
           }`}
         >
           <nav className={`flex flex-col gap-1 p-2 transition-[width] duration-200 ${isMini ? "w-16" : "w-60"}`}>
+          {/* grid (não flex): sobrepõe os dois painéis na mesma célula em vez
+              de os empilhar, senão a troca por swipe (hidden/flex) saltava
+              sem transição nenhuma — "col/row-start-1" partilhado é o que
+              permite o transform deslizar um sobre o outro. md:block desliga
+              isto tudo no desktop, onde só um painel existe de qualquer
+              forma. */}
+          <div className="grid overflow-hidden md:block md:overflow-visible">
           {inSettings && (
-            <div className={`${mobilePanel === "settings" ? "flex" : "hidden"} flex-col gap-4 md:hidden`}>
+            <div
+              className={`col-start-1 row-start-1 flex flex-col gap-4 transition-transform duration-200 ease-out md:hidden ${
+                mobilePanel === "settings" ? "translate-x-0" : "translate-x-full"
+              }`}
+            >
               {SETTINGS_NAV_GROUPS.map((group) => (
                 <div key={group.title}>
                   <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
@@ -266,11 +277,9 @@ export function Sidebar() {
             </div>
           )}
           <div
-            className={
-              inSettings
-                ? `${mobilePanel === "main" ? "flex" : "hidden"} flex-col gap-1 md:flex`
-                : "flex flex-col gap-1"
-            }
+            className={`col-start-1 row-start-1 flex flex-col gap-1 transition-transform duration-200 ease-out md:static md:translate-x-0 ${
+              inSettings && mobilePanel !== "main" ? "-translate-x-full" : "translate-x-0"
+            }`}
           >
           {items.map((item) => {
             if (!isGroup(item)) {
@@ -358,6 +367,7 @@ export function Sidebar() {
               </div>
             );
           })}
+          </div>
           </div>
           </nav>
         </aside>

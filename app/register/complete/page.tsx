@@ -31,6 +31,8 @@ function CompleteForm() {
   const wantsToTeach = searchParams.get("role") === "instrutor";
   const resyncedRef = useRef(false);
   const usernamePrefilledRef = useRef(false);
+  const autoCompletedRef = useRef(false);
+  const [autoCompleteFailed, setAutoCompleteFailed] = useState(false);
 
   // O JWT só é reavaliado contra a BD no login ou quando update() é chamado
   // — se `registered` mudou entretanto por fora (ex.: backfill direto na
@@ -65,6 +67,35 @@ function CompleteForm() {
       router.replace("/instructor");
     }
   }, [status, session, router]);
+
+  // Google/link mágico sem intenção de ensinar: o botão já tem o aviso de
+  // termos por baixo (ver /login) e o username veio automático do
+  // events.createUser — pedir pra confirmar os dois outra vez só duplicava
+  // um clique que a pessoa já deu. Só o instrutor continua a passar por
+  // aqui de propósito, porque bio/especialização são dados reais, não uma
+  // confirmação.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    if (session.user.registered || session.user.hasPassword || wantsToTeach) return;
+    if (!session.user.username || autoCompletedRef.current) return;
+    autoCompletedRef.current = true;
+    (async () => {
+      const res = await fetch("/api/account/complete-registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: session.user.username, acceptedTerms: true }),
+      });
+      if (!res.ok) {
+        // Não devia acontecer com um username gerado automaticamente, mas
+        // se colidir por algum motivo cai no formulário normal em vez de
+        // deixar a pessoa presa num ecrã em branco.
+        setAutoCompleteFailed(true);
+        return;
+      }
+      await update();
+      router.replace("/");
+    })();
+  }, [status, session, wantsToTeach, update, router]);
 
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
@@ -196,6 +227,13 @@ function CompleteForm() {
   }
 
   if (status !== "authenticated" || session.user.registered) {
+    return null;
+  }
+
+  // Google/link mágico sem intenção de ensinar fica só um instante aqui —
+  // o efeito acima já submeteu o registo em silêncio, nunca chega a
+  // renderizar o formulário de username/termos.
+  if (!session.user.hasPassword && !wantsToTeach && !autoCompleteFailed) {
     return null;
   }
 

@@ -345,7 +345,10 @@ export function Navbar() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <GraduationCap className="h-4.5 w-4.5" size={18} />
               </span>
-              <span className={status === "authenticated" ? "" : "hidden sm:inline"}>Moz Academy</span>
+              {/* Autenticado mas por registar mostra o botão "Completar
+                  registo" ao lado — com pouco espaço (mobile) o texto
+                  aqui e o do botão disputavam a mesma linha. */}
+              <span className={registered ? "" : status === "authenticated" ? "hidden" : "hidden sm:inline"}>Moz Academy</span>
             </FadeLink>
           </div>
         </div>

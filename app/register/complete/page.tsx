@@ -94,6 +94,7 @@ function CompleteForm() {
       }
       await update();
       router.replace("/");
+      router.refresh();
     })();
   }, [status, session, wantsToTeach, update, router]);
 

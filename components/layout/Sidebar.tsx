@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   Home,
@@ -58,6 +58,29 @@ export function Sidebar() {
   // fixed já garante isso) sem tocar no state persistido — sair do rato
   // devolve-a ao tamanho mini, sem afetar a margem do conteúdo principal.
   const [peeking, setPeeking] = useState(false);
+  // Só interessa em mobile, dentro de /settings: qual dos dois painéis a
+  // gaveta mostra (trocam por swipe). Fora daí a gaveta só tem um painel,
+  // este estado fica sem efeito nenhum.
+  const [mobilePanel, setMobilePanel] = useState<"main" | "settings">("settings");
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // Horizontal tem de dominar claramente o vertical, senão um scroll da
+    // lista (lateral tem overflow-y) troca de painel sem se querer.
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    setMobilePanel(dx > 0 ? "main" : "settings");
+  }
 
   function handleNavClick(e: React.MouseEvent, href: string) {
     if (pathname === href) return;
@@ -140,6 +163,14 @@ export function Sidebar() {
   // perde a navegação normal (a lateral própria das Definições já aparece
   // ao lado do conteúdo lá).
   const inSettings = pathname === "/settings" || pathname.startsWith("/settings/");
+
+  // Cada vez que se entra de novo em /settings (vindo de fora), o painel
+  // volta a arrancar nas opções de Definições — só o swipe dentro da secção
+  // deve trocar para as opções gerais, não persistir depois de sair e voltar.
+  useEffect(() => {
+    if (inSettings) setMobilePanel("settings");
+  }, [inSettings]);
+
   const isMini = state === "mini" && !peeking;
   const widthClass = state === "closed" ? "w-0" : isMini ? "w-16" : "w-60";
   const isActive = (item: LeafItem) => {
@@ -195,13 +226,15 @@ export function Sidebar() {
         <aside
           onMouseEnter={() => state === "mini" && setPeeking(true)}
           onMouseLeave={() => setPeeking(false)}
+          onTouchStart={inSettings ? handleTouchStart : undefined}
+          onTouchEnd={inSettings ? handleTouchEnd : undefined}
           className={`h-full w-full overflow-y-auto overflow-x-hidden bg-white dark:bg-black ${
             peeking ? "shadow-xl" : ""
           }`}
         >
           <nav className={`flex flex-col gap-1 p-2 transition-[width] duration-200 ${isMini ? "w-16" : "w-60"}`}>
           {inSettings && (
-            <div className="flex flex-col gap-4 md:hidden">
+            <div className={`${mobilePanel === "settings" ? "flex" : "hidden"} flex-col gap-4 md:hidden`}>
               {SETTINGS_NAV_GROUPS.map((group) => (
                 <div key={group.title}>
                   <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
@@ -232,7 +265,13 @@ export function Sidebar() {
               ))}
             </div>
           )}
-          <div className={inSettings ? "hidden flex-col gap-1 md:flex" : "flex flex-col gap-1"}>
+          <div
+            className={
+              inSettings
+                ? `${mobilePanel === "main" ? "flex" : "hidden"} flex-col gap-1 md:flex`
+                : "flex flex-col gap-1"
+            }
+          >
           {items.map((item) => {
             if (!isGroup(item)) {
               const Icon = item.icon;

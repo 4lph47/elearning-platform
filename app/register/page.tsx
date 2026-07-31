@@ -42,8 +42,12 @@ export default function RegisterPage() {
   // aceitar) vai para /register/complete, não para a home.
   useEffect(() => {
     if (status !== "authenticated") return;
-    router.replace(session.user.registered ? "/" : "/register/complete");
-  }, [status, session, router]);
+    // Handler de submit também navega depois do signIn — router.replace aqui
+    // corria em paralelo com esse router.push e ficava só o header
+    // atualizado (layout partilhado), corpo da página preso. Navegação a
+    // sério evita a corrida por inteiro.
+    window.location.href = session.user.registered ? "/" : "/register/complete";
+  }, [status, session]);
 
   const [role, setRole] = useState<"aluno" | "instrutor" | null>(null);
   const [name, setName] = useState("");
@@ -181,8 +185,8 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    // Sessão passa a "authenticated" e o useEffect acima trata da navegação
+    // (window.location.href) — navegar aqui também duplicava a corrida.
   }
 
   if (status === "authenticated") return null;

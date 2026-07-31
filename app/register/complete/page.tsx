@@ -66,7 +66,11 @@ function CompleteForm() {
     }
     if (status !== "authenticated") return;
     if (session.user.registered) {
-      router.replace(session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN" ? "/instructor" : "/");
+      // handleStudentSubmit/handleInstructorSubmit chamam update() e depois
+      // navegam eles próprios — router.replace aqui corria em paralelo com
+      // essa navegação e só o header (layout partilhado) ficava atualizado.
+      // Navegação a sério evita a corrida.
+      window.location.href = session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN" ? "/instructor" : "/";
       return;
     }
     if (session.user.role === "INSTRUCTOR" || session.user.role === "ADMIN") {
@@ -164,8 +168,9 @@ function CompleteForm() {
 
     await update();
     setLoading(false);
-    router.push("/");
-    router.refresh();
+    // Sessão passa a registered=true e o useEffect acima trata da
+    // navegação (window.location.href) — navegar aqui também duplicava a
+    // corrida.
   }
 
   async function handleVerifyCode(e: React.FormEvent) {
@@ -187,8 +192,7 @@ function CompleteForm() {
 
     await update();
     setLoading(false);
-    router.push("/");
-    router.refresh();
+    // Idem: navegação fica a cargo do useEffect quando registered vira true.
   }
 
   async function handleResendCode() {
@@ -235,8 +239,7 @@ function CompleteForm() {
 
     await update();
     setLoading(false);
-    router.push("/instructor");
-    router.refresh();
+    // Idem: navegação fica a cargo do useEffect quando registered vira true.
   }
 
   if (status !== "authenticated" || session.user.registered) {

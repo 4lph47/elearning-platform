@@ -93,10 +93,15 @@ function CompleteForm() {
         return;
       }
       await update();
-      router.replace("/");
-      router.refresh();
+      // router.replace()+router.refresh() disparados de dentro de um efeito
+      // (sem o "tick" que um clique dá) competiam entre si -- a navegação
+      // ficava a meio, header (layout partilhado) atualizado mas o corpo da
+      // página preso na versão anterior até um F5 manual. Navegação a sério
+      // evita a categoria toda de corrida do router, sempre re-renderiza
+      // certo à primeira.
+      window.location.href = "/";
     })();
-  }, [status, session, wantsToTeach, update, router]);
+  }, [status, session, wantsToTeach, update]);
 
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
